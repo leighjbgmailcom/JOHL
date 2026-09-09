@@ -2,18 +2,13 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Standings | Jordan Oldtimers Hockey League</title>
 
     <link rel="stylesheet" href="css/style.css">
-
 </head>
-
 
 <body>
 
@@ -22,31 +17,20 @@
     <div class="container header-inner">
 
         <div class="league-brand">
-
             <div class="league-logo">JOHL</div>
 
             <div>
                 <h1>Jordan Oldtimers</h1>
                 <span>Hockey League</span>
             </div>
-
         </div>
 
-
         <nav>
-
             <a href="index.html">Home</a>
-
             <a href="schedule.html">Schedule</a>
-
-            <a href="standings.html" class="active">
-                Standings
-            </a>
-
+            <a href="standings.html" class="active">Standings</a>
             <a href="teams.html">Teams</a>
-
             <a href="players.html">Players</a>
-
         </nav>
 
     </div>
@@ -57,46 +41,31 @@
 <main class="container page-content">
 
     <div class="page-title">
-
-        <p class="eyebrow">2026 SEASON</p>
-
-        <h2>League Standings</h2>
-
-        <p>
-            Current Jordan Oldtimers Hockey League standings.
-        </p>
-
+        <p class="eyebrow">2026/2027 SEASON</p>
+        <h2>Standings</h2>
+        <p>Current standings for the JOHL season.</p>
     </div>
 
-
-    <div class="table-wrapper">
-
-        <table class="standings-table">
-
+    <div class="up-next-card" style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
             <thead>
-
-                <tr>
-
-                    <th>#</th>
-                    <th>Team</th>
-                    <th>GP</th>
-                    <th>W</th>
-                    <th>L</th>
-                    <th>T</th>
-                    <th>OT</th>
-                    <th>GF</th>
-                    <th>GA</th>
-                    <th>PTS</th>
-
+                <tr style="background: #f1f5f9; border-bottom: 1px solid #e2e8f0;">
+                    <th style="padding: 12px;">#</th>
+                    <th style="padding: 12px;">Team</th>
+                    <th style="padding: 12px;">GP</th>
+                    <th style="padding: 12px;">W</th>
+                    <th style="padding: 12px;">L</th>
+                    <th style="padding: 12px;">T</th>
+                    <th style="padding: 12px;">PTS</th>
+                    <th style="padding: 12px;">GF</th>
+                    <th style="padding: 12px;">GA</th>
+                    <th style="padding: 12px;">DIFF</th>
                 </tr>
-
             </thead>
-
-
-            <tbody id="standings-table"></tbody>
-
+            <tbody id="standings-body">
+                <!-- Dynamically populated by JS -->
+            </tbody>
         </table>
-
     </div>
 
 </main>
@@ -107,15 +76,8 @@
     <div class="container footer-inner">
 
         <div>
-
-            <strong>
-                Jordan Oldtimers Hockey League
-            </strong>
-
-            <p>
-                Six teams. One great league.
-            </p>
-
+            <strong>Jordan Oldtimers Hockey League</strong>
+            <p>Six teams. One great league.</p>
         </div>
 
         <p>© 2026 JOHL</p>
@@ -128,5 +90,4 @@
 <script src="js/app.js"></script>
 
 </body>
-
 </html>
