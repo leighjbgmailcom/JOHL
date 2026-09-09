@@ -1,7 +1,287 @@
 /* =========================================
    JORDAN OLDTIMERS HOCKEY LEAGUE
    ========================================= */
+// Schedule Data (Sep 27, 2026 – Mar 14, 2027)
+const scheduleData = [
+    {
+        date: "Sunday, September 27, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } },
+            { time: "7:50 PM", home: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } },
+            { time: "9:10 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" } }
+        ]
+    },
+    {
+        date: "Sunday, October 4, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "7:50 PM", home: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" }, away: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" } },
+            { time: "9:10 PM", home: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" }, away: { name: "Québec Nordiques", code: "QUE", class: "badge-que" } }
+        ]
+    },
+    {
+        date: "Sunday, October 11, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } },
+            { time: "7:50 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "9:10 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } }
+        ]
+    },
+    {
+        date: "Sunday, October 18, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } },
+            { time: "7:50 PM", home: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" }, away: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" } },
+            { time: "9:10 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Québec Nordiques", code: "QUE", class: "badge-que" } }
+        ]
+    },
+    {
+        date: "Sunday, October 25, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" } },
+            { time: "7:50 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "9:10 PM", home: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } }
+        ]
+    },
+    {
+        date: "Sunday, November 1, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" }, away: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" } },
+            { time: "7:50 PM", home: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "9:10 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Québec Nordiques", code: "QUE", class: "badge-que" } }
+        ]
+    },
+    {
+        date: "Sunday, November 8, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" }, away: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" } },
+            { time: "7:50 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } },
+            { time: "9:10 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } }
+        ]
+    },
+    {
+        date: "Sunday, November 15, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" }, away: { name: "Québec Nordiques", code: "QUE", class: "badge-que" } },
+            { time: "7:50 PM", home: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" }, away: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" } },
+            { time: "9:10 PM", home: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" }, away: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" } }
+        ]
+    },
+    {
+        date: "Sunday, November 22, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "7:50 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } },
+            { time: "9:10 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" } }
+        ]
+    },
+    {
+        date: "Sunday, November 29, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" } },
+            { time: "7:50 PM", home: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" }, away: { name: "Québec Nordiques", code: "QUE", class: "badge-que" } },
+            { time: "9:10 PM", home: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } }
+        ]
+    },
+    {
+        date: "Sunday, December 6, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } },
+            { time: "7:50 PM", home: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } },
+            { time: "9:10 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" } }
+        ]
+    },
+    {
+        date: "Sunday, December 13, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "7:50 PM", home: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" }, away: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" } },
+            { time: "9:10 PM", home: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" }, away: { name: "Québec Nordiques", code: "QUE", class: "badge-que" } }
+        ]
+    },
+    {
+        date: "Sunday, December 20, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } },
+            { time: "7:50 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "9:10 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } }
+        ]
+    },
+    {
+        date: "Sunday, December 27, 2026",
+        games: [
+            { time: "6:30 PM", home: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } },
+            { time: "7:50 PM", home: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" }, away: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" } },
+            { time: "9:10 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Québec Nordiques", code: "QUE", class: "badge-que" } }
+        ]
+    },
+    {
+        date: "Sunday, January 3, 2027",
+        games: [
+            { time: "6:30 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" } },
+            { time: "7:50 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "9:10 PM", home: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } }
+        ]
+    },
+    {
+        date: "Sunday, January 10, 2027",
+        games: [
+            { time: "6:30 PM", home: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" }, away: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" } },
+            { time: "7:50 PM", home: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "9:10 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Québec Nordiques", code: "QUE", class: "badge-que" } }
+        ]
+    },
+    {
+        date: "Sunday, January 17, 2027",
+        games: [
+            { time: "6:30 PM", home: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" }, away: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" } },
+            { time: "7:50 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } },
+            { time: "9:10 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } }
+        ]
+    },
+    {
+        date: "Sunday, January 24, 2027",
+        games: [
+            { time: "6:30 PM", home: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" }, away: { name: "Québec Nordiques", code: "QUE", class: "badge-que" } },
+            { time: "7:50 PM", home: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" }, away: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" } },
+            { time: "9:10 PM", home: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" }, away: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" } }
+        ]
+    },
+    {
+        date: "Sunday, January 31, 2027",
+        games: [
+            { time: "6:30 PM", home: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "7:50 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } },
+            { time: "9:10 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" } }
+        ]
+    },
+    {
+        date: "Sunday, February 7, 2027",
+        games: [
+            { time: "6:30 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" } },
+            { time: "7:50 PM", home: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" }, away: { name: "Québec Nordiques", code: "QUE", class: "badge-que" } },
+            { time: "9:10 PM", home: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } }
+        ]
+    },
+    {
+        date: "Sunday, February 14, 2027",
+        games: [
+            { time: "6:30 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } },
+            { time: "7:50 PM", home: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } },
+            { time: "9:10 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" } }
+        ]
+    },
+    {
+        date: "Sunday, February 21, 2027",
+        games: [
+            { time: "6:30 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "7:50 PM", home: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" }, away: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" } },
+            { time: "9:10 PM", home: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" }, away: { name: "Québec Nordiques", code: "QUE", class: "badge-que" } }
+        ]
+    },
+    {
+        date: "Sunday, February 28, 2027",
+        games: [
+            { time: "6:30 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } },
+            { time: "7:50 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "9:10 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } }
+        ]
+    },
+    {
+        date: "Sunday, March 7, 2027",
+        games: [
+            { time: "6:30 PM", home: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" }, away: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" } },
+            { time: "7:50 PM", home: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" }, away: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" } },
+            { time: "9:10 PM", home: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" }, away: { name: "Québec Nordiques", code: "QUE", class: "badge-que" } }
+        ]
+    },
+    {
+        date: "Sunday, March 14, 2027",
+        games: [
+            { time: "6:30 PM", home: { name: "Ottawa Senators", code: "OTT", class: "badge-ott" }, away: { name: "Montréal Canadiens", code: "MTL", class: "badge-mtl" } },
+            { time: "7:50 PM", home: { name: "Québec Nordiques", code: "QUE", class: "badge-que" }, away: { name: "Vancouver Canucks", code: "VAN", class: "badge-van" } },
+            { time: "9:10 PM", home: { name: "Toronto Maple Leafs", code: "TOR", class: "badge-tor" }, away: { name: "Edmonton Oilers", code: "EDM", class: "badge-edm" } }
+        ]
+    }
+];
 
+// Function to render full schedule list
+function renderFullSchedule(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    let html = '';
+
+    scheduleData.forEach(day => {
+        html += `
+            <div class="schedule-day">
+                <h3 class="schedule-date">${day.date}</h3>
+                <div class="up-next-card">
+        `;
+
+        day.games.forEach(game => {
+            html += `
+                <div class="game-row">
+                    <div class="game-time">${game.time}</div>
+                    <div class="game-matchup">
+                        <div class="team-side">
+                            <span class="team-badge ${game.home.class}">${game.home.code}</span>
+                            <span class="team-name">${game.home.name}</span>
+                        </div>
+                        <span class="vs-label">vs.</span>
+                        <div class="team-side">
+                            <span class="team-badge ${game.away.class}">${game.away.code}</span>
+                            <span class="team-name">${game.away.name}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+// Function to render "UP NEXT" section on index.html dynamically
+function renderUpNextGame() {
+    const nextGameContainer = document.getElementById('next-game');
+    if (!nextGameContainer) return;
+
+    const nextDay = scheduleData[0]; // Sept 27
+    let html = '';
+
+    nextDay.games.forEach(game => {
+        html += `
+            <div class="game-row">
+                <div class="game-time">${game.time}</div>
+                <div class="game-matchup">
+                    <div class="team-side">
+                        <span class="team-badge ${game.home.class}">${game.home.code}</span>
+                        <span class="team-name">${game.home.name}</span>
+                    </div>
+                    <span class="vs-label">vs.</span>
+                    <div class="team-side">
+                        <span class="team-badge ${game.away.class}">${game.away.code}</span>
+                        <span class="team-name">${game.away.name}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    nextGameContainer.innerHTML = html;
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    renderUpNextGame();
+    renderFullSchedule('full-schedule-list');
+});
 // 2026-27 JOHL Master Player Roster Data
 const JOHL_ROSTERS = {
   Canadiens: [
