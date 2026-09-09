@@ -1,17 +1,16 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
 
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
 
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
-<title>Players | Six City Hockey League</title>
+    <title>Players | Jordan Oldtimers Hockey League</title>
 
-<link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css">
 
 </head>
 
@@ -20,135 +19,153 @@ content="width=device-width, initial-scale=1.0">
 
 <header class="site-header">
 
-<div class="container header-inner">
+    <div class="container header-inner">
 
-<a href="index.html" class="logo">
+        <div class="league-brand">
 
-<span class="logo-mark">🏒</span>
+            <div class="league-logo">JOHL</div>
 
-<span>
+            <div>
 
-<strong>SIX CITY</strong>
+                <h1>Jordan Oldtimers</h1>
 
-<small>HOCKEY LEAGUE</small>
+                <span>Hockey League</span>
 
-</span>
+            </div>
 
-</a>
+        </div>
 
 
-<nav class="main-nav">
+        <nav>
 
-<a href="index.html">Home</a>
+            <a href="index.html">Home</a>
 
-<a href="schedule.html">Schedule</a>
+            <a href="schedule.html">Schedule</a>
 
-<a href="standings.html">Standings</a>
+            <a href="standings.html">Standings</a>
 
-<a href="teams.html">Teams</a>
+            <a href="teams.html">Teams</a>
 
-<a href="players.html" class="active">
-Players
-</a>
+            <a href="players.html" class="active">
+                Players
+            </a>
 
-</nav>
+        </nav>
 
-</div>
+    </div>
 
 </header>
 
 
-<main>
+<main class="container page-content">
 
-<section class="page-header">
+    <div class="page-title">
 
-<div class="container">
+        <p class="eyebrow">2026 SEASON</p>
 
-<p class="eyebrow">LEAGUE ROSTERS</p>
+        <h2>Players</h2>
 
-<h1>Players</h1>
+        <p>
+            Player statistics from around the league.
+        </p>
 
-<p>
-Player statistics and league leaders.
-</p>
-
-</div>
-
-</section>
+    </div>
 
 
-<section class="section">
+    <div class="player-controls">
 
-<div class="container">
-
-<div class="player-controls">
-
-<input
-type="text"
-id="playerSearch"
-placeholder="Search players..."
->
-
-<select id="teamFilter">
-
-<option value="all">
-All Teams
-</option>
-
-</select>
-
-</div>
+        <input
+            type="text"
+            id="player-search"
+            placeholder="Search player..."
+        >
 
 
-<div class="table-wrapper">
+        <select id="player-team">
 
-<table>
+            <option value="ALL">
+                All Teams
+            </option>
 
-<thead>
+            <option value="TOR">
+                Toronto Maple Leafs
+            </option>
 
-<tr>
+            <option value="VAN">
+                Vancouver Canucks
+            </option>
 
-<th>#</th>
+            <option value="QUE">
+                Québec Nordiques
+            </option>
 
-<th>Player</th>
+            <option value="EDM">
+                Edmonton Oilers
+            </option>
 
-<th>Team</th>
+            <option value="MTL">
+                Montréal Canadiens
+            </option>
 
-<th>Pos</th>
+            <option value="OTT">
+                Ottawa Senators
+            </option>
 
-<th>GP</th>
+        </select>
 
-<th>G</th>
-
-<th>A</th>
-
-<th>PTS</th>
-
-</tr>
-
-</thead>
+    </div>
 
 
-<tbody id="playersTable"></tbody>
+    <div class="table-wrapper">
 
-</table>
+        <table>
 
-</div>
+            <thead>
 
-</div>
+                <tr>
 
-</section>
+                    <th>#</th>
+                    <th>Player</th>
+                    <th>Team</th>
+                    <th>Pos</th>
+                    <th>GP</th>
+                    <th>G</th>
+                    <th>A</th>
+                    <th>PTS</th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody id="players-table"></tbody>
+
+        </table>
+
+    </div>
 
 </main>
 
 
-<footer class="site-footer">
+<footer>
 
-<div class="container footer-inner">
+    <div class="container footer-inner">
 
-<strong>SIX CITY HOCKEY LEAGUE</strong>
+        <div>
 
-</div>
+            <strong>
+                Jordan Oldtimers Hockey League
+            </strong>
+
+            <p>
+                Six teams. One great league.
+            </p>
+
+        </div>
+
+        <p>© 2026 JOHL</p>
+
+    </div>
 
 </footer>
 
@@ -158,4 +175,3 @@ All Teams
 </body>
 
 </html>
-```
