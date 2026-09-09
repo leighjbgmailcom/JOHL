@@ -1,6 +1,5 @@
 /* =========================================
    JORDAN OLDTIMERS HOCKEY LEAGUE
-   DUMMY DATA
    ========================================= */
 
 
@@ -256,84 +255,99 @@ const players = [
 
 
 /* =========================================
-   GAMES
+   FIND NEXT SUNDAY
    ========================================= */
 
-const games = [
+function getNextSunday() {
 
-    {
-        date: "September 15, 2026",
-        time: "7:00 PM",
-        home: "TOR",
-        away: "MTL",
-        homeScore: 4,
-        awayScore: 2
-    },
+    const today = new Date();
 
-    {
-        date: "September 15, 2026",
-        time: "8:30 PM",
-        home: "EDM",
-        away: "VAN",
-        homeScore: 3,
-        awayScore: 3
-    },
+    const day = today.getDay();
 
-    {
-        date: "September 16, 2026",
-        time: "7:00 PM",
-        home: "OTT",
-        away: "QUE",
-        homeScore: 5,
-        awayScore: 2
-    },
+    let daysUntilSunday = 7 - day;
 
-    {
-        date: "September 22, 2026",
-        time: "7:00 PM",
-        home: "QUE",
-        away: "TOR",
-        homeScore: null,
-        awayScore: null
-    },
-
-    {
-        date: "September 22, 2026",
-        time: "8:30 PM",
-        home: "MTL",
-        away: "EDM",
-        homeScore: null,
-        awayScore: null
-    },
-
-    {
-        date: "September 23, 2026",
-        time: "7:00 PM",
-        home: "VAN",
-        away: "OTT",
-        homeScore: null,
-        awayScore: null
-    },
-
-    {
-        date: "September 29, 2026",
-        time: "7:00 PM",
-        home: "TOR",
-        away: "EDM",
-        homeScore: null,
-        awayScore: null
-    },
-
-    {
-        date: "September 29, 2026",
-        time: "8:30 PM",
-        home: "QUE",
-        away: "MTL",
-        homeScore: null,
-        awayScore: null
+    if (daysUntilSunday === 0) {
+        daysUntilSunday = 7;
     }
 
-];
+    const nextSunday = new Date(today);
+
+    nextSunday.setDate(
+        today.getDate() + daysUntilSunday
+    );
+
+    nextSunday.setHours(0, 0, 0, 0);
+
+    return nextSunday;
+
+}
+
+
+/* =========================================
+   FORMAT DATE
+   ========================================= */
+
+function formatDate(date) {
+
+    return date.toLocaleDateString(
+        "en-CA",
+        {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            year: "numeric"
+        }
+    );
+
+}
+
+
+/* =========================================
+   CREATE NEXT GAME DAY
+   ========================================= */
+
+function getNextGameDay() {
+
+    const nextSunday = getNextSunday();
+
+    return [
+
+        {
+            date: nextSunday,
+            time: "6:30 PM",
+            home: "Toronto Maple Leafs",
+            away: "Montréal Canadiens",
+            homeShort: "TOR",
+            awayShort: "MTL",
+            homeScore: null,
+            awayScore: null
+        },
+
+        {
+            date: nextSunday,
+            time: "7:50 PM",
+            home: "Edmonton Oilers",
+            away: "Vancouver Canucks",
+            homeShort: "EDM",
+            awayShort: "VAN",
+            homeScore: null,
+            awayScore: null
+        },
+
+        {
+            date: nextSunday,
+            time: "9:10 PM",
+            home: "Ottawa Senators",
+            away: "Québec Nordiques",
+            homeShort: "OTT",
+            awayShort: "QUE",
+            homeScore: null,
+            awayScore: null
+        }
+
+    ];
+
+}
 
 
 /* =========================================
@@ -342,7 +356,9 @@ const games = [
 
 function getTeam(short) {
 
-    return teams.find(team => team.short === short);
+    return teams.find(
+        team => team.short === short
+    );
 
 }
 
@@ -351,7 +367,9 @@ function teamName(short) {
 
     const team = getTeam(short);
 
-    return team ? team.name : short;
+    return team
+        ? team.name
+        : short;
 
 }
 
@@ -380,41 +398,48 @@ function teamBadge(short) {
 function renderStandingsPreview() {
 
     const element =
-        document.getElementById("standings-preview");
+        document.getElementById(
+            "standings-preview"
+        );
 
     if (!element) {
         return;
     }
 
-    element.innerHTML = standings.map((team, index) => {
+    element.innerHTML =
+        standings.map((team, index) => {
 
-        return `
+            return `
 
-            <tr>
+                <tr>
 
-                <td class="rank">
-                    ${index + 1}
-                </td>
+                    <td class="rank">
+                        ${index + 1}
+                    </td>
 
-                <td class="team-name-cell">
-                    ${teamName(team.team)}
-                </td>
+                    <td class="team-name-cell">
+                        ${teamName(team.team)}
+                    </td>
 
-                <td>${team.gp}</td>
+                    <td>${team.gp}</td>
 
-                <td>${team.w}</td>
+                    <td>${team.w}</td>
 
-                <td>${team.l}</td>
+                    <td>${team.l}</td>
 
-                <td>${team.t}</td>
+                    <td>${team.t}</td>
 
-                <td><strong>${team.pts}</strong></td>
+                    <td>
+                        <strong>
+                            ${team.pts}
+                        </strong>
+                    </td>
 
-            </tr>
+                </tr>
 
-        `;
+            `;
 
-    }).join("");
+        }).join("");
 
 }
 
@@ -426,47 +451,54 @@ function renderStandingsPreview() {
 function renderFullStandings() {
 
     const element =
-        document.getElementById("standings-table");
+        document.getElementById(
+            "standings-table"
+        );
 
     if (!element) {
         return;
     }
 
-    element.innerHTML = standings.map((team, index) => {
+    element.innerHTML =
+        standings.map((team, index) => {
 
-        return `
+            return `
 
-            <tr>
+                <tr>
 
-                <td class="rank">
-                    ${index + 1}
-                </td>
+                    <td class="rank">
+                        ${index + 1}
+                    </td>
 
-                <td class="team-name-cell">
-                    ${teamName(team.team)}
-                </td>
+                    <td class="team-name-cell">
+                        ${teamName(team.team)}
+                    </td>
 
-                <td>${team.gp}</td>
+                    <td>${team.gp}</td>
 
-                <td>${team.w}</td>
+                    <td>${team.w}</td>
 
-                <td>${team.l}</td>
+                    <td>${team.l}</td>
 
-                <td>${team.t}</td>
+                    <td>${team.t}</td>
 
-                <td>${team.ot}</td>
+                    <td>${team.ot}</td>
 
-                <td>${team.gf}</td>
+                    <td>${team.gf}</td>
 
-                <td>${team.ga}</td>
+                    <td>${team.ga}</td>
 
-                <td><strong>${team.pts}</strong></td>
+                    <td>
+                        <strong>
+                            ${team.pts}
+                        </strong>
+                    </td>
 
-            </tr>
+                </tr>
 
-        `;
+            `;
 
-    }).join("");
+        }).join("");
 
 }
 
@@ -479,9 +511,13 @@ function renderTeams() {
 
     const elements = [
 
-        document.getElementById("team-grid"),
+        document.getElementById(
+            "team-grid"
+        ),
 
-        document.getElementById("all-teams")
+        document.getElementById(
+            "all-teams"
+        )
 
     ];
 
@@ -493,31 +529,33 @@ function renderTeams() {
         }
 
 
-        container.innerHTML = teams.map(team => {
+        container.innerHTML =
+            teams.map(team => {
 
-            return `
+                return `
 
-                <div class="team-card">
+                    <div class="team-card">
 
-                    ${teamBadge(team.short)}
+                        ${teamBadge(team.short)}
 
-                    <div>
+                        <div>
 
-                        <h3>
-                            ${team.name}
-                        </h3>
+                            <h3>
+                                ${team.name}
+                            </h3>
 
-                        <p>
-                            Jordan Oldtimers Hockey League
-                        </p>
+                            <p>
+                                Jordan Oldtimers
+                                Hockey League
+                            </p>
+
+                        </div>
 
                     </div>
 
-                </div>
+                `;
 
-            `;
-
-        }).join("");
+            }).join("");
 
     });
 
@@ -525,60 +563,79 @@ function renderTeams() {
 
 
 /* =========================================
-   RECENT GAMES
+   NEXT GAME
    ========================================= */
 
-function renderRecentGames() {
+function renderNextGame() {
 
     const element =
-        document.getElementById("recent-games");
+        document.getElementById(
+            "next-game"
+        );
 
     if (!element) {
         return;
     }
 
 
-    const completedGames =
-        games.filter(game =>
-            game.homeScore !== null
-        ).slice(0, 5);
+    const games =
+        getNextGameDay();
 
 
-    element.innerHTML =
-        completedGames.map(game => {
-
-            return `
-
-                <div class="result-card">
-
-                    <div>
-
-                        <div class="result-team">
-                            ${teamName(game.away)}
-                        </div>
-
-                        <div class="result-team">
-                            ${teamName(game.home)}
-                        </div>
-
-                    </div>
+    const game = games[0];
 
 
-                    <div class="result-score">
+    element.innerHTML = `
 
-                        ${game.awayScore}
+        <div class="next-game">
 
-                        -
+            <div class="game-team">
 
-                        ${game.homeScore}
+                ${teamBadge(game.awayShort)}
 
-                    </div>
+                <h3>
+                    ${game.away}
+                </h3>
+
+            </div>
+
+
+            <div class="game-info">
+
+                <div class="game-date">
+
+                    ${formatDate(game.date)}
 
                 </div>
 
-            `;
+                <div class="game-time">
 
-        }).join("");
+                    ${game.time}
+
+                </div>
+
+                <div class="game-location">
+
+                    Jordan Arena
+
+                </div>
+
+            </div>
+
+
+            <div class="game-team">
+
+                ${teamBadge(game.homeShort)}
+
+                <h3>
+                    ${game.home}
+                </h3>
+
+            </div>
+
+        </div>
+
+    `;
 
 }
 
@@ -590,95 +647,101 @@ function renderRecentGames() {
 function renderSchedule(filter = "ALL") {
 
     const element =
-        document.getElementById("schedule-list");
+        document.getElementById(
+            "schedule-list"
+        );
 
     if (!element) {
         return;
     }
 
 
-    let filteredGames = games;
+    let games =
+        getNextGameDay();
 
 
     if (filter !== "ALL") {
 
-        filteredGames =
+        games =
             games.filter(game =>
-                game.home === filter ||
-                game.away === filter
+
+                game.homeShort === filter ||
+                game.awayShort === filter
+
             );
 
     }
 
 
-    const dates = [
-        ...new Set(
-            filteredGames.map(game => game.date)
-        )
-    ];
+    const gameDate =
+        games.length > 0
+            ? formatDate(games[0].date)
+            : "";
 
 
-    element.innerHTML =
-        dates.map(date => {
+    if (games.length === 0) {
 
-            const dateGames =
-                filteredGames.filter(
-                    game => game.date === date
-                );
+        element.innerHTML = `
+            <p>No games scheduled.</p>
+        `;
+
+        return;
+
+    }
 
 
-            return `
+    element.innerHTML = `
 
-                <div class="schedule-day">
+        <div class="schedule-day">
 
-                    <div class="schedule-date">
-                        ${date}
+            <div class="schedule-date">
+
+                ${gameDate}
+
+            </div>
+
+
+            ${games.map(game => {
+
+                return `
+
+                    <div class="schedule-game">
+
+                        <div class="schedule-time">
+
+                            ${game.time}
+
+                        </div>
+
+
+                        <div class="schedule-matchup">
+
+                            ${teamName(game.awayShort)}
+
+                            <span class="at-symbol">
+                                vs.
+                            </span>
+
+                            ${teamName(game.homeShort)}
+
+                        </div>
+
+
+                        <div class="schedule-score">
+
+                            GAME
+
+                        </div>
+
                     </div>
 
+                `;
 
-                    ${dateGames.map(game => {
+            }).join("")}
 
-                        const score =
-                            game.homeScore === null
-                                ? "VS"
-                                : `${game.awayScore} - ${game.homeScore}`;
+        </div>
 
-
-                        return `
-
-                            <div class="schedule-game">
-
-                                <div class="schedule-time">
-                                    ${game.time}
-                                </div>
-
-
-                                <div class="schedule-matchup">
-
-                                    ${teamName(game.away)}
-
-                                    @
-
-                                    ${teamName(game.home)}
-
-                                </div>
-
-
-                                <div class="schedule-score">
-                                    ${score}
-                                </div>
-
-                            </div>
-
-                        `;
-
-                    }).join("")}
-
-                </div>
-
-            `;
-
-        }).join("");
+    `;
 
 }
 
@@ -690,7 +753,9 @@ function renderSchedule(filter = "ALL") {
 function renderPlayers() {
 
     const element =
-        document.getElementById("players-table");
+        document.getElementById(
+            "players-table"
+        );
 
     if (!element) {
         return;
@@ -698,14 +763,16 @@ function renderPlayers() {
 
 
     const search =
-        document.getElementById("player-search")
-            ?.value
-            .toLowerCase() || "";
+        document.getElementById(
+            "player-search"
+        )?.value
+        .toLowerCase() || "";
 
 
     const selectedTeam =
-        document.getElementById("player-team")
-            ?.value || "ALL";
+        document.getElementById(
+            "player-team"
+        )?.value || "ALL";
 
 
     const filtered =
@@ -722,7 +789,10 @@ function renderPlayers() {
                 player.team === selectedTeam;
 
 
-            return matchesSearch && matchesTeam;
+            return (
+                matchesSearch &&
+                matchesTeam
+            );
 
         });
 
@@ -782,34 +852,43 @@ function renderPlayers() {
 
 
 /* =========================================
-   SCHEDULE FILTER BUTTONS
+   SCHEDULE FILTERS
    ========================================= */
 
 function setupScheduleFilters() {
 
     const buttons =
-        document.querySelectorAll(".filter-button");
+        document.querySelectorAll(
+            ".filter-button"
+        );
 
 
     buttons.forEach(button => {
 
-        button.addEventListener("click", () => {
+        button.addEventListener(
+            "click",
+            () => {
 
-            buttons.forEach(btn =>
-                btn.classList.remove("active")
-            );
-
-
-            button.classList.add("active");
-
-
-            const team =
-                button.dataset.team;
+                buttons.forEach(btn =>
+                    btn.classList.remove(
+                        "active"
+                    )
+                );
 
 
-            renderSchedule(team);
+                button.classList.add(
+                    "active"
+                );
 
-        });
+
+                const team =
+                    button.dataset.team;
+
+
+                renderSchedule(team);
+
+            }
+        );
 
     });
 
@@ -817,32 +896,40 @@ function setupScheduleFilters() {
 
 
 /* =========================================
-   PLAYER SEARCH
+   PLAYER FILTERS
    ========================================= */
 
 function setupPlayerFilters() {
 
     const search =
-        document.getElementById("player-search");
+        document.getElementById(
+            "player-search"
+        );
 
 
     const team =
-        document.getElementById("player-team");
+        document.getElementById(
+            "player-team"
+        );
 
 
     if (search) {
+
         search.addEventListener(
             "input",
             renderPlayers
         );
+
     }
 
 
     if (team) {
+
         team.addEventListener(
             "change",
             renderPlayers
         );
+
     }
 
 }
@@ -862,7 +949,7 @@ document.addEventListener(
 
         renderTeams();
 
-        renderRecentGames();
+        renderNextGame();
 
         renderSchedule();
 
