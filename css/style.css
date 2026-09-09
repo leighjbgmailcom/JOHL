@@ -8,7 +8,6 @@
     padding: 0;
 }
 
-
 body {
     font-family: Arial, Helvetica, sans-serif;
     background: #f3f5f7;
@@ -16,12 +15,10 @@ body {
     line-height: 1.5;
 }
 
-
 .container {
     width: min(1200px, 92%);
     margin: auto;
 }
-
 
 /* =========================================
    HEADER
@@ -33,7 +30,6 @@ body {
     border-bottom: 4px solid #c8102e;
 }
 
-
 .header-inner {
     min-height: 82px;
     display: flex;
@@ -42,43 +38,34 @@ body {
     gap: 30px;
 }
 
-
 .league-brand {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-
 .league-logo {
     width: 55px;
     height: 55px;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     border: 3px solid white;
     border-radius: 50%;
-
     font-size: 14px;
     font-weight: 900;
-
     background: #c8102e;
 }
-
 
 .league-brand h1 {
     font-size: 20px;
     line-height: 1;
 }
 
-
 .league-brand span {
     font-size: 13px;
     color: #b9c5cf;
 }
-
 
 nav {
     display: flex;
@@ -86,47 +73,36 @@ nav {
     flex-wrap: wrap;
 }
 
-
 nav a {
     color: white;
     text-decoration: none;
-
     padding: 10px 14px;
-
     font-size: 14px;
     font-weight: bold;
-
     border-radius: 4px;
 }
-
 
 nav a:hover,
 nav a.active {
     background: #c8102e;
 }
 
-
 /* =========================================
    HERO
    ========================================= */
 
 .hero {
-    background:
-        linear-gradient(
-            rgba(7, 26, 43, .92),
-            rgba(7, 26, 43, .92)
-        );
-
+    background: linear-gradient(
+        rgba(7, 26, 43, .92),
+        rgba(7, 26, 43, .92)
+    );
     color: white;
-
     padding: 85px 0;
 }
-
 
 .hero-content {
     max-width: 700px;
 }
-
 
 .eyebrow {
     color: #c8102e;
@@ -134,13 +110,12 @@ nav a.active {
     font-weight: 900;
     letter-spacing: 2px;
     margin-bottom: 8px;
+    text-transform: uppercase;
 }
-
 
 .hero .eyebrow {
     color: #d7e2ea;
 }
-
 
 .hero h2 {
     font-size: clamp(40px, 6vw, 70px);
@@ -148,36 +123,28 @@ nav a.active {
     margin-bottom: 20px;
 }
 
-
 .hero p:not(.eyebrow) {
     font-size: 20px;
     color: #d5dde3;
     margin-bottom: 30px;
 }
 
-
 .button {
     display: inline-block;
-
     background: #c8102e;
     color: white;
-
     padding: 13px 22px;
-
     border-radius: 4px;
-
     text-decoration: none;
     font-weight: bold;
 }
-
 
 .button:hover {
     background: #a70d26;
 }
 
-
 /* =========================================
-   CONTENT
+   CONTENT & SECTIONS
    ========================================= */
 
 .main-content,
@@ -185,25 +152,21 @@ nav a.active {
     padding: 55px 0;
 }
 
-
 section {
     margin-bottom: 55px;
 }
 
-
 .section-heading {
     display: flex;
     justify-content: space-between;
-    align-items: end;
+    align-items: flex-end;
     margin-bottom: 20px;
 }
-
 
 .section-heading h2,
 .page-title h2 {
     font-size: 32px;
 }
-
 
 .section-heading a {
     color: #c8102e;
@@ -211,178 +174,160 @@ section {
     font-weight: bold;
 }
 
-
 .page-title {
     margin-bottom: 35px;
 }
-
 
 .page-title p:last-child {
     color: #64727e;
 }
 
-
 /* =========================================
-   NEXT GAME
+   UP NEXT (MATCHES SCREENSHOT)
    ========================================= */
 
-.next-game {
-    background: white;
-
-    border-radius: 8px;
-
-    padding: 30px;
-
-    box-shadow: 0 3px 15px rgba(0,0,0,.08);
-
-    display: grid;
-
-    grid-template-columns: 1fr 200px 1fr;
-
-    align-items: center;
-
-    text-align: center;
-
-    gap: 20px;
+.up-next-section {
+    margin-bottom: 55px;
 }
 
+.up-next-card {
+    background-color: #f4f6f8;
+    padding: 2.5rem 3rem;
+    border-radius: 6px;
+}
 
-.team-badge {
-    width: 70px;
-    height: 70px;
-
-    border-radius: 50%;
-
-    margin: 0 auto 12px;
-
+.section-heading-split {
     display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 2rem;
+}
 
+.eyebrow-red {
+    color: #8b1e22;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    margin-bottom: 0.5rem;
+}
+
+.game-date-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #111;
+    margin: 0;
+}
+
+.link-schedule {
+    color: #8b1e22;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.link-schedule:hover {
+    text-decoration: underline;
+}
+
+/* Game Rows */
+.game-row {
+    display: flex;
     align-items: center;
-    justify-content: center;
-
-    color: white;
-
-    font-weight: 900;
-
-    border: 4px solid white;
-
-    box-shadow: 0 2px 7px rgba(0,0,0,.25);
+    padding: 1.25rem 0;
 }
-
-
-.team-badge.toronto {
-    background: #003e7e;
-}
-
-
-.team-badge.montreal {
-    background: #af1e2d;
-}
-
-
-.team-badge.vancouver {
-    background: #00843d;
-}
-
-
-.team-badge.quebec {
-    background: #00539b;
-}
-
-
-.team-badge.edmonton {
-    background: #ff4c00;
-}
-
-
-.team-badge.ottawa {
-    background: #c8102e;
-}
-
-
-.game-team h3 {
-    font-size: 17px;
-}
-
-
-.game-date {
-    font-size: 14px;
-    color: #66727d;
-}
-
 
 .game-time {
-    font-size: 32px;
-    font-weight: 900;
-    margin: 5px 0;
+    width: 120px;
+    font-size: 1.1rem;
+    color: #444;
 }
 
-
-.game-location {
-    color: #66727d;
-    font-size: 14px;
+.game-matchup {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
 }
 
+.team-side {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    width: 230px;
+}
+
+.team-name {
+    font-size: 1.05rem;
+    color: #222;
+}
+
+.vs-label {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+/* Circular Team Badges */
+.team-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+/* Team Brand Color Classes */
+.badge-mtl, .team-badge.montreal { background-color: #9e2a2b; }
+.badge-tor, .team-badge.toronto { background-color: #163e75; }
+.badge-van, .team-badge.vancouver { background-color: #2a7241; }
+.badge-edm, .team-badge.edmonton { background-color: #e0531c; }
+.badge-que, .team-badge.quebec { background-color: #215196; }
+.badge-ott, .team-badge.ottawa { background-color: #9e2a2b; }
 
 /* =========================================
-   TABLES
+   TABLES (STANDINGS / PLAYERS)
    ========================================= */
 
 .table-wrapper {
     background: white;
-
     border-radius: 8px;
-
     overflow-x: auto;
-
     box-shadow: 0 3px 15px rgba(0,0,0,.07);
 }
-
 
 table {
     width: 100%;
     border-collapse: collapse;
 }
 
-
 th {
     background: #071a2b;
     color: white;
-
     text-align: left;
-
     padding: 14px 12px;
-
     font-size: 12px;
-
     letter-spacing: .5px;
 }
 
-
 td {
     padding: 14px 12px;
-
     border-bottom: 1px solid #e5e9ec;
-
     font-size: 14px;
 }
-
 
 tbody tr:hover {
     background: #f6f8fa;
 }
 
-
 .team-name-cell {
     font-weight: bold;
 }
-
 
 .rank {
     font-weight: 900;
     color: #c8102e;
 }
-
 
 /* =========================================
    TEAMS
@@ -390,61 +335,41 @@ tbody tr:hover {
 
 .team-grid {
     display: grid;
-
-    grid-template-columns:
-        repeat(3, 1fr);
-
+    grid-template-columns: repeat(3, 1fr);
     gap: 20px;
 }
 
-
 .team-grid.large {
-    grid-template-columns:
-        repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr);
 }
-
 
 .team-card {
     background: white;
-
     border-radius: 8px;
-
     padding: 25px;
-
     display: flex;
-
     align-items: center;
-
     gap: 18px;
-
     box-shadow: 0 3px 15px rgba(0,0,0,.07);
-
     transition: transform .15s;
 }
-
 
 .team-card:hover {
     transform: translateY(-3px);
 }
 
-
 .team-card .team-badge {
-    flex-shrink: 0;
-
     margin: 0;
 }
-
 
 .team-card h3 {
     margin-bottom: 4px;
 }
 
-
 .team-card p {
     color: #75818b;
     font-size: 13px;
 }
-
 
 /* =========================================
    SCHEDULE
@@ -452,29 +377,19 @@ tbody tr:hover {
 
 .filter-buttons {
     display: flex;
-
     gap: 8px;
-
     flex-wrap: wrap;
-
     margin-bottom: 25px;
 }
 
-
 .filter-button {
     border: 1px solid #ccd3d9;
-
     background: white;
-
     padding: 9px 14px;
-
     border-radius: 4px;
-
     cursor: pointer;
-
     font-weight: bold;
 }
-
 
 .filter-button:hover,
 .filter-button.active {
@@ -483,62 +398,43 @@ tbody tr:hover {
     border-color: #c8102e;
 }
 
-
 .schedule-day {
     margin-bottom: 30px;
 }
 
-
 .schedule-date {
     font-size: 18px;
     font-weight: 900;
-
     margin-bottom: 10px;
-
     padding-bottom: 8px;
-
     border-bottom: 2px solid #c8102e;
 }
 
-
 .schedule-game {
     background: white;
-
     margin-bottom: 8px;
-
     padding: 18px 20px;
-
     border-radius: 6px;
-
     display: grid;
-
     grid-template-columns: 120px 1fr 100px;
-
     align-items: center;
-
     box-shadow: 0 2px 8px rgba(0,0,0,.05);
 }
-
 
 .schedule-time {
     color: #687681;
     font-size: 14px;
 }
 
-
 .schedule-matchup {
     font-weight: bold;
 }
 
-
 .schedule-score {
     text-align: right;
-
     font-size: 18px;
-
     font-weight: 900;
 }
-
 
 /* =========================================
    PLAYERS
@@ -546,31 +442,40 @@ tbody tr:hover {
 
 .player-controls {
     display: flex;
-
     gap: 12px;
-
     margin-bottom: 20px;
 }
-
 
 .player-controls input,
 .player-controls select {
     padding: 12px;
-
     border: 1px solid #ccd3d9;
-
     border-radius: 4px;
-
     font-size: 14px;
-
     background: white;
 }
-
 
 .player-controls input {
     flex: 1;
 }
 
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.badge-skater {
+    background: #e1f0ff;
+    color: #00539b;
+}
+
+.badge-goalie {
+    background: #ffe3e3;
+    color: #a70d26;
+}
 
 /* =========================================
    RESULTS
@@ -578,37 +483,26 @@ tbody tr:hover {
 
 .results-list {
     display: grid;
-
     gap: 8px;
 }
 
-
 .result-card {
     background: white;
-
     padding: 16px 20px;
-
     border-radius: 6px;
-
     display: flex;
-
     justify-content: space-between;
-
     align-items: center;
-
     box-shadow: 0 2px 8px rgba(0,0,0,.05);
 }
-
 
 .result-team {
     font-weight: bold;
 }
 
-
 .result-score {
     font-weight: 900;
 }
-
 
 /* =========================================
    FOOTER
@@ -616,83 +510,81 @@ tbody tr:hover {
 
 footer {
     background: #071a2b;
-
     color: white;
-
     padding: 35px 0;
-
     margin-top: 30px;
 }
 
-
 .footer-inner {
     display: flex;
-
     justify-content: space-between;
-
     gap: 20px;
 }
 
-
 .footer-inner p {
     color: #9eabb5;
-
     font-size: 13px;
-
     margin-top: 5px;
 }
 
-
 /* =========================================
-   MOBILE
+   RESPONSIVE DESIGN / MOBILE
    ========================================= */
 
 @media (max-width: 800px) {
-
     .header-inner {
         flex-direction: column;
-
         align-items: flex-start;
-
         padding: 18px 0;
     }
 
-
     nav {
         width: 100%;
-
         overflow-x: auto;
     }
-
 
     .hero {
         padding: 55px 0;
     }
 
-
-    .next-game {
-        grid-template-columns: 1fr;
+    .up-next-card {
+        padding: 1.5rem;
     }
 
+    .section-heading-split {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .game-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .game-matchup {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
 
     .team-grid,
     .team-grid.large {
         grid-template-columns: 1fr;
     }
 
-
     .schedule-game {
         grid-template-columns: 80px 1fr 70px;
     }
-
 
     .player-controls {
         flex-direction: column;
     }
 
-
     .footer-inner {
         flex-direction: column;
     }
-
 }
