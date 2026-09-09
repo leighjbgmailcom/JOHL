@@ -1,24 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Jordan Oldtimers Hockey League</title>
-
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
 <header class="site-header">
-
     <div class="container header-inner">
 
         <div class="league-brand">
             <div class="league-logo">JOHL</div>
-
             <div>
                 <h1>Jordan Oldtimers</h1>
                 <span>Hockey League</span>
@@ -34,19 +29,121 @@
         </nav>
 
     </div>
-
 </header>
 
 
-<main class="container page-content">
+<section class="hero">
+    <div class="container">
 
-    <div class="page-title">
-        <p class="eyebrow">2026/2027 SEASON</p>
-        <h2>Up Next</h2>
-        <p>Upcoming games at Jordan Arena.</p>
+        <div class="hero-content">
+            <p class="eyebrow">JORDAN OLD TIMERS HOCKEY LEAGUE</p>
+
+            <h2>
+                Old School Hockey.<br>
+                Great Competition.
+            </h2>
+
+            <p>
+                Six teams. One league. A whole lot of hockey.
+            </p>
+
+            <a href="schedule.html" class="button">
+                View Schedule
+            </a>
+        </div>
+
+    </div>
+</section>
+
+
+<main class="container main-content">
+
+    <!-- NEXT GAME -->
+
+   <section>
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">UP NEXT</p>
+            <h2>Next Game Day</h2>
+        </div>
+
+        <a href="schedule.html">Full Schedule →</a>
     </div>
 
-    <div id="up-next-schedule"></div>
+    <div id="next-game"></div>
+</section>
+
+
+    <!-- STANDINGS -->
+
+    <section>
+
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">LEAGUE</p>
+                <h2>Standings</h2>
+            </div>
+
+            <a href="standings.html">Full Standings →</a>
+        </div>
+
+        <div class="table-wrapper">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Team</th>
+                        <th>GP</th>
+                        <th>W</th>
+                        <th>L</th>
+                        <th>T</th>
+                        <th>PTS</th>
+                    </tr>
+                </thead>
+
+                <tbody id="standings-preview"></tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+    <!-- TEAMS -->
+
+    <section>
+
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">THE LEAGUE</p>
+                <h2>Our Teams</h2>
+            </div>
+
+            <a href="teams.html">View All Teams →</a>
+        </div>
+
+        <div class="team-grid" id="team-grid"></div>
+
+    </section>
+
+
+    <!-- RECENT RESULTS -->
+
+    <section>
+
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">RESULTS</p>
+                <h2>Recent Games</h2>
+            </div>
+        </div>
+
+        <div id="recent-games" class="results-list"></div>
+
+    </section>
 
 </main>
 
@@ -60,7 +157,9 @@
             <p>Six teams. One great league.</p>
         </div>
 
-        <p>© 2026 JOHL</p>
+        <div>
+            <p>© 2026 Jordan Oldtimers Hockey League</p>
+        </div>
 
     </div>
 
