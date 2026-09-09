@@ -308,41 +308,35 @@ function formatDate(date) {
 
 function getNextGameDay() {
 
-    const nextSunday = getNextSunday();
+    const gameDate = new Date(2026, 8, 27);
 
     return [
 
         {
-            date: nextSunday,
+            date: gameDate,
             time: "6:30 PM",
             home: "Toronto Maple Leafs",
             away: "Montréal Canadiens",
             homeShort: "TOR",
-            awayShort: "MTL",
-            homeScore: null,
-            awayScore: null
+            awayShort: "MTL"
         },
 
         {
-            date: nextSunday,
+            date: gameDate,
             time: "7:50 PM",
             home: "Edmonton Oilers",
             away: "Vancouver Canucks",
             homeShort: "EDM",
-            awayShort: "VAN",
-            homeScore: null,
-            awayScore: null
+            awayShort: "VAN"
         },
 
         {
-            date: nextSunday,
+            date: gameDate,
             time: "9:10 PM",
             home: "Ottawa Senators",
             away: "Québec Nordiques",
             homeShort: "OTT",
-            awayShort: "QUE",
-            homeScore: null,
-            awayScore: null
+            awayShort: "QUE"
         }
 
     ];
@@ -569,67 +563,70 @@ function renderTeams() {
 function renderNextGame() {
 
     const element =
-        document.getElementById(
-            "next-game"
-        );
+        document.getElementById("next-game");
 
     if (!element) {
         return;
     }
 
+    const games = getNextGameDay();
 
-    const games =
-        getNextGameDay();
-
-
-    const game = games[0];
-
+    const gameDate = formatDate(games[0].date);
 
     element.innerHTML = `
 
-        <div class="next-game">
+        <div class="next-game-day">
 
-            <div class="game-team">
+            <div class="next-game-date">
 
-                ${teamBadge(game.awayShort)}
+                <div class="eyebrow">
+                    NEXT GAME DAY
+                </div>
 
                 <h3>
-                    ${game.away}
+                    ${gameDate}
                 </h3>
 
             </div>
 
 
-            <div class="game-info">
+            <div class="homepage-games">
 
-                <div class="game-date">
+                ${games.map(game => `
 
-                    ${formatDate(game.date)}
+                    <div class="homepage-game">
 
-                </div>
+                        <div class="homepage-game-time">
+                            ${game.time}
+                        </div>
 
-                <div class="game-time">
+                        <div class="homepage-team">
 
-                    ${game.time}
+                            ${teamBadge(game.awayShort)}
 
-                </div>
+                            <span>
+                                ${game.away}
+                            </span>
 
-                <div class="game-location">
+                        </div>
 
-                    Jordan Arena
+                        <div class="homepage-vs">
+                            vs.
+                        </div>
 
-                </div>
+                        <div class="homepage-team">
 
-            </div>
+                            ${teamBadge(game.homeShort)}
 
+                            <span>
+                                ${game.home}
+                            </span>
 
-            <div class="game-team">
+                        </div>
 
-                ${teamBadge(game.homeShort)}
+                    </div>
 
-                <h3>
-                    ${game.home}
-                </h3>
+                `).join("")}
 
             </div>
 
