@@ -278,9 +278,17 @@ function renderUpNextGame() {
 }
 
 // Initialize on load
-document.addEventListener('DOMContentLoaded', () => {
-    renderUpNextGame();
-    renderFullSchedule('full-schedule-list');
+document.addEventListener("DOMContentLoaded", () => {
+    // If we are on schedule.html
+    if (document.getElementById("schedule-list")) {
+        renderSchedule("ALL");
+        setupScheduleFilters();
+    }
+
+    // If we are on index.html
+    if (document.getElementById("next-game")) {
+        renderUpNextGame();
+    }
 });
 // 2026-27 JOHL Master Player Roster Data
 const JOHL_ROSTERS = {
