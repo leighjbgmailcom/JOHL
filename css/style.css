@@ -240,17 +240,19 @@ section {
     color: #444;
 }
 
+/* css/style.css */
 .game-matchup {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
 }
 
 .team-side {
     display: flex;
     align-items: center;
-    gap: 0.85rem;
-    width: 230px;
+    gap: 8px;
 }
 
 .team-name {
