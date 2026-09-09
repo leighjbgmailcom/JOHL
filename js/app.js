@@ -1,11 +1,12 @@
-```javascript
 /* =========================================
-   SIX CITY HOCKEY LEAGUE
-   MAIN JAVASCRIPT
-========================================= */
+   JORDAN OLDTIMERS HOCKEY LEAGUE
+   DUMMY DATA
+   ========================================= */
 
 
-/* ---------- TEAMS ---------- */
+/* =========================================
+   TEAMS
+   ========================================= */
 
 const teams = [
 
@@ -13,119 +14,121 @@ const teams = [
         id: 1,
         name: "Toronto Maple Leafs",
         short: "TOR",
-        class: "leafs"
+        className: "toronto"
     },
 
     {
         id: 2,
         name: "Vancouver Canucks",
         short: "VAN",
-        class: "canucks"
+        className: "vancouver"
     },
 
     {
         id: 3,
-        name: "Nordiques",
-        short: "NOR",
-        class: "nordiques"
+        name: "Québec Nordiques",
+        short: "QUE",
+        className: "quebec"
     },
 
     {
         id: 4,
         name: "Edmonton Oilers",
         short: "EDM",
-        class: "oilers"
+        className: "edmonton"
     },
 
     {
         id: 5,
         name: "Montréal Canadiens",
         short: "MTL",
-        class: "canadiens"
+        className: "montreal"
     },
 
     {
         id: 6,
         name: "Ottawa Senators",
         short: "OTT",
-        class: "senators"
+        className: "ottawa"
     }
 
 ];
 
 
-/* ---------- STANDINGS ---------- */
+/* =========================================
+   STANDINGS
+   ========================================= */
 
 const standings = [
 
     {
-        team: 1,
+        team: "TOR",
         gp: 8,
         w: 6,
         l: 1,
         t: 1,
         ot: 0,
         gf: 42,
-        ga: 25,
+        ga: 27,
         pts: 13
     },
 
     {
-        team: 4,
+        team: "EDM",
         gp: 8,
         w: 5,
         l: 2,
         t: 1,
         ot: 0,
-        gf: 38,
-        ga: 27,
+        gf: 39,
+        ga: 29,
         pts: 11
     },
 
     {
-        team: 5,
+        team: "MTL",
         gp: 8,
         w: 4,
         l: 3,
         t: 1,
         ot: 0,
-        gf: 34,
+        gf: 35,
         ga: 31,
         pts: 9
     },
 
     {
-        team: 2,
+        team: "VAN",
         gp: 8,
         w: 4,
         l: 4,
         t: 0,
         ot: 0,
-        gf: 32,
-        ga: 33,
+        gf: 33,
+        ga: 34,
         pts: 8
     },
 
     {
-        team: 6,
+        team: "OTT",
         gp: 8,
         w: 3,
         l: 4,
         t: 1,
         ot: 0,
-        gf: 29,
+        gf: 30,
         ga: 35,
         pts: 7
     },
 
     {
-        team: 3,
+        team: "QUE",
         gp: 8,
         w: 2,
         l: 5,
         t: 1,
         ot: 0,
-        gf: 24,
+        gf: 26,
         ga: 41,
         pts: 5
     }
@@ -133,25 +136,16 @@ const standings = [
 ];
 
 
-/* ---------- PLAYERS ---------- */
+/* =========================================
+   PLAYERS
+   ========================================= */
 
 const players = [
 
     {
         number: 91,
         name: "John Smith",
-        team: 1,
-        position: "F",
-        gp: 8,
-        goals: 9,
-        assists: 8,
-        points: 17
-    },
-
-    {
-        number: 87,
-        name: "Mike Johnson",
-        team: 1,
+        team: "TOR",
         position: "F",
         gp: 8,
         goals: 7,
@@ -161,30 +155,30 @@ const players = [
 
     {
         number: 22,
-        name: "Chris Wilson",
-        team: 2,
+        name: "Mike Johnson",
+        team: "EDM",
         position: "F",
         gp: 8,
-        goals: 8,
-        assists: 6,
+        goals: 6,
+        assists: 8,
         points: 14
     },
 
     {
-        number: 19,
-        name: "Dave Brown",
-        team: 4,
-        position: "F",
+        number: 17,
+        name: "Chris Brown",
+        team: "MTL",
+        position: "D",
         gp: 8,
-        goals: 6,
-        assists: 7,
+        goals: 3,
+        assists: 10,
         points: 13
     },
 
     {
-        number: 12,
-        name: "Ryan Miller",
-        team: 5,
+        number: 88,
+        name: "Dave Wilson",
+        team: "VAN",
         position: "F",
         gp: 8,
         goals: 5,
@@ -193,279 +187,329 @@ const players = [
     },
 
     {
-        number: 44,
-        name: "Steve Wilson",
-        team: 6,
-        position: "D",
+        number: 14,
+        name: "Steve Miller",
+        team: "OTT",
+        position: "F",
         gp: 8,
-        goals: 3,
-        assists: 8,
+        goals: 6,
+        assists: 5,
         points: 11
     },
 
     {
         number: 9,
-        name: "Mark Davis",
-        team: 3,
+        name: "Paul Anderson",
+        team: "QUE",
         position: "F",
         gp: 8,
-        goals: 5,
-        assists: 5,
+        goals: 4,
+        assists: 6,
         points: 10
+    },
+
+    {
+        number: 4,
+        name: "Rob Thompson",
+        team: "TOR",
+        position: "D",
+        gp: 8,
+        goals: 2,
+        assists: 8,
+        points: 10
+    },
+
+    {
+        number: 30,
+        name: "Mark Davis",
+        team: "EDM",
+        position: "G",
+        gp: 8,
+        goals: 0,
+        assists: 1,
+        points: 1
+    },
+
+    {
+        number: 7,
+        name: "Jason White",
+        team: "MTL",
+        position: "F",
+        gp: 8,
+        goals: 4,
+        assists: 5,
+        points: 9
+    },
+
+    {
+        number: 19,
+        name: "Dan Clark",
+        team: "VAN",
+        position: "D",
+        gp: 8,
+        goals: 2,
+        assists: 6,
+        points: 8
     }
 
 ];
 
 
-/* ---------- GAMES ---------- */
+/* =========================================
+   GAMES
+   ========================================= */
 
 const games = [
 
     {
-        date: "September 10",
+        date: "September 15, 2026",
         time: "7:00 PM",
-        home: 1,
-        away: 2,
-        homeScore: 5,
-        awayScore: 3,
-        location: "Community Arena",
-        status: "Final"
-    },
-
-    {
-        date: "September 10",
-        time: "8:30 PM",
-        home: 4,
-        away: 5,
+        home: "TOR",
+        away: "MTL",
         homeScore: 4,
-        awayScore: 2,
-        location: "Community Arena",
-        status: "Final"
+        awayScore: 2
     },
 
     {
-        date: "September 11",
-        time: "7:30 PM",
-        home: 6,
-        away: 3,
+        date: "September 15, 2026",
+        time: "8:30 PM",
+        home: "EDM",
+        away: "VAN",
         homeScore: 3,
-        awayScore: 3,
-        location: "Community Arena",
-        status: "Final"
+        awayScore: 3
     },
 
     {
-        date: "September 17",
-        time: "7:30 PM",
-        home: 1,
-        away: 4,
-        homeScore: null,
-        awayScore: null,
-        location: "Community Arena",
-        status: "Upcoming"
+        date: "September 16, 2026",
+        time: "7:00 PM",
+        home: "OTT",
+        away: "QUE",
+        homeScore: 5,
+        awayScore: 2
     },
 
     {
-        date: "September 17",
-        time: "9:00 PM",
-        home: 2,
-        away: 6,
+        date: "September 22, 2026",
+        time: "7:00 PM",
+        home: "QUE",
+        away: "TOR",
         homeScore: null,
-        awayScore: null,
-        location: "Community Arena",
-        status: "Upcoming"
+        awayScore: null
     },
 
     {
-        date: "September 18",
-        time: "7:30 PM",
-        home: 5,
-        away: 3,
+        date: "September 22, 2026",
+        time: "8:30 PM",
+        home: "MTL",
+        away: "EDM",
         homeScore: null,
-        awayScore: null,
-        location: "Community Arena",
-        status: "Upcoming"
+        awayScore: null
+    },
+
+    {
+        date: "September 23, 2026",
+        time: "7:00 PM",
+        home: "VAN",
+        away: "OTT",
+        homeScore: null,
+        awayScore: null
+    },
+
+    {
+        date: "September 29, 2026",
+        time: "7:00 PM",
+        home: "TOR",
+        away: "EDM",
+        homeScore: null,
+        awayScore: null
+    },
+
+    {
+        date: "September 29, 2026",
+        time: "8:30 PM",
+        home: "QUE",
+        away: "MTL",
+        homeScore: null,
+        awayScore: null
     }
 
 ];
 
 
-/* ---------- HELPER ---------- */
+/* =========================================
+   HELPER FUNCTIONS
+   ========================================= */
 
-function getTeam(id) {
+function getTeam(short) {
 
-    return teams.find(team => team.id === id);
+    return teams.find(team => team.short === short);
 
 }
 
 
-/* =========================================
-   HOME PAGE — STANDINGS
-========================================= */
+function teamName(short) {
 
-const homeStandings =
-    document.getElementById("homeStandings");
+    const team = getTeam(short);
 
-
-if (homeStandings) {
-
-    standings.forEach((row, index) => {
-
-        const team = getTeam(row.team);
-
-        homeStandings.innerHTML += `
-
-            <tr>
-
-                <td>${index + 1}</td>
-
-                <td>
-                    <strong>${team.name}</strong>
-                </td>
-
-                <td>${row.gp}</td>
-
-                <td>${row.w}</td>
-
-                <td>${row.l}</td>
-
-                <td>${row.t}</td>
-
-                <td>
-                    <strong>${row.pts}</strong>
-                </td>
-
-            </tr>
-
-        `;
-
-    });
+    return team ? team.name : short;
 
 }
 
 
-/* =========================================
-   HOME PAGE — TEAMS
-========================================= */
+function teamBadge(short) {
 
-const homeTeams =
-    document.getElementById("homeTeams");
+    const team = getTeam(short);
 
-
-function createTeamCard(team) {
-
-    const record =
-        standings.find(x => x.team === team.id);
-
+    if (!team) {
+        return "";
+    }
 
     return `
-
-        <div class="team-card">
-
-            <div class="team-card-top">
-
-                <div class="team-logo ${team.class}">
-                    ${team.short}
-                </div>
-
-                <div>
-
-                    <h3>${team.name}</h3>
-
-                    <small>
-                        ${record.w}-${record.l}-${record.t}
-                    </small>
-
-                </div>
-
-            </div>
-
-
-            <div class="team-record">
-
-                <div>
-
-                    <small>POINTS</small>
-
-                    <strong>
-                        ${record.pts}
-                    </strong>
-
-                </div>
-
-                <div>
-
-                    <small>GP</small>
-
-                    <strong>
-                        ${record.gp}
-                    </strong>
-
-                </div>
-
-            </div>
-
+        <div class="team-badge ${team.className}">
+            ${team.short}
         </div>
-
     `;
 
 }
 
 
-if (homeTeams) {
+/* =========================================
+   HOME PAGE - STANDINGS
+   ========================================= */
 
-    teams.forEach(team => {
+function renderStandingsPreview() {
 
-        homeTeams.innerHTML +=
-            createTeamCard(team);
+    const element =
+        document.getElementById("standings-preview");
 
-    });
+    if (!element) {
+        return;
+    }
+
+    element.innerHTML = standings.map((team, index) => {
+
+        return `
+
+            <tr>
+
+                <td class="rank">
+                    ${index + 1}
+                </td>
+
+                <td class="team-name-cell">
+                    ${teamName(team.team)}
+                </td>
+
+                <td>${team.gp}</td>
+
+                <td>${team.w}</td>
+
+                <td>${team.l}</td>
+
+                <td>${team.t}</td>
+
+                <td><strong>${team.pts}</strong></td>
+
+            </tr>
+
+        `;
+
+    }).join("");
 
 }
 
 
 /* =========================================
-   HOME PAGE — RECENT GAMES
-========================================= */
+   FULL STANDINGS
+   ========================================= */
 
-const recentGames =
-    document.getElementById("recentGames");
+function renderFullStandings() {
+
+    const element =
+        document.getElementById("standings-table");
+
+    if (!element) {
+        return;
+    }
+
+    element.innerHTML = standings.map((team, index) => {
+
+        return `
+
+            <tr>
+
+                <td class="rank">
+                    ${index + 1}
+                </td>
+
+                <td class="team-name-cell">
+                    ${teamName(team.team)}
+                </td>
+
+                <td>${team.gp}</td>
+
+                <td>${team.w}</td>
+
+                <td>${team.l}</td>
+
+                <td>${team.t}</td>
+
+                <td>${team.ot}</td>
+
+                <td>${team.gf}</td>
+
+                <td>${team.ga}</td>
+
+                <td><strong>${team.pts}</strong></td>
+
+            </tr>
+
+        `;
+
+    }).join("");
+
+}
 
 
-if (recentGames) {
+/* =========================================
+   TEAM CARDS
+   ========================================= */
 
-    games
-        .filter(game => game.status === "Final")
-        .forEach(game => {
+function renderTeams() {
 
-            const home = getTeam(game.home);
+    const elements = [
 
-            const away = getTeam(game.away);
+        document.getElementById("team-grid"),
+
+        document.getElementById("all-teams")
+
+    ];
 
 
-            recentGames.innerHTML += `
+    elements.forEach(container => {
 
-                <div class="result-card">
+        if (!container) {
+            return;
+        }
 
-                    <div class="result-date">
-                        ${game.date}
-                    </div>
 
-                    <div class="result-teams">
+        container.innerHTML = teams.map(team => {
 
-                        ${home.name}
+            return `
 
-                        <br>
+                <div class="team-card">
 
-                        ${away.name}
+                    ${teamBadge(team.short)}
 
-                    </div>
+                    <div>
 
-                    <div class="result-score">
+                        <h3>
+                            ${team.name}
+                        </h3>
 
-                        ${game.homeScore}
-                        -
-                        ${game.awayScore}
+                        <p>
+                            Jordan Oldtimers Hockey League
+                        </p>
 
                     </div>
 
@@ -473,25 +517,7 @@ if (recentGames) {
 
             `;
 
-        });
-
-}
-
-
-/* =========================================
-   TEAMS PAGE
-========================================= */
-
-const allTeams =
-    document.getElementById("allTeams");
-
-
-if (allTeams) {
-
-    teams.forEach(team => {
-
-        allTeams.innerHTML +=
-            createTeamCard(team);
+        }).join("");
 
     });
 
@@ -499,175 +525,191 @@ if (allTeams) {
 
 
 /* =========================================
-   STANDINGS PAGE
-========================================= */
+   RECENT GAMES
+   ========================================= */
 
-const standingsTable =
-    document.getElementById("standingsTable");
+function renderRecentGames() {
 
+    const element =
+        document.getElementById("recent-games");
 
-if (standingsTable) {
-
-    standings.forEach((row, index) => {
-
-        const team =
-            getTeam(row.team);
+    if (!element) {
+        return;
+    }
 
 
-        standingsTable.innerHTML += `
+    const completedGames =
+        games.filter(game =>
+            game.homeScore !== null
+        ).slice(0, 5);
 
-            <tr>
 
-                <td>${index + 1}</td>
+    element.innerHTML =
+        completedGames.map(game => {
 
-                <td>
-                    <strong>${team.name}</strong>
-                </td>
+            return `
 
-                <td>${row.gp}</td>
+                <div class="result-card">
 
-                <td>${row.w}</td>
+                    <div>
 
-                <td>${row.l}</td>
+                        <div class="result-team">
+                            ${teamName(game.away)}
+                        </div>
 
-                <td>${row.t}</td>
+                        <div class="result-team">
+                            ${teamName(game.home)}
+                        </div>
 
-                <td>${row.ot}</td>
+                    </div>
 
-                <td>${row.gf}</td>
 
-                <td>${row.ga}</td>
+                    <div class="result-score">
 
-                <td>
-                    <strong>${row.pts}</strong>
-                </td>
+                        ${game.awayScore}
 
-            </tr>
+                        -
 
-        `;
+                        ${game.homeScore}
 
-    });
+                    </div>
+
+                </div>
+
+            `;
+
+        }).join("");
 
 }
 
 
 /* =========================================
-   SCHEDULE PAGE
-========================================= */
+   SCHEDULE
+   ========================================= */
 
-const fullSchedule =
-    document.getElementById("fullSchedule");
+function renderSchedule(filter = "ALL") {
 
+    const element =
+        document.getElementById("schedule-list");
 
-if (fullSchedule) {
-
-    games.forEach(game => {
-
-        const home =
-            getTeam(game.home);
-
-        const away =
-            getTeam(game.away);
+    if (!element) {
+        return;
+    }
 
 
-        fullSchedule.innerHTML += `
+    let filteredGames = games;
 
-            <div class="schedule-game">
 
-                <div class="schedule-time">
+    if (filter !== "ALL") {
 
-                    <strong>${game.date}</strong>
+        filteredGames =
+            games.filter(game =>
+                game.home === filter ||
+                game.away === filter
+            );
 
-                    <br>
+    }
 
-                    ${game.time}
+
+    const dates = [
+        ...new Set(
+            filteredGames.map(game => game.date)
+        )
+    ];
+
+
+    element.innerHTML =
+        dates.map(date => {
+
+            const dateGames =
+                filteredGames.filter(
+                    game => game.date === date
+                );
+
+
+            return `
+
+                <div class="schedule-day">
+
+                    <div class="schedule-date">
+                        ${date}
+                    </div>
+
+
+                    ${dateGames.map(game => {
+
+                        const score =
+                            game.homeScore === null
+                                ? "VS"
+                                : `${game.awayScore} - ${game.homeScore}`;
+
+
+                        return `
+
+                            <div class="schedule-game">
+
+                                <div class="schedule-time">
+                                    ${game.time}
+                                </div>
+
+
+                                <div class="schedule-matchup">
+
+                                    ${teamName(game.away)}
+
+                                    @
+
+                                    ${teamName(game.home)}
+
+                                </div>
+
+
+                                <div class="schedule-score">
+                                    ${score}
+                                </div>
+
+                            </div>
+
+                        `;
+
+                    }).join("")}
 
                 </div>
 
+            `;
 
-                <div class="schedule-matchup">
-
-                    ${away.name}
-
-                    <br>
-
-                    @ ${home.name}
-
-                    ${
-                        game.status === "Final"
-                        ?
-                        `<br><strong>
-                            ${game.awayScore} -
-                            ${game.homeScore}
-                        </strong>`
-                        :
-                        ""
-                    }
-
-                </div>
-
-
-                <div class="schedule-location">
-
-                    ${game.location}
-
-                    <br>
-
-                    ${game.status}
-
-                </div>
-
-            </div>
-
-        `;
-
-    });
+        }).join("");
 
 }
 
 
 /* =========================================
-   PLAYERS PAGE
-========================================= */
-
-const playersTable =
-    document.getElementById("playersTable");
-
-
-const teamFilter =
-    document.getElementById("teamFilter");
-
-
-const playerSearch =
-    document.getElementById("playerSearch");
-
+   PLAYERS
+   ========================================= */
 
 function renderPlayers() {
 
-    if (!playersTable) return;
+    const element =
+        document.getElementById("players-table");
+
+    if (!element) {
+        return;
+    }
 
 
     const search =
-        playerSearch
-        ?
-        playerSearch.value.toLowerCase()
-        :
-        "";
+        document.getElementById("player-search")
+            ?.value
+            .toLowerCase() || "";
 
 
-    const filter =
-        teamFilter
-        ?
-        teamFilter.value
-        :
-        "all";
+    const selectedTeam =
+        document.getElementById("player-team")
+            ?.value || "ALL";
 
 
-    playersTable.innerHTML = "";
-
-
-    players
-        .filter(player => {
+    const filtered =
+        players.filter(player => {
 
             const matchesSearch =
                 player.name
@@ -676,21 +718,19 @@ function renderPlayers() {
 
 
             const matchesTeam =
-                filter === "all"
-                ||
-                player.team == filter;
+                selectedTeam === "ALL" ||
+                player.team === selectedTeam;
 
 
             return matchesSearch && matchesTeam;
 
-        })
-        .forEach(player => {
-
-            const team =
-                getTeam(player.team);
+        });
 
 
-            playersTable.innerHTML += `
+    element.innerHTML =
+        filtered.map(player => {
+
+            return `
 
                 <tr>
 
@@ -701,11 +741,13 @@ function renderPlayers() {
                     </td>
 
                     <td>
-                        ${player.name}
+                        <strong>
+                            ${player.name}
+                        </strong>
                     </td>
 
                     <td>
-                        ${team.name}
+                        ${teamName(player.team)}
                     </td>
 
                     <td>
@@ -734,47 +776,101 @@ function renderPlayers() {
 
             `;
 
-        });
+        }).join("");
 
 }
 
 
-if (teamFilter) {
+/* =========================================
+   SCHEDULE FILTER BUTTONS
+   ========================================= */
 
-    teams.forEach(team => {
+function setupScheduleFilters() {
 
-        teamFilter.innerHTML += `
+    const buttons =
+        document.querySelectorAll(".filter-button");
 
-            <option value="${team.id}">
-                ${team.name}
-            </option>
 
-        `;
+    buttons.forEach(button => {
+
+        button.addEventListener("click", () => {
+
+            buttons.forEach(btn =>
+                btn.classList.remove("active")
+            );
+
+
+            button.classList.add("active");
+
+
+            const team =
+                button.dataset.team;
+
+
+            renderSchedule(team);
+
+        });
 
     });
 
 }
 
 
-if (playerSearch) {
+/* =========================================
+   PLAYER SEARCH
+   ========================================= */
 
-    playerSearch.addEventListener(
-        "input",
-        renderPlayers
-    );
+function setupPlayerFilters() {
+
+    const search =
+        document.getElementById("player-search");
+
+
+    const team =
+        document.getElementById("player-team");
+
+
+    if (search) {
+        search.addEventListener(
+            "input",
+            renderPlayers
+        );
+    }
+
+
+    if (team) {
+        team.addEventListener(
+            "change",
+            renderPlayers
+        );
+    }
 
 }
 
 
-if (teamFilter) {
+/* =========================================
+   START WEBSITE
+   ========================================= */
 
-    teamFilter.addEventListener(
-        "change",
-        renderPlayers
-    );
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
 
-}
+        renderStandingsPreview();
 
+        renderFullStandings();
 
-renderPlayers();
-```
+        renderTeams();
+
+        renderRecentGames();
+
+        renderSchedule();
+
+        renderPlayers();
+
+        setupScheduleFilters();
+
+        setupPlayerFilters();
+
+    }
+);
