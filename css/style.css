@@ -420,6 +420,9 @@ tbody tr:hover {
     box-shadow: 0 3px 15px rgba(0,0,0,.07);
 
     transition: transform .15s;
+
+    text-decoration: none;
+    color: inherit;
 }
 
 
@@ -607,6 +610,89 @@ tbody tr:hover {
 
 .result-score {
     font-weight: 900;
+}
+
+
+/* =========================================
+   SCHEDULE — BYE WEEKS & NOTES
+   ========================================= */
+
+.schedule-bye {
+    background: #eef1f4;
+    border: 1px dashed #ccd3d9;
+    border-radius: 6px;
+    padding: 16px 20px;
+    color: #64727e;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.note-tag {
+    display: inline-block;
+    background: #c8102e;
+    color: white;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .5px;
+    padding: 4px 9px;
+    border-radius: 20px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.schedule-game.is-tbd {
+    opacity: .8;
+}
+
+.schedule-location {
+    color: #97a3ac;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+/* =========================================
+   PLAYERS — POSITION TAG
+   ========================================= */
+
+.position-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 900;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #eef1f4;
+    color: #45525c;
+}
+
+.position-tag.goalie {
+    background: #071a2b;
+    color: white;
+}
+
+/* =========================================
+   INFO BANNER
+   ========================================= */
+
+.info-banner {
+    background: white;
+    border-left: 4px solid #c8102e;
+    border-radius: 6px;
+    padding: 18px 22px;
+    box-shadow: 0 3px 15px rgba(0,0,0,.07);
+    color: #45525c;
+}
+
+.info-banner strong {
+    color: #17212b;
+}
+
+/* =========================================
+   ROSTER COUNT PILL
+   ========================================= */
+
+.roster-count {
+    color: #75818b;
+    font-size: 13px;
 }
 
 
