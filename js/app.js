@@ -115,7 +115,7 @@ function renderNextGame() {
         <div class="next-game-day">
 
             <div class="next-game-date">
-                <div class="eyebrow">NEXT GAME DAY</div>
+                /* <div class="eyebrow">NEXT GAME DAY</div> */
                 <h3>${gameDate}</h3>
             </div>
 
