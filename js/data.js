@@ -22,8 +22,8 @@ const TEAMS = [
     },
     {
         "code": "NOR",
-        "name": "NordiNORs",
-        "class": "NordiNORs"
+        "name": "Nordiques ",
+        "class": "Nordiques "
     },
     {
         "code": "OIL",
@@ -37,8 +37,8 @@ const TEAMS = [
     },
     {
         "code": "SEN",
-        "name": "SenaTMLs",
-        "class": "SenaTMLs"
+        "name": "Senators",
+        "class": "Senators"
     }
 ];
 
