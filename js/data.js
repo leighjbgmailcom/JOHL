@@ -11,34 +11,34 @@
 
 const TEAMS = [
     {
-        "code": "TOR",
-        "name": "Toronto Maple Leafs",
-        "class": "toronto"
+        "code": "TML",
+        "name": "Maple Leafs",
+        "class": "Leafs"
     },
     {
-        "code": "VAN",
-        "name": "Vancouver Canucks",
-        "class": "vancouver"
+        "code": "CAN",
+        "name": "Canucks",
+        "class": "Canucks"
     },
     {
-        "code": "QUE",
-        "name": "Québec Nordiques",
-        "class": "quebec"
+        "code": "NOR",
+        "name": "NordiNORs",
+        "class": "NordiNORs"
     },
     {
-        "code": "EDM",
-        "name": "Edmonton Oilers",
-        "class": "edmonton"
+        "code": "OIL",
+        "name": "Oilers",
+        "class": "Oilers"
     },
     {
         "code": "MTL",
-        "name": "Montréal Canadiens",
-        "class": "montreal"
+        "name": "Canadiens",
+        "class": "Canadiens"
     },
     {
-        "code": "OTT",
-        "name": "Ottawa Senators",
-        "class": "ottawa"
+        "code": "SEN",
+        "name": "SenaTMLs",
+        "class": "SenaTMLs"
     }
 ];
 
@@ -46,37 +46,37 @@ const PLAYERS = [
     {
         "first": "Mark",
         "last": "Abrams",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
         "first": "Mark",
         "last": "Adams",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
         "first": "Kres",
         "last": "Andersen",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Will",
         "last": "Beckett",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Peter",
         "last": "Beukema",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
         "first": "Andrew",
-        "last": "Bevan",
-        "team": "OTT",
+        "last": "BeCAN",
+        "team": "SEN",
         "position": "Skater"
     },
     {
@@ -88,13 +88,13 @@ const PLAYERS = [
     {
         "first": "Chris",
         "last": "Boom",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
         "first": "Steve",
         "last": "Bowen",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
@@ -106,19 +106,19 @@ const PLAYERS = [
     {
         "first": "Jamie",
         "last": "Brophy",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Leigh",
         "last": "Brown",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
         "first": "Bruce",
         "last": "Buynink",
-        "team": "OTT",
+        "team": "SEN",
         "position": "G"
     },
     {
@@ -130,7 +130,7 @@ const PLAYERS = [
     {
         "first": "Derek",
         "last": "Collini",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
@@ -142,13 +142,13 @@ const PLAYERS = [
     {
         "first": "Chris",
         "last": "Cookson",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Darren",
         "last": "Craig",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
@@ -172,31 +172,31 @@ const PLAYERS = [
     {
         "first": "Blaine",
         "last": "Davies",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
         "first": "Andy",
         "last": "Dawson",
-        "team": "EDM",
+        "team": "OIL",
         "position": "G"
     },
     {
         "first": "Brad",
         "last": "Deakon",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
         "first": "Rob",
         "last": "DeBolster",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Derrick",
         "last": "DeBolster",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
@@ -208,67 +208,67 @@ const PLAYERS = [
     {
         "first": "Joel",
         "last": "Dykstra",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Bob",
         "last": "Fernick",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
         "first": "Andrew",
         "last": "Fissel",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Mike",
         "last": "Foran",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
         "first": "Steve",
         "last": "Fox",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
         "first": "Jeff",
         "last": "Gates",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
         "first": "Adam",
         "last": "Goodbrand",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Jeff",
         "last": "Grossi",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
         "first": "Nick",
         "last": "Hageman",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
         "first": "Jeff",
         "last": "Haroutunian",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Adam",
         "last": "Hendricks",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
@@ -280,7 +280,7 @@ const PLAYERS = [
     {
         "first": "Rob",
         "last": "Holt",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
@@ -292,7 +292,7 @@ const PLAYERS = [
     {
         "first": "Darren",
         "last": "Horton",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
@@ -304,19 +304,19 @@ const PLAYERS = [
     {
         "first": "Paul",
         "last": "Koke",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Nick",
         "last": "Langlois",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Doug",
         "last": "Lawrence",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
@@ -328,91 +328,91 @@ const PLAYERS = [
     {
         "first": "Jon",
         "last": "Leyenhorst",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Dave",
         "last": "Mable",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Rudy",
         "last": "Mallet",
-        "team": "TOR",
+        "team": "TML",
         "position": "G"
     },
     {
         "first": "Nick",
         "last": "Mansion",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
         "first": "Craig",
         "last": "Martin",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Jason",
         "last": "McKay",
-        "team": "QUE",
+        "team": "NOR",
         "position": "G"
     },
     {
         "first": "Steve",
         "last": "McMillan",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Ron",
         "last": "McPherson",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
-        "first": "Scott",
+        "first": "ScSEN",
         "last": "Mills",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "John",
         "last": "Misek",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
         "first": "Josh",
         "last": "Moore",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Simon",
         "last": "Murphy",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
         "first": "Colin",
         "last": "Murphy",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Matt",
         "last": "O'Brien",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
         "first": "Jamie",
         "last": "O'Brien",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
@@ -430,7 +430,7 @@ const PLAYERS = [
     {
         "first": "David",
         "last": "Parsons",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
@@ -442,7 +442,7 @@ const PLAYERS = [
     {
         "first": "Larry",
         "last": "Penney",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
@@ -454,61 +454,61 @@ const PLAYERS = [
     {
         "first": "Kurt",
         "last": "Peters",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Kevin",
         "last": "Pierce",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
         "first": "Michael",
         "last": "Pulo",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Dave",
         "last": "Pundyk",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Emilio",
         "last": "Raimondo",
-        "team": "EDM",
+        "team": "OIL",
         "position": "G"
     },
     {
         "first": "Adam",
         "last": "Regular",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
         "first": "Jeff",
         "last": "Reimer",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
         "first": "Dave",
         "last": "Rennie",
-        "team": "VAN",
+        "team": "CAN",
         "position": "G"
     },
     {
         "first": "Chris",
         "last": "Riediger",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
         "first": "Michael",
         "last": "Robertson",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
@@ -520,139 +520,139 @@ const PLAYERS = [
     {
         "first": "Kevin",
         "last": "Rolston",
-        "team": "QUE",
+        "team": "NOR",
         "position": "G"
     },
     {
         "first": "Colin",
         "last": "Roy",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Ryan",
         "last": "Rozon",
-        "team": "TOR",
+        "team": "TML",
         "position": "G"
     },
     {
         "first": "Keith",
         "last": "Schmidt",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
         "first": "Tim",
         "last": "Shannon",
-        "team": "OTT",
+        "team": "SEN",
         "position": "G"
     },
     {
         "first": "Dave",
         "last": "Sheridan",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
         "first": "Wes",
         "last": "Short",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Adam",
         "last": "Short",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Andrew",
         "last": "Smith",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
         "first": "Joe",
         "last": "Snihur",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
         "first": "Adam",
         "last": "Steele",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
         "first": "Daryl",
         "last": "Strong",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Jeff",
         "last": "Stuart",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
         "first": "Andy",
         "last": "Suggitt",
-        "team": "TOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
         "first": "Cam",
-        "last": "Tourcotte",
-        "team": "OTT",
+        "last": "TourcSENe",
+        "team": "SEN",
         "position": "Skater"
     },
     {
         "first": "Waylon",
         "last": "Tweedy",
-        "team": "VAN",
+        "team": "CAN",
         "position": "Skater"
     },
     {
         "first": "Marcel",
-        "last": "VanRuyven",
-        "team": "TOR",
+        "last": "CANRuyven",
+        "team": "TML",
         "position": "Skater"
     },
     {
         "first": "Wayne",
         "last": "Wall",
-        "team": "EDM",
+        "team": "OIL",
         "position": "Skater"
     },
     {
         "first": "Tim",
         "last": "Warden",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Greg",
         "last": "Wells",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
         "first": "Brody",
         "last": "Whetlam",
-        "team": "QUE",
+        "team": "NOR",
         "position": "Skater"
     },
     {
         "first": "Tyler",
         "last": "Williams",
-        "team": "OTT",
+        "team": "SEN",
         "position": "Skater"
     },
     {
         "first": "Derek",
         "last": "Yendt",
-        "team": "VAN",
+        "team": "CAN",
         "position": "G"
     }
 ];
@@ -663,7 +663,7 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 1,
-        "away": "EDM",
+        "away": "OIL",
         "home": "MTL",
         "note": null,
         "noGames": false
@@ -673,8 +673,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 1,
-        "away": "OTT",
-        "home": "QUE",
+        "away": "SEN",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -683,8 +683,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 1,
-        "away": "TOR",
-        "home": "VAN",
+        "away": "TML",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -693,8 +693,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 2,
-        "away": "VAN",
-        "home": "EDM",
+        "away": "CAN",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -703,8 +703,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 2,
-        "away": "TOR",
-        "home": "QUE",
+        "away": "TML",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -714,7 +714,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 2,
         "away": "MTL",
-        "home": "OTT",
+        "home": "SEN",
         "note": null,
         "noGames": false
     },
@@ -728,7 +728,7 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 3,
-        "away": "QUE",
+        "away": "NOR",
         "home": "MTL",
         "note": null,
         "noGames": false
@@ -738,8 +738,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 3,
-        "away": "OTT",
-        "home": "VAN",
+        "away": "SEN",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -748,8 +748,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 3,
-        "away": "EDM",
-        "home": "TOR",
+        "away": "OIL",
+        "home": "TML",
         "note": null,
         "noGames": false
     },
@@ -758,8 +758,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 4,
-        "away": "QUE",
-        "home": "EDM",
+        "away": "NOR",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -768,7 +768,7 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 4,
-        "away": "VAN",
+        "away": "CAN",
         "home": "MTL",
         "note": null,
         "noGames": false
@@ -778,8 +778,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 4,
-        "away": "TOR",
-        "home": "OTT",
+        "away": "TML",
+        "home": "SEN",
         "note": null,
         "noGames": false
     },
@@ -789,7 +789,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 5,
         "away": "MTL",
-        "home": "TOR",
+        "home": "TML",
         "note": null,
         "noGames": false
     },
@@ -798,8 +798,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 5,
-        "away": "OTT",
-        "home": "EDM",
+        "away": "SEN",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -808,8 +808,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 5,
-        "away": "QUE",
-        "home": "VAN",
+        "away": "NOR",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -818,8 +818,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 6,
-        "away": "VAN",
-        "home": "TOR",
+        "away": "CAN",
+        "home": "TML",
         "note": null,
         "noGames": false
     },
@@ -828,8 +828,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 6,
-        "away": "OTT",
-        "home": "QUE",
+        "away": "SEN",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -838,7 +838,7 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 6,
-        "away": "EDM",
+        "away": "OIL",
         "home": "MTL",
         "note": null,
         "noGames": false
@@ -849,7 +849,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 7,
         "away": "MTL",
-        "home": "OTT",
+        "home": "SEN",
         "note": null,
         "noGames": false
     },
@@ -858,8 +858,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 7,
-        "away": "VAN",
-        "home": "EDM",
+        "away": "CAN",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -868,8 +868,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 7,
-        "away": "TOR",
-        "home": "QUE",
+        "away": "TML",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -878,7 +878,7 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 8,
-        "away": "QUE",
+        "away": "NOR",
         "home": "MTL",
         "note": null,
         "noGames": false
@@ -888,8 +888,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 8,
-        "away": "OTT",
-        "home": "VAN",
+        "away": "SEN",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -898,8 +898,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 8,
-        "away": "EDM",
-        "home": "TOR",
+        "away": "OIL",
+        "home": "TML",
         "note": null,
         "noGames": false
     },
@@ -908,8 +908,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 9,
-        "away": "QUE",
-        "home": "EDM",
+        "away": "NOR",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -918,8 +918,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 9,
-        "away": "TOR",
-        "home": "OTT",
+        "away": "TML",
+        "home": "SEN",
         "note": null,
         "noGames": false
     },
@@ -929,7 +929,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 9,
         "away": "MTL",
-        "home": "VAN",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -938,8 +938,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 10,
-        "away": "EDM",
-        "home": "OTT",
+        "away": "OIL",
+        "home": "SEN",
         "note": null,
         "noGames": false
     },
@@ -948,7 +948,7 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 10,
-        "away": "TOR",
+        "away": "TML",
         "home": "MTL",
         "note": null,
         "noGames": false
@@ -958,8 +958,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 10,
-        "away": "VAN",
-        "home": "QUE",
+        "away": "CAN",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -968,8 +968,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 11,
-        "away": "VAN",
-        "home": "TOR",
+        "away": "CAN",
+        "home": "TML",
         "note": null,
         "noGames": false
     },
@@ -979,7 +979,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 11,
         "away": "MTL",
-        "home": "EDM",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -988,8 +988,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 11,
-        "away": "OTT",
-        "home": "QUE",
+        "away": "SEN",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -998,8 +998,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 12,
-        "away": "QUE",
-        "home": "TOR",
+        "away": "NOR",
+        "home": "TML",
         "note": null,
         "noGames": false
     },
@@ -1008,8 +1008,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 12,
-        "away": "EDM",
-        "home": "VAN",
+        "away": "OIL",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -1018,7 +1018,7 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 12,
-        "away": "OTT",
+        "away": "SEN",
         "home": "MTL",
         "note": null,
         "noGames": false
@@ -1029,7 +1029,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 13,
         "away": "MTL",
-        "home": "QUE",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -1038,8 +1038,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 13,
-        "away": "VAN",
-        "home": "OTT",
+        "away": "CAN",
+        "home": "SEN",
         "note": null,
         "noGames": false
     },
@@ -1048,8 +1048,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 13,
-        "away": "EDM",
-        "home": "TOR",
+        "away": "OIL",
+        "home": "TML",
         "note": null,
         "noGames": false
     },
@@ -1058,8 +1058,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 14,
-        "away": "TOR",
-        "home": "OTT",
+        "away": "TML",
+        "home": "SEN",
         "note": null,
         "noGames": false
     },
@@ -1068,8 +1068,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 14,
-        "away": "EDM",
-        "home": "QUE",
+        "away": "OIL",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -1079,7 +1079,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 14,
         "away": "MTL",
-        "home": "VAN",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -1088,8 +1088,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 15,
-        "away": "QUE",
-        "home": "VAN",
+        "away": "NOR",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -1099,7 +1099,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 15,
         "away": "MTL",
-        "home": "TOR",
+        "home": "TML",
         "note": null,
         "noGames": false
     },
@@ -1108,8 +1108,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 15,
-        "away": "OTT",
-        "home": "EDM",
+        "away": "SEN",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -1118,8 +1118,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 16,
-        "away": "TOR",
-        "home": "VAN",
+        "away": "TML",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -1128,8 +1128,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 16,
-        "away": "QUE",
-        "home": "OTT",
+        "away": "NOR",
+        "home": "SEN",
         "note": null,
         "noGames": false
     },
@@ -1138,7 +1138,7 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 16,
-        "away": "EDM",
+        "away": "OIL",
         "home": "MTL",
         "note": null,
         "noGames": false
@@ -1149,7 +1149,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 17,
         "away": "MTL",
-        "home": "OTT",
+        "home": "SEN",
         "note": null,
         "noGames": false
     },
@@ -1158,8 +1158,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 17,
-        "away": "VAN",
-        "home": "EDM",
+        "away": "CAN",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -1168,8 +1168,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 17,
-        "away": "TOR",
-        "home": "QUE",
+        "away": "TML",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -1178,8 +1178,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 18,
-        "away": "TOR",
-        "home": "EDM",
+        "away": "TML",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -1189,7 +1189,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 18,
         "away": "MTL",
-        "home": "QUE",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -1198,8 +1198,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 18,
-        "away": "OTT",
-        "home": "VAN",
+        "away": "SEN",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -1208,7 +1208,7 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 19,
-        "away": "VAN",
+        "away": "CAN",
         "home": "MTL",
         "note": null,
         "noGames": false
@@ -1218,8 +1218,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 19,
-        "away": "EDM",
-        "home": "QUE",
+        "away": "OIL",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -1228,8 +1228,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 19,
-        "away": "OTT",
-        "home": "TOR",
+        "away": "SEN",
+        "home": "TML",
         "note": null,
         "noGames": false
     },
@@ -1243,8 +1243,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 20,
-        "away": "OTT",
-        "home": "EDM",
+        "away": "SEN",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -1254,7 +1254,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 20,
         "away": "MTL",
-        "home": "TOR",
+        "home": "TML",
         "note": null,
         "noGames": false
     },
@@ -1263,8 +1263,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 20,
-        "away": "QUE",
-        "home": "VAN",
+        "away": "NOR",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -1273,8 +1273,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 21,
-        "away": "QUE",
-        "home": "OTT",
+        "away": "NOR",
+        "home": "SEN",
         "note": null,
         "noGames": false
     },
@@ -1284,7 +1284,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 21,
         "away": "MTL",
-        "home": "EDM",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -1293,8 +1293,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 21,
-        "away": "TOR",
-        "home": "VAN",
+        "away": "TML",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -1303,8 +1303,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 22,
-        "away": "EDM",
-        "home": "VAN",
+        "away": "OIL",
+        "home": "CAN",
         "note": null,
         "noGames": false
     },
@@ -1313,8 +1313,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 22,
-        "away": "QUE",
-        "home": "TOR",
+        "away": "NOR",
+        "home": "TML",
         "note": null,
         "noGames": false
     },
@@ -1323,7 +1323,7 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 22,
-        "away": "OTT",
+        "away": "SEN",
         "home": "MTL",
         "note": null,
         "noGames": false
@@ -1333,8 +1333,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 23,
-        "away": "VAN",
-        "home": "OTT",
+        "away": "CAN",
+        "home": "SEN",
         "note": null,
         "noGames": false
     },
@@ -1343,8 +1343,8 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 23,
-        "away": "TOR",
-        "home": "EDM",
+        "away": "TML",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -1354,7 +1354,7 @@ const SCHEDULE = [
         "location": "Jordan Arena",
         "gameNo": 23,
         "away": "MTL",
-        "home": "QUE",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -1363,8 +1363,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 24,
-        "away": "OTT",
-        "home": "TOR",
+        "away": "SEN",
+        "home": "TML",
         "note": null,
         "noGames": false
     },
@@ -1373,7 +1373,7 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 24,
-        "away": "VAN",
+        "away": "CAN",
         "home": "MTL",
         "note": null,
         "noGames": false
@@ -1383,8 +1383,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 24,
-        "away": "QUE",
-        "home": "EDM",
+        "away": "NOR",
+        "home": "OIL",
         "note": null,
         "noGames": false
     },
@@ -1393,8 +1393,8 @@ const SCHEDULE = [
         "time": "6:30 pm",
         "location": "Jordan Arena",
         "gameNo": 25,
-        "away": "VAN",
-        "home": "QUE",
+        "away": "CAN",
+        "home": "NOR",
         "note": null,
         "noGames": false
     },
@@ -1403,7 +1403,7 @@ const SCHEDULE = [
         "time": "7:50 pm",
         "location": "Jordan Arena",
         "gameNo": 25,
-        "away": "TOR",
+        "away": "TML",
         "home": "MTL",
         "note": null,
         "noGames": false
@@ -1413,8 +1413,8 @@ const SCHEDULE = [
         "time": "9:10 pm",
         "location": "Jordan Arena",
         "gameNo": 25,
-        "away": "EDM",
-        "home": "OTT",
+        "away": "OIL",
+        "home": "SEN",
         "note": null,
         "noGames": false
     },
