@@ -12,32 +12,32 @@
 const TEAMS = [
     {
         "code": "TML",
-        "name": "Maple Leafs",
+        "name": "ColdBreak Leafs",
         "class": "Leafs"
     },
     {
         "code": "CAN",
-        "name": "Canucks",
+        "name": "Keg Canucks",
         "class": "Canucks"
     },
     {
         "code": "NOR",
-        "name": "Nordiques ",
+        "name": "Regatta Nordiques ",
         "class": "Nordiques "
     },
     {
         "code": "OIL",
-        "name": "Oilers",
+        "name": "Dawson's Oilers",
         "class": "Oilers"
     },
     {
         "code": "MTL",
-        "name": "Canadiens",
+        "name": "Culp Habs",
         "class": "Canadiens"
     },
     {
         "code": "SEN",
-        "name": "Senators",
+        "name": "Timbit Senators",
         "class": "Senators"
     }
 ];
