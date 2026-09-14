@@ -1,3 +1,94 @@
+
+/
+Claude finished the response
+Thought for 8s
+Checking whether the recent change needs any CSS updates.
+Thought for 8s
+Yes — here's exactly what changed in css/style.css for this last update (header logo + hero layout).
+
+1. Replace your existing .league-logo rule (the old one styled a text badge in a circle; this styles an <img>):
+
+css
+.league-logo {
+    height: 55px;
+    width: auto;
+
+    border-radius: 8px;
+
+    flex-shrink: 0;
+}
+2. Add these three new rules (they didn't exist before — for the hero's two-column layout):
+
+css
+.hero-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 50px;
+}
+
+.hero-logo {
+    flex-shrink: 0;
+}
+
+.hero-logo img {
+    width: 260px;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.35);
+}
+3. Inside your existing @media (max-width: 800px) block, add these two rules (your existing .hero { padding: 55px 0; } stays as-is, just add these alongside it):
+
+css
+.hero-inner {
+    flex-direction: column;
+    text-align: center;
+    gap: 30px;
+}
+
+.hero-logo img {
+    width: 160px;
+}
+Important — this one needs matching HTML too, not just CSS. Unlike some of the earlier fixes, CSS alone won't show anything here because the markup structure changed:
+
+Every page's header: <div class="league-logo">JOHL</div> → <img src="images/JordanOHL_Logo.png" alt="Jordan Oldtimers Hockey League" class="league-logo">
+index.html hero section: the <div class="container"> wrapping .hero-content needs to become <div class="container hero-inner">, and a new <div class="hero-logo"><img src="images/JordanOHL_Logo.png" alt="Jordan Oldtimers Hockey League"></div> needs to be added as a sibling right after .hero-content, inside that same container.
+Given how the last couple of rounds went (CSS and JS getting out of sync on your live site), your safest bet is honestly just replacing your live index.html and css/style.css wholesale with the copies from the zip I sent — that guarantees the markup and styles match exactly, rather than hand-patching pieces and risking another mismatch.
+
+Can you build me a thanks you sponsors section on the index page?
+
+Thought for 24s
+Before I build this — do the sponsor names already show up in your team names (e.g. "ColdBreak" sponsors the ColdBreak Leafs, "Keg" sponsors the Keg Canucks, etc.), or do you have a separate sponsor list — with logos, website links, or blurbs — you'd like me to use instead?
+
+Ran a command
+Actually, let me just build a first draft using the obvious pattern (ColdBreak, Keg, Regatta, Dawson's, Culp, Timbit) so you have something concrete to react to — easy to swap in logos/links/blurbs after if you've got them.
+
+Ran 7 commands, edited 7 files, and 6 more tools
+Added a "Our Sponsors" section on the homepage, placed after the season-start banner and before the footer. Here's what's in it:
+
+New in js/data.js: a SPONSORS array, one entry per sponsor — name, which team they back, plus empty url and blurb fields ready for you to fill in.
+
+New in js/app.js: renderSponsors() — builds a card per sponsor showing their name and "Proud sponsor of the [Team Name]." If you add a url, that sponsor's card automatically becomes a clickable link to their site (opens in a new tab); if you add a blurb, it shows underneath as a short line of text.
+
+New in css/style.css: .sponsor-grid, .sponsor-card, .sponsor-name, .sponsor-team, .sponsor-blurb, .sponsor-intro — 3-column grid on desktop, 2-column on mobile, matching your existing card style.
+
+I built this using the sponsor names implied by your team names (ColdBreak, Keg, Regatta, Dawson's, Culp, Timbit) since I didn't want to block on that — but if any of those aren't right, or you've got actual logos, websites, or a blurb for each sponsor, send them over and I'll wire them in properly (logos especially would look better than the plain text cards).
+
+
+Johl
+ZIP 
+
+Index
+Code·HTML 
+
+Write a message…
+
+
+Claude is AI and can make mistakes. Please double-check responses.
+
+
+Index · HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,20 +97,20 @@
     <title>Jordan Oldtimers Hockey League</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
-
+ 
 <body>
-
+ 
 <header class="site-header">
     <div class="container header-inner">
-
+ 
         <div class="league-brand">
-            <img src="images/sm_JOHL_LOGO.png" alt="Jordan Oldtimers Hockey League" class="league-logo">
+            <img src="images/JordanOHL_Logo.png" alt="Jordan Oldtimers Hockey League" class="league-logo">
             <div>
                 <h1>Jordan Oldtimers</h1>
                 <span>Hockey League</span>
             </div>
         </div>
-
+ 
         <nav>
             <a href="index.html" class="active">Home</a>
             <a href="schedule.html">Schedule</a>
@@ -27,77 +118,77 @@
             <a href="teams.html">Teams</a>
             <a href="players.html">Rosters</a>
         </nav>
-
+ 
     </div>
 </header>
-
-
+ 
+ 
 <section class="hero">
     <div class="container hero-inner">
-
+ 
         <div class="hero-content">
             <p class="eyebrow">JORDAN OLD TIMERS HOCKEY LEAGUE — 2026-27 SEASON</p>
-
+ 
             <h2>
                 Old School Hockey.<br>
                 Great Competition.
             </h2>
-
+ 
             <p>
                 Six teams. One league. A whole lot of hockey.
             </p>
-
+ 
             <a href="schedule.html" class="button">
                 View Schedule
             </a>
         </div>
-
+ 
         <div class="hero-logo">
-            <img src="images/JOHL_LOGO.png" alt="Jordan Oldtimers Hockey League">
+            <img src="images/JordanOHL_Logo.png" alt="Jordan Oldtimers Hockey League">
         </div>
-
+ 
     </div>
 </section>
-
-
+ 
+ 
 <main class="container main-content">
-
+ 
     <!-- NEXT GAME -->
-
+ 
     <section>
         <div class="section-heading">
             <div>
                 <p class="eyebrow">UP NEXT</p>
                 <h2>Next Game Day</h2>
             </div>
-
+ 
             <a href="schedule.html">Full Schedule →</a>
         </div>
-
+ 
         <div id="next-game"></div>
     </section>
-
-
+ 
+ 
     <!-- TEAMS -->
-
+ 
     <section>
-
+ 
         <div class="section-heading">
             <div>
                 <p class="eyebrow">THE LEAGUE</p>
                 <h2>Our Teams</h2>
             </div>
-
+ 
             <a href="teams.html">View All Teams →</a>
         </div>
-
+ 
         <div class="team-grid" id="team-grid"></div>
-
+ 
     </section>
-
-
+ 
+ 
     <!-- CTA -->
-
+ 
     <section>
         <div class="info-banner">
             <strong>Season starts September 27, 2026.</strong>
@@ -106,30 +197,52 @@
             and the <a href="schedule.html">complete 2026-27 schedule</a>.
         </div>
     </section>
-
+ 
+ 
+    <!-- SPONSORS -->
+ 
+    <section>
+ 
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">WITH THANKS</p>
+                <h2>Our Sponsors</h2>
+            </div>
+        </div>
+ 
+        <p class="sponsor-intro">
+            The Jordan Oldtimers Hockey League runs because of the local businesses
+            who back our teams every season. Thank you for your support.
+        </p>
+ 
+        <div class="sponsor-grid" id="sponsor-grid"></div>
+ 
+    </section>
+ 
 </main>
-
-
+ 
+ 
 <footer>
-
+ 
     <div class="container footer-inner">
-
+ 
         <div>
             <strong>Jordan Oldtimers Hockey League</strong>
             <p>Six teams. One great league.</p>
         </div>
-
+ 
         <div>
             <p>© 2026 Jordan Oldtimers Hockey League</p>
         </div>
-
+ 
     </div>
-
+ 
 </footer>
-
-
+ 
+ 
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
-
+ 
 </body>
 </html>
+ 
