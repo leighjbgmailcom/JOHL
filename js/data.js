@@ -84,6 +84,12 @@ const SPONSORS = [
         "team": "SEN",
         "url": "https://www.timhortons.ca/",
         "blurb": "The ultimate Canadian hockey tradition in the heart of our neighborhood — fuel for your early morning rink runs, a proud supporter of local grassroots sports, and where everyday moments bring the community together."
+    },
+    {
+        "name": "League",
+        "team": "",
+        "url": "https://www.niagarawealthmanagement.com/",
+        "blurb": "A premier wealth management and financial planning team dedicated to serving the Niagara region — listening, collaborating, and providing the expert guidance needed to protect your future and support your lifestyle goals both on and off the ice."
     }
 ];
 
