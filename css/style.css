@@ -588,20 +588,17 @@ tbody tr:hover {
 
 .schedule-matchup {
     font-weight: bold;
-
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
 }
 
-
 .schedule-team {
     display: flex;
     align-items: center;
     gap: 8px;
 }
-
 
 .schedule-team .team-badge,
 .schedule-team .team-badge-logo {
@@ -613,13 +610,11 @@ tbody tr:hover {
     flex-shrink: 0;
 }
 
-
 .roster-team {
     display: flex;
     align-items: center;
     gap: 10px;
 }
-
 
 .roster-team .team-badge,
 .roster-team .team-badge-logo {
