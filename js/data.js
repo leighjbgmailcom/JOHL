@@ -313,7 +313,7 @@ const PLAYERS = [
     {
         "first": "Jeff",
         "last": "Haroutunian",
-        "team": "CAN",
+        "team": "TML",
         "position": "Skater"
     },
     {
@@ -425,9 +425,9 @@ const PLAYERS = [
         "position": "Skater"
     },
     {
-        "first": "ScSEN",
+        "first": "Scott",
         "last": "Mills",
-        "team": "NOR",
+        "team": "TML",
         "position": "Skater"
     },
     {
@@ -535,7 +535,7 @@ const PLAYERS = [
     {
         "first": "Adam",
         "last": "Regular",
-        "team": "TML",
+        "team": "NOR",
         "position": "Skater"
     },
     {
@@ -625,7 +625,7 @@ const PLAYERS = [
     {
         "first": "Joe",
         "last": "Snihur",
-        "team": "TML",
+        "team": "CAN",
         "position": "Skater"
     },
     {
@@ -654,7 +654,7 @@ const PLAYERS = [
     },
     {
         "first": "Cam",
-        "last": "TourcSENe",
+        "last": "Tourcotte",
         "team": "SEN",
         "position": "Skater"
     },
@@ -666,7 +666,7 @@ const PLAYERS = [
     },
     {
         "first": "Marcel",
-        "last": "CANRuyven",
+        "last": "VanRuyven",
         "team": "TML",
         "position": "Skater"
     },
