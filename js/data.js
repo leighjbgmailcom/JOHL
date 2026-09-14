@@ -126,7 +126,7 @@ const PLAYERS = [
     },
     {
         "first": "Andrew",
-        "last": "BeCAN",
+        "last": "Bevan",
         "team": "SEN",
         "position": "Skater"
     },
