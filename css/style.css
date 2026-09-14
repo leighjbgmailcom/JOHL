@@ -221,7 +221,24 @@ section {
     color: #64727e;
 }
 
+/* =========================================
+   Standings
+   ========================================= */
+.standings-team {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 
+.standings-team .team-badge,
+.standings-team .team-badge-logo {
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    border-width: 2px;
+    font-size: 10px;
+    flex-shrink: 0;
+}
 /* =========================================
    NEXT GAME
    ========================================= */
