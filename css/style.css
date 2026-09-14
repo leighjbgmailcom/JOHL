@@ -274,7 +274,8 @@ section {
     font-weight: bold;
 }
 
-.homepage-team .team-badge {
+.homepage-team .team-badge,
+.homepage-team .team-badge-logo {
     width: 50px;
     height: 50px;
     font-size: 13px;
@@ -289,7 +290,8 @@ section {
 }
 
 
-.team-badge {
+.team-badge,
+.team-badge-logo {
     width: 70px;
     height: 70px;
 
@@ -302,42 +304,54 @@ section {
     align-items: center;
     justify-content: center;
 
-    color: red;
+    color: white;
 
     font-weight: 900;
 
     border: 4px solid white;
 
     box-shadow: 0 2px 7px rgba(0,0,0,.25);
+
+    overflow: hidden;
+    background: white;
+}
+
+.team-badge-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 5px;
+    box-sizing: border-box;
+    display: block;
 }
 
 
-.team-badge.toronto {
+.team-badge.Leafs {
     background: #003e7e;
 }
 
 
-.team-badge.montreal {
+.team-badge.Canadiens {
     background: #af1e2d;
 }
 
 
-.team-badge.vancouver {
+.team-badge.Canucks {
     background: #00843d;
 }
 
 
-.team-badge.quebec {
+.team-badge.Nordiques {
     background: #00539b;
 }
 
 
-.team-badge.edmonton {
+.team-badge.Oilers {
     background: #ff4c00;
 }
 
 
-.team-badge.ottawa {
+.team-badge.Senators {
     background: #c8102e;
 }
 
@@ -473,7 +487,8 @@ tbody tr:hover {
 }
 
 
-.team-card .team-badge {
+.team-card .team-badge,
+.team-card .team-badge-logo {
     flex-shrink: 0;
 
     margin: 0;
