@@ -237,9 +237,15 @@ function renderSchedule(filter = "ALL") {
 
                             <div>
                                 <div class="schedule-matchup">
-                                    ${teamName(game.away)}
+                                    <div class="schedule-team">
+                                        ${teamBadge(game.away)}
+                                        <span>${teamName(game.away)}</span>
+                                    </div>
                                     <span class="at-symbol">vs.</span>
-                                    ${teamName(game.home)}
+                                    <div class="schedule-team">
+                                        ${teamBadge(game.home)}
+                                        <span>${teamName(game.home)}</span>
+                                    </div>
                                     ${game.note ? `<span class="note-tag">${game.note}</span>` : ""}
                                 </div>
                                 ${game.location ? `<div class="schedule-location">${game.location}</div>` : ""}
@@ -313,7 +319,12 @@ function renderPlayers() {
     element.innerHTML = filtered.map(player => `
         <tr>
             <td><strong>${player.last}, ${player.first}</strong></td>
-            <td>${teamName(player.team)}</td>
+            <td>
+                <div class="roster-team">
+                    ${teamBadge(player.team)}
+                    <span>${teamName(player.team)}</span>
+                </div>
+            </td>
             <td>
                 <span class="position-tag ${player.position === "G" ? "goalie" : ""}">
                     ${player.position === "G" ? "Goalie" : "Skater"}
