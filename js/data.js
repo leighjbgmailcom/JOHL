@@ -50,7 +50,7 @@ const TEAMS = [
 
 const SPONSORS = [
     {
-        "name": "	",
+        "name": "ColdBreak",
         "team": "TML",
         "url": "https://coldbreak.ca/",
         "blurb": "An owner-operated brewery and taproom in the West Hill — where neighbours connect and strangers become friends."
