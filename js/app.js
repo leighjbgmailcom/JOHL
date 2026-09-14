@@ -25,9 +25,19 @@ function teamBadge(code) {
     }
     const team = getTeam(code);
     if (!team) return "";
+
+    // Try the team logo image first; if it fails to load (missing file,
+    // wrong path, etc.) fall back to the colored initials circle so the
+    // page never shows a broken image icon.
+    const fallback = `this.outerHTML = '<div class=&quot;team-badge ${team.class}&quot;>${team.code}</div>';`;
+
     return `
-        <div class="team-badge ${team.class}">
-            ${team.code}
+        <div class="team-badge-logo">
+            <img
+                src="${team.logo}"
+                alt="${team.name} logo"
+                onerror="${fallback}"
+            >
         </div>
     `;
 }

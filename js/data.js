@@ -13,32 +13,38 @@ const TEAMS = [
     {
         "code": "TML",
         "name": "ColdBreak Leafs",
-        "class": "Leafs"
+        "class": "Leafs",
+        "logo": "images/Leafs.png"
     },
     {
         "code": "CAN",
         "name": "Keg Canucks",
-        "class": "Canucks"
+        "class": "Canucks",
+        "logo": "images/Canucks.png"
     },
     {
         "code": "NOR",
         "name": "Regatta Nordiques ",
-        "class": "Nordiques "
+        "class": "Nordiques ",
+        "logo": "images/Nordiques.png"
     },
     {
         "code": "OIL",
         "name": "Dawson's Oilers",
-        "class": "Oilers"
+        "class": "Oilers",
+        "logo": "images/Oilers.png"
     },
     {
         "code": "MTL",
         "name": "Culp Habs",
-        "class": "Canadiens"
+        "class": "Canadiens",
+        "logo": "images/Habs.png"
     },
     {
         "code": "SEN",
         "name": "Timbit Senators",
-        "class": "Senators"
+        "class": "Senators",
+        "logo": "images/Sens.png"
     }
 ];
 
