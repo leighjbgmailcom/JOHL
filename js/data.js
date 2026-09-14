@@ -48,6 +48,45 @@ const TEAMS = [
     }
 ];
 
+const SPONSORS = [
+    {
+        "name": "	",
+        "team": "TML",
+        "url": "https://coldbreak.ca/",
+        "blurb": "An owner-operated brewery and taproom in the West Hill — where neighbours connect and strangers become friends."
+    },
+    {
+        "name": "Keg",
+        "team": "CAN",
+        "url": "https://thekeg.com/en/locations/st-catharines",
+        "blurb": "A legendary Canadian steakhouse and lounge in the heart of our community — where friends gather, stories are shared, and every meal feels like a celebration."
+    },
+    {
+        "name": "Regatta",
+        "team": "NOR",
+        "url": "https://regattasport.com/",
+        "blurb": ""A premium performance apparel company rooted right here in the Niagara sporting community — where athletes are equipped, local teams are celebrated, and a passion for the game unites us all."
+    },
+    {
+        "name": "Dawson's",
+        "team": "OIL",
+        "url": "https://ca.linkedin.com/in/andrew-dawson-872a5689",
+        "blurb": "A trusted local financial and insurance advisor right here in Niagara, and a proud veteran of our own league — where personal service protects what matters most, teammates support teammates, and community comes first both on and off the ice."
+    },
+    {
+        "name": "Culp",
+        "team": "MTL",
+        "url": "https://www.jeculptransport.com/",
+        "blurb": "A trusted, family-owned transportation and haulage cornerstone of the Niagara region since 1957 — keeping our local economy moving forward, building lasting relationships on the road, and proudly supporting the community on the ice."
+    },
+    {
+        "name": "Timbit",
+        "team": "SEN",
+        "url": "https://www.timhortons.ca/",
+        "blurb": "The ultimate Canadian hockey tradition in the heart of our neighborhood — fuel for your early morning rink runs, a proud supporter of local grassroots sports, and where everyday moments bring the community together."
+    }
+];
+
 const PLAYERS = [
     {
         "first": "Mark",
