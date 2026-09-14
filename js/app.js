@@ -367,7 +367,12 @@ function renderStandingsPlaceholder() {
 
     element.innerHTML = sorted.map(team => `
         <tr>
-            <td class="team-name-cell">${team.name}</td>
+            <td class="team-name-cell">
+                <div class="standings-team">
+                    ${teamBadge(team.code)}
+                    <span>${team.name}</span>
+                </div>
+            </td>
             <td>0</td>
             <td>0</td>
             <td>0</td>
