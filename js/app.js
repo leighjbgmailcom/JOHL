@@ -356,6 +356,31 @@ function setupPlayerFilters() {
 
 
 /* =========================================
+   SPONSORS (home page)
+   ========================================= */
+
+function renderSponsors() {
+    const element = document.getElementById("sponsor-grid");
+    if (!element) return;
+
+    element.innerHTML = SPONSORS.map(sponsor => {
+        const team = getTeam(sponsor.team);
+        const teamLabel = team ? `Proud sponsor of the ${team.name}` : "";
+        const inner = `
+            <div class="sponsor-name">${sponsor.name}</div>
+            ${teamLabel ? `<p class="sponsor-team">${teamLabel}</p>` : ""}
+            ${sponsor.blurb ? `<p class="sponsor-blurb">${sponsor.blurb}</p>` : ""}
+        `;
+
+        if (sponsor.url) {
+            return `<a class="sponsor-card" href="${sponsor.url}" target="_blank" rel="noopener">${inner}</a>`;
+        }
+        return `<div class="sponsor-card">${inner}</div>`;
+    }).join("");
+}
+
+
+/* =========================================
    STANDINGS (placeholder — pre-season)
    ========================================= */
 
@@ -397,4 +422,5 @@ document.addEventListener("DOMContentLoaded", () => {
     renderPlayers();
     setupPlayerFilters();
     renderStandingsPlaceholder();
+    renderSponsors();
 });
