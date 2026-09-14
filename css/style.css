@@ -51,22 +51,31 @@ body {
 
 
 .league-logo {
-    width: 55px;
     height: 55px;
+    width: auto;
 
+    border-radius: 8px;
+
+    flex-shrink: 0;
+}
+.hero-inner {
     display: flex;
     align-items: center;
-    justify-content: center;
-
-    border: 3px solid white;
-    border-radius: 50%;
-
-    font-size: 14px;
-    font-weight: 900;
-
-    background: #c8102e;
+    justify-content: space-between;
+    gap: 50px;
 }
 
+.hero-logo {
+    flex-shrink: 0;
+}
+
+.hero-logo img {
+    width: 260px;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.35);
+}
 
 .league-brand h1 {
     font-size: 20px;
@@ -852,7 +861,15 @@ footer {
 
         padding: 18px 0;
     }
+.hero-inner {
+    flex-direction: column;
+    text-align: center;
+    gap: 30px;
+}
 
+.hero-logo img {
+    width: 160px;
+}
 
     nav {
         width: 100%;
