@@ -412,10 +412,37 @@ function renderStandingsPlaceholder() {
 
 
 /* =========================================
+   MOBILE NAV TOGGLE
+   ========================================= */
+
+function setupMobileNav() {
+    const toggle = document.getElementById("nav-toggle");
+    const nav = document.getElementById("site-nav");
+    if (!toggle || !nav) return;
+
+    toggle.addEventListener("click", () => {
+        const isOpen = nav.classList.toggle("open");
+        toggle.classList.toggle("open", isOpen);
+        toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    });
+
+    // Close the menu automatically once a link is tapped
+    nav.querySelectorAll("a").forEach(link => {
+        link.addEventListener("click", () => {
+            nav.classList.remove("open");
+            toggle.classList.remove("open");
+            toggle.setAttribute("aria-expanded", "false");
+        });
+    });
+}
+
+
+/* =========================================
    START WEBSITE
    ========================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
+    setupMobileNav();
     renderNextGame();
     renderTeams();
     setupScheduleFilters();
