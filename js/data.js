@@ -65,7 +65,7 @@ const SPONSORS = [
         "name": "Regatta",
         "team": "NOR",
         "url": "https://regattasport.com/",
-        "blurb": ""A premium performance apparel company rooted right here in the Niagara sporting community — where athletes are equipped, local teams are celebrated, and a passion for the game unites us all."
+        "blurb": "A premium performance apparel company rooted right here in the Niagara sporting community — where athletes are equipped, local teams are celebrated, and a passion for the game unites us all."
     },
     {
         "name": "Dawson's",
