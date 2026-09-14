@@ -58,24 +58,7 @@ body {
 
     flex-shrink: 0;
 }
-.hero-inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 50px;
-}
 
-.hero-logo {
-    flex-shrink: 0;
-}
-
-.hero-logo img {
-    width: 260px;
-    height: auto;
-    display: block;
-    border-radius: 12px;
-    box-shadow: 0 8px 30px rgba(0,0,0,.35);
-}
 
 .league-brand h1 {
     font-size: 20px;
@@ -132,8 +115,30 @@ nav a.active {
 }
 
 
+.hero-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 50px;
+}
+
+
 .hero-content {
     max-width: 700px;
+}
+
+
+.hero-logo {
+    flex-shrink: 0;
+}
+
+
+.hero-logo img {
+    width: 260px;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.35);
 }
 
 
@@ -230,24 +235,7 @@ section {
     color: #64727e;
 }
 
-/* =========================================
-   Standings
-   ========================================= */
-.standings-team {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
 
-.standings-team .team-badge,
-.standings-team .team-badge-logo {
-    width: 30px;
-    height: 30px;
-    margin: 0;
-    border-width: 2px;
-    font-size: 10px;
-    flex-shrink: 0;
-}
 /* =========================================
    NEXT GAME
    ========================================= */
@@ -614,17 +602,20 @@ tbody tr:hover {
 
 .schedule-matchup {
     font-weight: bold;
+
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
 }
 
+
 .schedule-team {
     display: flex;
     align-items: center;
     gap: 8px;
 }
+
 
 .schedule-team .team-badge,
 .schedule-team .team-badge-logo {
@@ -636,14 +627,34 @@ tbody tr:hover {
     flex-shrink: 0;
 }
 
+
 .roster-team {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
+
 .roster-team .team-badge,
 .roster-team .team-badge-logo {
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    border-width: 2px;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+
+.standings-team {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+
+.standings-team .team-badge,
+.standings-team .team-badge-logo {
     width: 30px;
     height: 30px;
     margin: 0;
@@ -806,6 +817,58 @@ tbody tr:hover {
 }
 
 /* =========================================
+   SPONSORS
+   ========================================= */
+
+.sponsor-intro {
+    color: #687681;
+    max-width: 640px;
+    margin-bottom: 22px;
+}
+
+.sponsor-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.sponsor-card {
+    background: white;
+    border-radius: 8px;
+    padding: 28px 20px;
+    text-align: center;
+
+    box-shadow: 0 3px 15px rgba(0,0,0,.07);
+    transition: transform .15s;
+
+    text-decoration: none;
+    color: inherit;
+}
+
+a.sponsor-card:hover {
+    transform: translateY(-3px);
+}
+
+.sponsor-name {
+    font-size: 22px;
+    font-weight: 900;
+    color: #c8102e;
+    letter-spacing: .5px;
+}
+
+.sponsor-team {
+    color: #687681;
+    font-size: 13px;
+    margin-top: 6px;
+}
+
+.sponsor-blurb {
+    color: #45525c;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+/* =========================================
    ROSTER COUNT PILL
    ========================================= */
 
@@ -861,15 +924,7 @@ footer {
 
         padding: 18px 0;
     }
-.hero-inner {
-    flex-direction: column;
-    text-align: center;
-    gap: 30px;
-}
 
-.hero-logo img {
-    width: 160px;
-}
 
     nav {
         width: 100%;
@@ -880,6 +935,18 @@ footer {
 
     .hero {
         padding: 55px 0;
+    }
+
+
+    .hero-inner {
+        flex-direction: column;
+        text-align: center;
+        gap: 30px;
+    }
+
+
+    .hero-logo img {
+        width: 160px;
     }
 
 
@@ -898,6 +965,11 @@ footer {
     .team-grid,
     .team-grid.large {
         grid-template-columns: 1fr;
+    }
+
+
+    .sponsor-grid {
+        grid-template-columns: 1fr 1fr;
     }
 
 
