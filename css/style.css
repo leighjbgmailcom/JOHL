@@ -79,6 +79,48 @@ nav {
 }
 
 
+.nav-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+
+    width: 42px;
+    height: 42px;
+
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+
+.nav-toggle span {
+    display: block;
+    width: 26px;
+    height: 3px;
+    background: white;
+    border-radius: 2px;
+    transition: transform .2s, opacity .2s;
+}
+
+
+.nav-toggle.open span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+
+
+.nav-toggle.open span:nth-child(2) {
+    opacity: 0;
+}
+
+
+.nav-toggle.open span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
+
+
 nav a {
     color: white;
     text-decoration: none;
@@ -918,18 +960,37 @@ footer {
 @media (max-width: 800px) {
 
     .header-inner {
-        flex-direction: column;
+        flex-wrap: wrap;
 
-        align-items: flex-start;
+        padding: 16px 0;
+    }
 
-        padding: 18px 0;
+
+    .nav-toggle {
+        display: flex;
     }
 
 
     nav {
-        width: 100%;
+        display: none;
 
-        overflow-x: auto;
+        width: 100%;
+        flex-direction: column;
+        order: 3;
+
+        margin-top: 14px;
+    }
+
+
+    nav.open {
+        display: flex;
+    }
+
+
+    nav a {
+        width: 100%;
+        padding: 13px 14px;
+        border-bottom: 1px solid rgba(255,255,255,.08);
     }
 
 
