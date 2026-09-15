@@ -81,7 +81,13 @@ async function checkLogin() {
         window.location.hash.substring(1)
     );
 
-    const inviteType = hashParams.get("type");
+    const searchParams = new URLSearchParams(
+        window.location.search
+    );
+
+    const inviteType =
+        hashParams.get("type") ||
+        searchParams.get("type");
 
     const isHomePage =
         window.location.pathname === "/" ||
@@ -89,10 +95,12 @@ async function checkLogin() {
 
     if (inviteType === "invite" && isHomePage) {
 
-        console.log("Invitation detected.");
+        console.log("JOHL invitation detected.");
 
         window.location.replace(
-            "accept-invite.html" + window.location.hash
+            "accept-invite.html" +
+            window.location.search +
+            window.location.hash
         );
 
         return false;
