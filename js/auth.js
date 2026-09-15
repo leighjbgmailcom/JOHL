@@ -1,4 +1,4 @@
-const SUPABASE_URL = "https://wjsxpywxwjordtzzjrue.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://wjsxpywxwjordtzzjrue.supabase.co";
 const SUPABASE_KEY = "sb_publishable_g61gG7QXf9nZr9u0gFjGvg_Kn4jIM_n";
 
 const supabaseClient = supabase.createClient(
@@ -14,7 +14,6 @@ const loginForm = document.getElementById("login-form");
 
 if (loginForm) {
 
-```
 loginForm.addEventListener("submit", async function(event) {
 
     event.preventDefault();
@@ -44,7 +43,6 @@ loginForm.addEventListener("submit", async function(event) {
 
     window.location.href = "index.html";
 });
-```
 
 }
 
@@ -54,7 +52,6 @@ loginForm.addEventListener("submit", async function(event) {
 
 async function checkLogin() {
 
-```
 const {
     data: { session }
 } = await supabaseClient.auth.getSession();
@@ -67,7 +64,7 @@ if (!session) {
 }
 
 return true;
-```
+
 
 }
 
@@ -77,7 +74,7 @@ return true;
 
 async function logout() {
 
-```
+
 const { error } = await supabaseClient.auth.signOut();
 
 if (error) {
@@ -88,7 +85,7 @@ if (error) {
 }
 
 window.location.href = "login.html";
-```
+
 
 }
 
@@ -101,7 +98,7 @@ document.getElementById("forgot-password-form");
 
 if (forgotPasswordForm) {
 
-```
+
 forgotPasswordForm.addEventListener("submit", async function(event) {
 
     event.preventDefault();
@@ -135,7 +132,7 @@ forgotPasswordForm.addEventListener("submit", async function(event) {
     message.textContent =
         "Check your email for a password reset link.";
 });
-```
+
 
 }
 
@@ -146,7 +143,6 @@ forgotPasswordForm.addEventListener("submit", async function(event) {
 supabaseClient.auth.onAuthStateChange(
 async function(event, session) {
 
-```
     if (event === "PASSWORD_RECOVERY") {
 
         console.log("Password recovery session detected.");
@@ -235,7 +231,7 @@ async function(event, session) {
         );
     }
 }
-```
+
 
 );
 
