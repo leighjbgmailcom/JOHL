@@ -177,11 +177,14 @@
 <script src="js/auth.js"></script>
 
 <script>
-    checkLogin();
-</script>
+    supabaseClient.auth.getSession().then(function(result) {
 
-<script>
-    checkLogin();
+        console.log("JOHL SESSION TEST:");
+        console.log(result);
+
+        checkLogin();
+
+    });
 </script>
 </body>
 </html>
