@@ -46,6 +46,27 @@ loginForm.addEventListener("submit", async function(event) {
 
 async function checkLogin() {
 
+// Check if this is an invitation being accepted
+const hashParams =
+    new URLSearchParams(window.location.hash.substring(1));
+
+const inviteType = hashParams.get("type");
+
+const isHomePage =
+    window.location.pathname === "/" ||
+    window.location.pathname.endsWith("/index.html");
+
+if (inviteType === "invite" && isHomePage) {
+
+    window.location.replace(
+        "accept-invite.html" + window.location.hash
+    );
+
+    return false;
+}
+
+
+// Normal login check
 const {
     data: { session }
 } = await supabaseClient.auth.getSession();
@@ -58,7 +79,6 @@ if (!session) {
 }
 
 return true;
-
 
 }
 
