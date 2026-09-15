@@ -441,13 +441,12 @@ function setupMobileNav() {
    START WEBSITE
    ========================================= */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+
     setupMobileNav();
-    renderNextGame();
+
+    await loadLeagueData();
+
     renderTeams();
-    setupScheduleFilters();
-    renderPlayers();
-    setupPlayerFilters();
-    renderStandingsPlaceholder();
-    renderSponsors();
+
 });
