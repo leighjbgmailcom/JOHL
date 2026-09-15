@@ -445,8 +445,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     setupMobileNav();
 
-    await loadLeagueData();
+    const loaded = await loadLeagueData();
 
+    if (!loaded) {
+        console.error("Could not load JOHL data from Supabase.");
+        return;
+    }
+
+    renderNextGame();
     renderTeams();
+    setupScheduleFilters();
+    renderPlayers();
+    setupPlayerFilters();
+    renderStandingsPlaceholder();
+    renderSponsors();
 
 });
