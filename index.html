@@ -156,35 +156,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
-
-<script>
-    // Detect a Supabase invitation before normal login checking
-    const hashParams = new URLSearchParams(
-        window.location.hash.substring(1)
-    );
-
-    if (hashParams.get("type") === "invite") {
-
-        window.location.replace(
-            "accept-invite.html" + window.location.hash
-        );
-
-    }
-</script>
-
 <script src="js/db.js"></script>
 <script src="js/app.js"></script>
 <script src="js/auth.js"></script>
 
 <script>
-    supabaseClient.auth.getSession().then(function(result) {
-
-        console.log("JOHL SESSION TEST:");
-        console.log(result);
-
-        checkLogin();
-
-    });
+    console.log("JOHL INDEX PAGE LOADED");
 </script>
+    
 </body>
 </html>
