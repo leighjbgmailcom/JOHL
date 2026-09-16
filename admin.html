@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Jordan Oldtimers Hockey League</title>
+    <link rel="stylesheet" href="css/style.css?v=20260916d">
+</head>
+
+<body>
+
+<header class="site-header">
+    <div class="container header-inner">
+
+        <div class="league-brand">
+            <img src="images/sm_JOHL_LOGO.png" alt="Jordan Oldtimers Hockey League" class="league-logo">
+            <div>
+                <h1>Jordan Oldtimers</h1>
+                <span>Hockey League</span>
+            </div>
+        </div>
+
+        <button class="nav-toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <nav id="site-nav">
+            <a href="index.html">Home</a>
+            <a href="schedule.html">Schedule</a>
+            <a href="standings.html" data-protected style="display:none;">Standings</a>
+            <a href="teams.html" data-protected style="display:none;">Teams</a>
+            <a href="players.html" data-protected style="display:none;">Rosters</a>
+            <a href="admin.html" id="admin-link" class="active" style="display:none;">Admin</a>
+            <a href="login.html" id="auth-link">Login</a>
+        </nav>
+
+    </div>
+</header>
+
+
+<main class="container page-content">
+
+    <div class="page-title">
+        <p class="eyebrow">ADMIN</p>
+        <h2>Enter Game Results</h2>
+        <p>Pick a game, log every goal and penalty, then save.</p>
+    </div>
+
+    <div class="admin-panel">
+
+        <label for="admin-game-select"><strong>Game</strong></label>
+        <select id="admin-game-select">
+            <option value="">Select a game&hellip;</option>
+        </select>
+
+        <div id="admin-game-editor" style="display:none;">
+
+            <div class="admin-score-preview" id="admin-score-preview"></div>
+
+            <div class="admin-team-columns">
+
+                <div class="admin-team-column">
+                    <h3 id="away-team-heading"></h3>
+
+                    <h4>Goals</h4>
+                    <div id="away-goals-list"></div>
+                    <button type="button" class="btn admin-add-btn" data-side="away" data-kind="goal">+ Add Goal</button>
+
+                    <h4>Penalties</h4>
+                    <div id="away-penalties-list"></div>
+                    <button type="button" class="btn admin-add-btn" data-side="away" data-kind="penalty">+ Add Penalty</button>
+                </div>
+
+                <div class="admin-team-column">
+                    <h3 id="home-team-heading"></h3>
+
+                    <h4>Goals</h4>
+                    <div id="home-goals-list"></div>
+                    <button type="button" class="btn admin-add-btn" data-side="home" data-kind="goal">+ Add Goal</button>
+
+                    <h4>Penalties</h4>
+                    <div id="home-penalties-list"></div>
+                    <button type="button" class="btn admin-add-btn" data-side="home" data-kind="penalty">+ Add Penalty</button>
+                </div>
+
+            </div>
+
+            <label class="admin-final-check">
+                <input type="checkbox" id="admin-mark-final">
+                Mark this game as Final (counts toward standings)
+            </label>
+
+            <button type="button" class="btn btn-primary" id="admin-save-btn">Save Game Results</button>
+
+            <p id="admin-message"></p>
+
+        </div>
+
+    </div>
+
+</main>
+
+
+<footer>
+
+    <div class="container footer-inner">
+
+        <div>
+            <strong>Jordan Oldtimers Hockey League</strong>
+            <p>Six teams. One great league.</p>
+        </div>
+
+        <p>© 2026 JOHL</p>
+
+    </div>
+
+</footer>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js?v=20260916d"></script>
+<script src="js/db.js?v=20260916d"></script>
+<script src="js/app.js?v=20260916d"></script>
+<script src="js/auth.js?v=20260916d"></script>
+<script src="js/admin.js?v=20260916d"></script>
+
+<script>
+    checkAdmin();
+</script>
+
+</body>
+</html>

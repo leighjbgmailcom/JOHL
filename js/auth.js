@@ -128,6 +128,47 @@ async function checkLogin() {
 
 
 // =====================================================
+// CHECK ADMIN
+// For pages that require not just login, but the
+// current user's profiles.is_admin flag to be true.
+// Call AFTER checkLogin() (or instead of it, since this
+// also verifies a session exists first).
+// =====================================================
+
+async function checkAdmin() {
+
+    const isLoggedIn = await checkLogin();
+
+    if (!isLoggedIn) {
+        return false;
+    }
+
+    const {
+        data: { session }
+    } = await supabaseClient.auth.getSession();
+
+    const { data: profile, error } =
+        await supabaseClient
+            .from("profiles")
+            .select("is_admin")
+            .eq("id", session.user.id)
+            .single();
+
+    if (error || !profile || !profile.is_admin) {
+
+        console.warn("Admin access denied.");
+
+        window.location.href = "index.html";
+
+        return false;
+    }
+
+    return true;
+
+}
+
+
+// =====================================================
 // LOGOUT
 // =====================================================
 

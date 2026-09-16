@@ -7,6 +7,7 @@ let TEAMS = [];
 let PLAYERS = [];
 let SPONSORS = [];
 let SCHEDULE = [];
+let GOALS = [];
 
 
 /* =========================================
@@ -169,6 +170,42 @@ async function loadSchedule() {
 
 
 /* =========================================
+   LOAD GOALS
+   (only completed games have any -- used to
+   calculate standings)
+   ========================================= */
+
+async function loadGoals() {
+
+    const { data, error } = await supabaseClient
+        .from("game_goals")
+        .select(`
+            id,
+            game_id,
+            team_id,
+            period,
+            teams (
+                code
+            )
+        `);
+
+    if (error) {
+        console.error("Error loading goals:", error);
+        return false;
+    }
+
+    GOALS = data.map(goal => ({
+        id: goal.id,
+        gameId: goal.game_id,
+        team: goal.teams ? goal.teams.code : null,
+        period: goal.period
+    }));
+
+    return true;
+}
+
+
+/* =========================================
    LOAD EVERYTHING
    ========================================= */
 
@@ -178,7 +215,8 @@ async function loadLeagueData() {
         loadTeams(),
         loadPlayers(),
         loadSponsors(),
-        loadSchedule()
+        loadSchedule(),
+        loadGoals()
     ]);
 
     const success = results.every(result => result === true);
@@ -189,6 +227,7 @@ async function loadLeagueData() {
         console.log("Players:", PLAYERS.length);
         console.log("Sponsors:", SPONSORS.length);
         console.log("Schedule entries:", SCHEDULE.length);
+        console.log("Goals:", GOALS.length);
     }
 
     return success;

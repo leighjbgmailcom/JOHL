@@ -381,31 +381,110 @@ function renderSponsors() {
 
 
 /* =========================================
-   STANDINGS (placeholder — pre-season)
+   STANDINGS
+   Calculated from GOALS + completed games.
+   Points: 2 for a win (regulation, OT, or SO),
+   1 for an OT/SO loss, 1 each for a tie,
+   0 for a regulation loss.
    ========================================= */
 
-function renderStandingsPlaceholder() {
+function calculateStandings() {
+
+    const table = {};
+
+    TEAMS.forEach(team => {
+        table[team.code] = {
+            team: team,
+            gp: 0, w: 0, l: 0, t: 0, ot: 0,
+            gf: 0, ga: 0, pts: 0
+        };
+    });
+
+    const finalGames = SCHEDULE.filter(
+        game => !game.noGames && game.status === "final"
+    );
+
+    finalGames.forEach(game => {
+        const homeGoals = GOALS.filter(
+            g => String(g.gameId) === String(game.id) && g.team === game.home
+        );
+        const awayGoals = GOALS.filter(
+            g => String(g.gameId) === String(game.id) && g.team === game.away
+        );
+
+        const isExtraTime = p => p === "OT" || p === "SO";
+
+        const homeReg = homeGoals.filter(g => !isExtraTime(g.period)).length;
+        const awayReg = awayGoals.filter(g => !isExtraTime(g.period)).length;
+
+        const homeFinal = homeGoals.length;
+        const awayFinal = awayGoals.length;
+
+        const home = table[game.home];
+        const away = table[game.away];
+
+        if (!home || !away) return; // TBD / playoff placeholder games
+
+        home.gp++;
+        away.gp++;
+        home.gf += homeFinal;
+        home.ga += awayFinal;
+        away.gf += awayFinal;
+        away.ga += homeFinal;
+
+        if (homeFinal === awayFinal) {
+            // Tied at the final buzzer, no OT/SO played -- a tie.
+            home.t++;
+            away.t++;
+            home.pts += 1;
+            away.pts += 1;
+        } else if (homeReg === awayReg) {
+            // Tied after regulation, decided in OT/SO.
+            const winner = homeFinal > awayFinal ? home : away;
+            const loser = homeFinal > awayFinal ? away : home;
+            winner.w++;
+            winner.pts += 2;
+            loser.ot++;
+            loser.pts += 1;
+        } else {
+            // Decided in regulation.
+            const winner = homeFinal > awayFinal ? home : away;
+            const loser = homeFinal > awayFinal ? away : home;
+            winner.w++;
+            winner.pts += 2;
+            loser.l++;
+        }
+    });
+
+    return Object.values(table).sort((a, b) => {
+        if (b.pts !== a.pts) return b.pts - a.pts;
+        if (b.gf - b.ga !== a.gf - a.ga) return (b.gf - b.ga) - (a.gf - a.ga);
+        return a.team.name.localeCompare(b.team.name);
+    });
+}
+
+function renderStandings() {
     const element = document.getElementById("standings-table");
     if (!element) return;
 
-    const sorted = [...TEAMS].sort((a, b) => a.name.localeCompare(b.name));
+    const standings = calculateStandings();
 
-    element.innerHTML = sorted.map(team => `
+    element.innerHTML = standings.map(row => `
         <tr>
             <td class="team-name-cell">
                 <div class="standings-team">
-                    ${teamBadge(team.code)}
-                    <span>${team.name}</span>
+                    ${teamBadge(row.team.code)}
+                    <span>${row.team.name}</span>
                 </div>
             </td>
-            <td>0</td>
-            <td>0</td>
-            <td>0</td>
-            <td>0</td>
-            <td>0</td>
-            <td>0</td>
-            <td>0</td>
-            <td><strong>0</strong></td>
+            <td>${row.gp}</td>
+            <td>${row.w}</td>
+            <td>${row.l}</td>
+            <td>${row.t}</td>
+            <td>${row.ot}</td>
+            <td>${row.gf}</td>
+            <td>${row.ga}</td>
+            <td><strong>${row.pts}</strong></td>
         </tr>
     `).join("");
 }
@@ -642,6 +721,43 @@ function setupLoginModal() {
 
 
 /* =========================================
+   ADMIN NAV LINK
+   Shows an "Admin" nav item only for users
+   whose profiles.is_admin flag is true.
+   ========================================= */
+
+async function setupAdminNav() {
+    const link = document.getElementById("admin-link");
+    if (!link) return;
+    if (typeof supabaseClient === "undefined") return;
+
+    async function refresh() {
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (!session) {
+            link.style.display = "none";
+            return;
+        }
+
+        const { data: profile } =
+            await supabaseClient
+                .from("profiles")
+                .select("is_admin")
+                .eq("id", session.user.id)
+                .single();
+
+        link.style.display = (profile && profile.is_admin) ? "" : "none";
+    }
+
+    supabaseClient.auth.onAuthStateChange(() => refresh());
+
+    refresh();
+}
+
+
+/* =========================================
    START WEBSITE
    ========================================= */
 
@@ -650,6 +766,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupMobileNav();
     setupAuthNav();
     setupLoginModal();
+    setupAdminNav();
 
     const loaded = await loadLeagueData();
 
@@ -663,7 +780,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupScheduleFilters();
     renderPlayers();
     setupPlayerFilters();
-    renderStandingsPlaceholder();
+    renderStandings();
     renderSponsors();
+
+    if (typeof initAdminPage === "function") {
+        initAdminPage();
+    }
 
 });

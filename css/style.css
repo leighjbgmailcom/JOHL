@@ -1107,10 +1107,184 @@ footer {
 
 
 /* =========================================
+   ADMIN — GAME RESULTS ENTRY
+   ========================================= */
+
+.admin-panel {
+    background: white;
+    border-radius: 8px;
+    padding: 26px;
+    box-shadow: 0 3px 15px rgba(0,0,0,.07);
+}
+
+.admin-panel label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+#admin-game-select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccd3d9;
+    border-radius: 6px;
+    font-size: 15px;
+    margin-bottom: 10px;
+}
+
+#admin-game-editor {
+    margin-top: 26px;
+    padding-top: 26px;
+    border-top: 1px solid #e5e9ec;
+}
+
+.admin-score-preview {
+    background: #f6f8fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.admin-score-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.admin-score-line .team-badge-logo,
+.admin-score-line .team-badge {
+    width: 36px;
+    height: 36px;
+    margin: 0;
+}
+
+.admin-team-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+.admin-team-column h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.admin-team-column h3 .team-badge-logo,
+.admin-team-column h3 .team-badge {
+    width: 34px;
+    height: 34px;
+    margin: 0;
+}
+
+.admin-team-column h4 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #75818b;
+    margin: 20px 0 10px;
+}
+
+.admin-row {
+    display: grid;
+    grid-template-columns: 70px 80px 1fr 1fr 1fr 34px;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+#away-penalties-list .admin-row,
+#home-penalties-list .admin-row {
+    grid-template-columns: 70px 80px 1fr 1fr 90px 34px;
+}
+
+.admin-row select,
+.admin-row input {
+    padding: 8px;
+    border: 1px solid #ccd3d9;
+    border-radius: 5px;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.admin-remove-btn {
+    background: none;
+    border: none;
+    color: #97a3ac;
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.admin-remove-btn:hover {
+    color: #c8102e;
+}
+
+.admin-add-btn {
+    margin-top: 4px;
+    font-size: 13px;
+    padding: 9px 16px;
+}
+
+.admin-final-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 28px 0 18px;
+    font-weight: normal;
+}
+
+.admin-final-check input {
+    width: auto;
+}
+
+#admin-save-btn {
+    width: auto;
+    padding: 13px 26px;
+}
+
+#admin-message {
+    margin-top: 14px;
+    font-size: 14px;
+    color: #45525c;
+}
+
+
+/* =========================================
    MOBILE
    ========================================= */
 
 @media (max-width: 800px) {
+
+    .admin-team-columns {
+        grid-template-columns: 1fr;
+        gap: 34px;
+    }
+
+
+    .admin-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 10px;
+        background: #f6f8fa;
+        border-radius: 6px;
+    }
+
+    #away-penalties-list .admin-row,
+    #home-penalties-list .admin-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .admin-row .admin-remove-btn {
+        grid-column: 1 / -1;
+        justify-self: end;
+    }
+
 
     .header-inner {
         flex-wrap: wrap;
