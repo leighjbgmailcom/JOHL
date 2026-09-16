@@ -58,14 +58,14 @@
 
     <div class="login-card">
 
-        <h3>Create Your Password</h3>
+        <h3 id="invite-heading">Verifying your invitation...</h3>
 
-        <p>
-            Set a password below to finish activating your league account.
+        <p id="invite-subtext">
+            Hang tight while we confirm your invitation link.
         </p>
 
 
-        <form id="accept-invite-form">
+        <form id="accept-invite-form" style="display:none;">
 
             <label for="new-password">
                 New Password
@@ -100,10 +100,10 @@
                 Activate My Account
             </button>
 
-
-            <p id="invite-message"></p>
-
         </form>
+
+
+        <p id="invite-message"></p>
 
     </div>
 
@@ -144,45 +144,79 @@
 
 <script>
 
+const heading = document.getElementById("invite-heading");
+const subtext = document.getElementById("invite-subtext");
 const form = document.getElementById("accept-invite-form");
-
 const message = document.getElementById("invite-message");
 
 
 /*
-    The invitation link creates a Supabase
-    authentication session automatically.
+    This page expects the invite link to point directly here with
+    token_hash and type as query params (NOT Supabase's hosted
+    /auth/v1/verify redirect link). We verify the token ourselves,
+    client-side, the moment a real browser loads this page and runs
+    this script.
 
-    We wait for that session before allowing
-    the player to set their password.
+    This avoids a common Supabase gotcha: email security scanners
+    (corporate spam filters, Outlook Safe Links, some mobile mail
+    apps) automatically "visit" links in emails to check they're
+    safe. If that link is Supabase's own verify endpoint, the token
+    gets consumed by the scanner before the real person ever clicks
+    it, and they see "invalid or expired" even on a fresh invite.
+    Verifying here, in JS, sidesteps that entirely.
 */
 
-async function checkInvitationSession() {
+async function verifyInvitation() {
+
+    const params = new URLSearchParams(window.location.search);
+
+    const tokenHash = params.get("token_hash");
+    const type = params.get("type");
 
     // TEMP DIAGNOSTIC LOGGING — remove once the flow is confirmed working.
-    console.log("URL hash on load:", window.location.hash);
-
-    const {
-        data: { session },
-        error
-    } = await supabaseClient.auth.getSession();
-
-    console.log("getSession() result:", { session, error });
+    console.log("Query params on load:", { tokenHash, type });
 
 
-    if (error || !session) {
+    if (!tokenHash || !type) {
 
-        message.textContent = error
-            ? `This invitation link couldn't be verified: ${error.message}`
-            : "This invitation is invalid or has expired. Please request a new invitation.";
+        heading.textContent = "Invitation link incomplete";
 
-        form.style.display = "none";
+        subtext.textContent =
+            "This link is missing required information. Please use the link exactly as it appears in your invitation email, or request a new invitation.";
 
-        return false;
+        return;
 
     }
 
-    return true;
+
+    const { data, error } =
+        await supabaseClient.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: type
+        });
+
+    // TEMP DIAGNOSTIC LOGGING — remove once the flow is confirmed working.
+    console.log("verifyOtp() result:", { data, error });
+
+
+    if (error) {
+
+        heading.textContent = "This invitation couldn't be verified";
+
+        subtext.textContent =
+            `${error.message}. Please request a new invitation.`;
+
+        return;
+
+    }
+
+
+    heading.textContent = "Create Your Password";
+
+    subtext.textContent =
+        "Set a password below to finish activating your league account.";
+
+    form.style.display = "";
 
 }
 
@@ -238,8 +272,6 @@ form.addEventListener("submit", async function(event) {
 
         console.error(error);
 
-        // Show the real reason instead of a generic message, so we can
-        // actually see what Supabase is rejecting.
         message.textContent =
             `There was a problem activating your account: ${error.message} (status ${error.status ?? "n/a"})`;
 
@@ -261,7 +293,7 @@ form.addEventListener("submit", async function(event) {
 });
 
 
-checkInvitationSession();
+verifyInvitation();
 
 </script>
 
