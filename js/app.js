@@ -602,6 +602,42 @@ function setupLoginModal() {
         // the person happened to be.
         window.location.reload();
     });
+
+    const forgotLink = document.getElementById("forgot-password-link");
+
+    if (forgotLink) {
+        forgotLink.addEventListener("click", async () => {
+
+            if (typeof supabaseClient === "undefined") return;
+
+            const emailField = document.getElementById("modal-email");
+            const email = emailField.value.trim();
+
+            if (!email) {
+                message.textContent =
+                    "Enter your email above first, then click \u201cForgot your password?\u201d again.";
+                emailField.focus();
+                return;
+            }
+
+            message.textContent = "Sending reset link...";
+
+            const { error } =
+                await supabaseClient.auth.resetPasswordForEmail(email, {
+                    redirectTo: "https://jordanohl.ca/reset-password.html"
+                });
+
+            if (error) {
+                console.error(error);
+                message.textContent =
+                    "There was a problem sending the reset email. Please try again.";
+                return;
+            }
+
+            message.textContent =
+                "Check your email for a link to reset your password.";
+        });
+    }
 }
 
 
