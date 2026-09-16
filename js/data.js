@@ -30,7 +30,7 @@ const TEAMS = [
     },
     {
         "code": "OIL",
-        "name": "Dawson's Oilersz",
+        "name": "Dawson's Oilers",
         "class": "Oilers",
         "logo": "images/Oilers.png"
     },
