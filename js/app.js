@@ -364,6 +364,12 @@ function setupPlayerFilters() {
 
     if (search) search.addEventListener("input", renderPlayers);
     if (team) team.addEventListener("change", renderPlayers);
+
+    // Setting .value above doesn't fire a "change" event, so the
+    // very first render needs to happen here explicitly once the
+    // dropdown reflects the ?team= param -- otherwise the list stays
+    // unfiltered until the person manually touches the dropdown.
+    renderPlayers();
 }
 
 
@@ -601,6 +607,8 @@ function setupLeadersFilters() {
 
     if (search) search.addEventListener("input", renderLeaders);
     if (team) team.addEventListener("change", renderLeaders);
+
+    renderLeaders();
 }
 
 
@@ -889,11 +897,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderNextGame();
     renderTeams();
     setupScheduleFilters();
-    renderPlayers();
     setupPlayerFilters();
     renderStandings();
     renderSponsors();
-    renderLeaders();
     setupLeadersFilters();
 
     if (typeof initAdminPage === "function") {
