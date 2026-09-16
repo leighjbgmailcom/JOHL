@@ -227,6 +227,12 @@ function renderSchedule(filter = "ALL") {
 
                 ${group.entries.map(game => {
                     const isTbd = game.home === "TBD" || game.away === "TBD";
+                    const isFinal = game.status === "final";
+
+                    const awayWon = isFinal && game.awayScore > game.homeScore;
+                    const homeWon = isFinal && game.homeScore > game.awayScore;
+                    const awayLost = isFinal && game.awayScore < game.homeScore;
+                    const homeLost = isFinal && game.homeScore < game.awayScore;
 
                     return `
                         <div class="schedule-game ${isTbd ? "is-tbd" : ""}">
@@ -237,12 +243,12 @@ function renderSchedule(filter = "ALL") {
 
                             <div>
                                 <div class="schedule-matchup">
-                                    <div class="schedule-team">
+                                    <div class="schedule-team ${awayWon ? "schedule-winner" : ""} ${awayLost ? "schedule-loser" : ""}">
                                         ${teamBadge(game.away)}
                                         <span>${teamName(game.away)}</span>
                                     </div>
                                     <span class="at-symbol">vs.</span>
-                                    <div class="schedule-team">
+                                    <div class="schedule-team ${homeWon ? "schedule-winner" : ""} ${homeLost ? "schedule-loser" : ""}">
                                         ${teamBadge(game.home)}
                                         <span>${teamName(game.home)}</span>
                                     </div>
@@ -252,7 +258,13 @@ function renderSchedule(filter = "ALL") {
                             </div>
 
                             <div class="schedule-score">
-                                ${isTbd ? "TBD" : "GAME " + game.gameNo}
+                                ${
+                                    isTbd
+                                        ? "TBD"
+                                        : isFinal
+                                            ? `<span class="score-final-badge">FINAL</span><span class="score-value">${game.awayScore} – ${game.homeScore}</span>`
+                                            : "GAME " + game.gameNo
+                                }
                             </div>
 
                         </div>

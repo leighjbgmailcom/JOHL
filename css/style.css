@@ -747,6 +747,47 @@ tbody tr:hover {
 }
 
 
+.score-final-badge {
+    display: block;
+
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .5px;
+
+    color: #75818b;
+
+    margin-bottom: 3px;
+}
+
+
+.score-value {
+    display: block;
+
+    font-size: 20px;
+    font-weight: 900;
+
+    color: #17212b;
+}
+
+
+.schedule-winner span {
+    font-weight: 900;
+    color: #17212b;
+}
+
+
+.schedule-loser span {
+    font-weight: normal;
+    color: #97a3ac;
+}
+
+
+.schedule-loser .team-badge,
+.schedule-loser .team-badge-logo {
+    opacity: .55;
+}
+
+
 /* =========================================
    PLAYERS
    ========================================= */
