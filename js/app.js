@@ -438,7 +438,8 @@ function setupMobileNav() {
 
 
 /* =========================================
-   AUTH NAV (Login / Logout link)
+   AUTH NAV (Login / Logout link + protected
+   nav items)
    ========================================= */
 
 function setupAuthNav() {
@@ -449,14 +450,24 @@ function setupAuthNav() {
     // reason, fail quietly rather than breaking the rest of the nav.
     if (typeof supabaseClient === "undefined") return;
 
+    const protectedLinks = document.querySelectorAll("#site-nav a[data-protected]");
+
     function showLoggedIn() {
         link.textContent = "Logout";
         link.href = "#";
+
+        protectedLinks.forEach(item => {
+            item.style.display = "";
+        });
     }
 
     function showLoggedOut() {
         link.textContent = "Login";
         link.href = "login.html";
+
+        protectedLinks.forEach(item => {
+            item.style.display = "none";
+        });
     }
 
     async function refresh() {
@@ -473,8 +484,8 @@ function setupAuthNav() {
 
     link.addEventListener("click", async (event) => {
         // Only intercept the click when we're in the logged-in
-        // (Logout) state -- otherwise let it navigate to login.html
-        // normally.
+        // (Logout) state -- otherwise the login modal handler (see
+        // setupLoginModal) takes care of the click instead.
         if (link.textContent !== "Logout") return;
 
         event.preventDefault();
@@ -484,8 +495,9 @@ function setupAuthNav() {
         window.location.href = "index.html";
     });
 
-    // Keep the link in sync if auth state changes while the page is
-    // open (e.g. session expires, or user logs out in another tab).
+    // Keep the link + protected nav items in sync if auth state
+    // changes while the page is open (e.g. session expires, or the
+    // user logs out in another tab).
     supabaseClient.auth.onAuthStateChange((_event, session) => {
         if (session) {
             showLoggedIn();
@@ -499,6 +511,86 @@ function setupAuthNav() {
 
 
 /* =========================================
+   LOGIN MODAL
+   ========================================= */
+
+function setupLoginModal() {
+    const authLink = document.getElementById("auth-link");
+    const modal = document.getElementById("login-modal");
+    const closeBtn = document.getElementById("login-modal-close");
+    const form = document.getElementById("modal-login-form");
+    const message = document.getElementById("modal-login-message");
+
+    if (!authLink || !modal || !form) return;
+
+    function openModal() {
+        modal.classList.add("open");
+        document.getElementById("modal-email")?.focus();
+    }
+
+    function closeModal() {
+        modal.classList.remove("open");
+        message.textContent = "";
+        form.reset();
+    }
+
+    authLink.addEventListener("click", (event) => {
+        // Only intercept the click when we're in the logged-out
+        // (Login) state -- the Logout behaviour is handled in
+        // setupAuthNav instead.
+        if (authLink.textContent !== "Login") return;
+
+        event.preventDefault();
+        openModal();
+    });
+
+    closeBtn.addEventListener("click", closeModal);
+
+    modal.addEventListener("click", (event) => {
+        if (event.target === modal) closeModal();
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modal.classList.contains("open")) {
+            closeModal();
+        }
+    });
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        if (typeof supabaseClient === "undefined") return;
+
+        const email = document.getElementById("modal-email").value.trim();
+        const password = document.getElementById("modal-password").value;
+
+        message.textContent = "Logging in...";
+
+        const { error } =
+            await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+
+        if (error) {
+            console.error(error);
+            message.textContent =
+                "Login failed. Please check your email and password.";
+            return;
+        }
+
+        message.textContent = "Success! Refreshing...";
+
+        // Reload so nav state, protected links, and any page-level
+        // auth guard (checkLogin) all re-evaluate against the fresh
+        // session, rather than hard-redirecting away from wherever
+        // the person happened to be.
+        window.location.reload();
+    });
+}
+
+
+/* =========================================
    START WEBSITE
    ========================================= */
 
@@ -506,6 +598,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     setupMobileNav();
     setupAuthNav();
+    setupLoginModal();
 
     const loaded = await loadLeagueData();
 
