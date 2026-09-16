@@ -8,6 +8,7 @@ let PLAYERS = [];
 let SPONSORS = [];
 let SCHEDULE = [];
 let GOALS = [];
+let PENALTIES = [];
 
 
 /* =========================================
@@ -183,6 +184,9 @@ async function loadGoals() {
             id,
             game_id,
             team_id,
+            scorer_id,
+            assist1_id,
+            assist2_id,
             period,
             teams (
                 code
@@ -198,7 +202,47 @@ async function loadGoals() {
         id: goal.id,
         gameId: goal.game_id,
         team: goal.teams ? goal.teams.code : null,
+        scorerId: goal.scorer_id,
+        assist1Id: goal.assist1_id,
+        assist2Id: goal.assist2_id,
         period: goal.period
+    }));
+
+    return true;
+}
+
+
+/* =========================================
+   LOAD PENALTIES
+   (used for the player leaderboard's PIM column)
+   ========================================= */
+
+async function loadPenalties() {
+
+    const { data, error } = await supabaseClient
+        .from("game_penalties")
+        .select(`
+            id,
+            game_id,
+            team_id,
+            player_id,
+            minutes,
+            teams (
+                code
+            )
+        `);
+
+    if (error) {
+        console.error("Error loading penalties:", error);
+        return false;
+    }
+
+    PENALTIES = data.map(penalty => ({
+        id: penalty.id,
+        gameId: penalty.game_id,
+        team: penalty.teams ? penalty.teams.code : null,
+        playerId: penalty.player_id,
+        minutes: penalty.minutes
     }));
 
     return true;
@@ -216,7 +260,8 @@ async function loadLeagueData() {
         loadPlayers(),
         loadSponsors(),
         loadSchedule(),
-        loadGoals()
+        loadGoals(),
+        loadPenalties()
     ]);
 
     const success = results.every(result => result === true);
@@ -228,6 +273,7 @@ async function loadLeagueData() {
         console.log("Sponsors:", SPONSORS.length);
         console.log("Schedule entries:", SCHEDULE.length);
         console.log("Goals:", GOALS.length);
+        console.log("Penalties:", PENALTIES.length);
     }
 
     return success;

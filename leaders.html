@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Standings | Jordan Oldtimers Hockey League</title>
+    <title>Leaders | Jordan Oldtimers Hockey League</title>
     <link rel="stylesheet" href="css/style.css?v=20260916f">
 </head>
 
@@ -29,8 +29,8 @@
         <nav id="site-nav">
             <a href="index.html">Home</a>
             <a href="schedule.html">Schedule</a>
-            <a href="standings.html" class="active" data-protected style="display:none;">Standings</a>
-            <a href="leaders.html" data-protected style="display:none;">Leaders</a>
+            <a href="standings.html" data-protected style="display:none;">Standings</a>
+            <a href="leaders.html" class="active" data-protected style="display:none;">Leaders</a>
             <a href="teams.html" data-protected style="display:none;">Teams</a>
             <a href="players.html" data-protected style="display:none;">Rosters</a>
             <a href="admin.html" id="admin-link" style="display:none;">Admin</a>
@@ -45,34 +45,45 @@
 
     <div class="page-title">
         <p class="eyebrow">2026-27 SEASON</p>
-        <h2>League Standings</h2>
-        <p>Current Jordan Oldtimers Hockey League standings.</p>
+        <h2>Scoring Leaders</h2>
+        <p>Goals, assists, and points across the league. <span id="leaders-count"></span></p>
     </div>
 
-    <section style="margin-bottom: 25px;">
-        <div class="info-banner">
-            <strong>Season starts September 27, 2026.</strong>
-            Standings below will start updating once results are entered for each game day.
-        </div>
-    </section>
+    <div class="player-controls">
+
+        <input
+            type="text"
+            id="leaders-search"
+            placeholder="Search player..."
+        >
+
+        <select id="leaders-team">
+            <option value="ALL">All Teams</option>
+            <option value="TML">Coldbreak Leafs</option>
+            <option value="CAN">Keg Canucks</option>
+            <option value="NOR">Regatta Nordiques</option>
+            <option value="OIL">Dawson's Oilers</option>
+            <option value="MTL">Culp Habs</option>
+            <option value="SEN">Timbit Senators</option>
+        </select>
+
+    </div>
 
     <div class="table-wrapper">
-        <table class="standings-table">
+        <table>
             <thead>
                 <tr>
+                    <th>#</th>
+                    <th>Player</th>
                     <th>Team</th>
-                    <th>GP</th>
-                    <th>W</th>
-                    <th>L</th>
-                    <th>T</th>
-                    <th>OT</th>
-                    <th>GF</th>
-                    <th>GA</th>
+                    <th>G</th>
+                    <th>A</th>
                     <th>PTS</th>
+                    <th>PIM</th>
                 </tr>
             </thead>
 
-            <tbody id="standings-table"></tbody>
+            <tbody id="leaders-table"></tbody>
         </table>
     </div>
 
@@ -131,13 +142,11 @@
 <script src="js/supabase.js?v=20260916f"></script>
 <script src="js/db.js?v=20260916f"></script>
 <script src="js/app.js?v=20260916f"></script>
-
-    <script src="js/auth.js?v=20260916f"></script>
+<script src="js/auth.js?v=20260916f"></script>
 
 <script>
     checkLogin();
 </script>
-    
 
 </body>
 </html>

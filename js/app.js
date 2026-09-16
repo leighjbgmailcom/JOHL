@@ -503,8 +503,107 @@ function renderStandings() {
 
 
 /* =========================================
-   MOBILE NAV TOGGLE
+   PLAYER LEADERBOARD (leaders.html)
+   Calculated from GOALS + PENALTIES, counting
+   only games marked final.
    ========================================= */
+
+function calculatePlayerStats() {
+
+    const finalGameIds = new Set(
+        SCHEDULE
+            .filter(game => game.status === "final")
+            .map(game => String(game.id))
+    );
+
+    const stats = {};
+
+    PLAYERS.forEach(player => {
+        stats[player.id] = { player: player, g: 0, a: 0, pim: 0 };
+    });
+
+    GOALS.forEach(goal => {
+        if (!finalGameIds.has(String(goal.gameId))) return;
+
+        if (goal.scorerId && stats[goal.scorerId]) {
+            stats[goal.scorerId].g++;
+        }
+        if (goal.assist1Id && stats[goal.assist1Id]) {
+            stats[goal.assist1Id].a++;
+        }
+        if (goal.assist2Id && stats[goal.assist2Id]) {
+            stats[goal.assist2Id].a++;
+        }
+    });
+
+    PENALTIES.forEach(penalty => {
+        if (!finalGameIds.has(String(penalty.gameId))) return;
+
+        if (penalty.playerId && stats[penalty.playerId]) {
+            stats[penalty.playerId].pim += (penalty.minutes || 0);
+        }
+    });
+
+    return Object.values(stats)
+        .map(row => ({ ...row, pts: row.g + row.a }))
+        .sort((a, b) => {
+            if (b.pts !== a.pts) return b.pts - a.pts;
+            if (b.g !== a.g) return b.g - a.g;
+            return a.player.last.localeCompare(b.player.last);
+        });
+}
+
+function renderLeaders() {
+    const element = document.getElementById("leaders-table");
+    if (!element) return;
+
+    const search = document.getElementById("leaders-search")?.value.toLowerCase() || "";
+    const selectedTeam = document.getElementById("leaders-team")?.value || "ALL";
+
+    const rows = calculatePlayerStats().filter(row => {
+        const fullName = `${row.player.first} ${row.player.last}`.toLowerCase();
+        const matchesSearch = fullName.includes(search);
+        const matchesTeam = selectedTeam === "ALL" || row.player.team === selectedTeam;
+        return matchesSearch && matchesTeam;
+    });
+
+    if (rows.length === 0) {
+        element.innerHTML = `<tr><td colspan="7">No players found.</td></tr>`;
+        return;
+    }
+
+    element.innerHTML = rows.map((row, index) => `
+        <tr>
+            <td>${index + 1}</td>
+            <td><strong>${row.player.last}, ${row.player.first}</strong></td>
+            <td>
+                <div class="roster-team">
+                    ${teamBadge(row.player.team)}
+                    <span>${teamName(row.player.team)}</span>
+                </div>
+            </td>
+            <td>${row.g}</td>
+            <td>${row.a}</td>
+            <td><strong>${row.pts}</strong></td>
+            <td>${row.pim}</td>
+        </tr>
+    `).join("");
+
+    const countEl = document.getElementById("leaders-count");
+    if (countEl) {
+        countEl.textContent = `${rows.length} player${rows.length === 1 ? "" : "s"}`;
+    }
+}
+
+function setupLeadersFilters() {
+    const search = document.getElementById("leaders-search");
+    const team = document.getElementById("leaders-team");
+
+    if (search) search.addEventListener("input", renderLeaders);
+    if (team) team.addEventListener("change", renderLeaders);
+}
+
+
 
 function setupMobileNav() {
     const toggle = document.getElementById("nav-toggle");
@@ -794,6 +893,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupPlayerFilters();
     renderStandings();
     renderSponsors();
+    renderLeaders();
+    setupLeadersFilters();
 
     if (typeof initAdminPage === "function") {
         initAdminPage();
