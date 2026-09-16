@@ -517,13 +517,24 @@ function setupAuthNav() {
 function setupLoginModal() {
     const authLink = document.getElementById("auth-link");
     const modal = document.getElementById("login-modal");
+    const modalCard = modal ? modal.querySelector(".modal-card") : null;
     const closeBtn = document.getElementById("login-modal-close");
     const form = document.getElementById("modal-login-form");
     const message = document.getElementById("modal-login-message");
 
     if (!authLink || !modal || !form) return;
 
+    function positionDropdown() {
+        const header = document.querySelector(".site-header");
+        if (!header || !modalCard) return;
+
+        const rect = header.getBoundingClientRect();
+
+        modalCard.style.top = (rect.bottom + 10) + "px";
+    }
+
     function openModal() {
+        positionDropdown();
         modal.classList.add("open");
         document.getElementById("modal-email")?.focus();
     }
@@ -533,6 +544,10 @@ function setupLoginModal() {
         message.textContent = "";
         form.reset();
     }
+
+    window.addEventListener("resize", () => {
+        if (modal.classList.contains("open")) positionDropdown();
+    });
 
     authLink.addEventListener("click", (event) => {
         // Only intercept the click when we're in the logged-out

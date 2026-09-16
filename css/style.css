@@ -232,6 +232,38 @@ nav a.active {
 }
 
 
+.btn {
+    display: inline-block;
+
+    background: #eef1f4;
+    color: #17212b;
+
+    padding: 13px 22px;
+
+    border: none;
+    border-radius: 6px;
+
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 15px;
+
+    cursor: pointer;
+}
+
+.btn:hover {
+    background: #e2e7eb;
+}
+
+.btn-primary {
+    background: #c8102e;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #a70d26;
+}
+
+
 /* =========================================
    CONTENT
    ========================================= */
@@ -950,6 +982,111 @@ footer {
     font-size: 13px;
 
     margin-top: 5px;
+}
+
+
+/* =========================================
+   LOGIN DROPDOWN
+   ========================================= */
+
+.modal-overlay {
+    display: none;
+
+    /* A transparent full-page click-catcher, so clicking anywhere
+       outside the dropdown closes it -- the dropdown itself is
+       positioned separately below the header, not centered here. */
+    position: fixed;
+    inset: 0;
+
+    z-index: 999;
+}
+
+.modal-overlay.open {
+    display: block;
+}
+
+.modal-card {
+    position: absolute;
+
+    /* top/right are set dynamically in JS to line up with the
+       bottom-right of the header, so this works correctly whether
+       the desktop nav or the mobile hamburger dropdown is showing. */
+    top: 80px;
+    right: 20px;
+
+    background: white;
+    border-radius: 12px;
+
+    padding: 30px 26px;
+
+    max-width: 340px;
+    width: calc(100% - 40px);
+
+    box-shadow: 0 15px 40px rgba(0,0,0,.3);
+
+    border: 1px solid #e5e9ec;
+}
+
+.modal-card h3 {
+    text-align: center;
+    margin-bottom: 22px;
+    font-size: 19px;
+}
+
+.modal-card label {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    color: #45525c;
+    margin-bottom: 6px;
+}
+
+.modal-card input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 16px;
+
+    border: 1px solid #ccd3d9;
+    border-radius: 6px;
+
+    box-sizing: border-box;
+    font-size: 15px;
+}
+
+.modal-card button[type="submit"] {
+    width: 100%;
+}
+
+.modal-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+
+    background: none;
+    border: none;
+
+    font-size: 26px;
+    line-height: 1;
+
+    color: #97a3ac;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    color: #45525c;
+}
+
+#modal-login-message {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 14px;
+    color: #45525c;
+}
+
+.modal-footer-link {
+    text-align: center;
+    margin-top: 18px;
+    font-size: 13px;
 }
 
 
