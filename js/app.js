@@ -441,17 +441,74 @@ function setupMobileNav() {
    START WEBSITE
    ========================================= */
 
-document.addEventListener("DOMContentLoaded", async () => {
+/* =========================================
+   AUTH NAV (Login / Logout link)
+   ========================================= */
 
-    setupMobileNav();
+function setupAuthNav() {
+    const link = document.getElementById("auth-link");
+    if (!link) return;
 
-    const loaded = await loadLeagueData();
+    // If js/supabase.js hasn't been loaded on this page for some
+    // reason, fail quietly rather than breaking the rest of the nav.
+    if (typeof supabaseClient === "undefined") return;
 
-    if (!loaded) {
-        console.error("Could not load JOHL data from Supabase.");
-        return;
+    function showLoggedIn() {
+        link.textContent = "Logout";
+        link.href = "#";
     }
 
+    function showLoggedOut() {
+        link.textContent = "Login";
+        link.href = "login.html";
+    }
+
+    async function refresh() {
+        const {
+            data: { session }
+        } = await supabaseClient.auth.getSession();
+
+        if (session) {
+            showLoggedIn();
+        } else {
+            showLoggedOut();
+        }
+    }
+
+    link.addEventListener("click", async (event) => {
+        // Only intercept the click when we're in the logged-in
+        // (Logout) state -- otherwise let it navigate to login.html
+        // normally.
+        if (link.textContent !== "Logout") return;
+
+        event.preventDefault();
+
+        await supabaseClient.auth.signOut();
+
+        window.location.href = "index.html";
+    });
+
+    // Keep the link in sync if auth state changes while the page is
+    // open (e.g. session expires, or user logs out in another tab).
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+        if (session) {
+            showLoggedIn();
+        } else {
+            showLoggedOut();
+        }
+    });
+
+    refresh();
+}
+
+
+/* =========================================
+   START WEBSITE
+   ========================================= */
+
+document.addEventListener("DOMContentLoaded", () => {
+    setupMobileNav();
+    setupAuthNav();
     renderNextGame();
     renderTeams();
     setupScheduleFilters();
@@ -459,5 +516,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupPlayerFilters();
     renderStandingsPlaceholder();
     renderSponsors();
-
 });
