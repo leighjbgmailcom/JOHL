@@ -438,10 +438,6 @@ function setupMobileNav() {
 
 
 /* =========================================
-   START WEBSITE
-   ========================================= */
-
-/* =========================================
    AUTH NAV (Login / Logout link)
    ========================================= */
 
@@ -506,9 +502,18 @@ function setupAuthNav() {
    START WEBSITE
    ========================================= */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+
     setupMobileNav();
     setupAuthNav();
+
+    const loaded = await loadLeagueData();
+
+    if (!loaded) {
+        console.error("Could not load JOHL data from Supabase.");
+        return;
+    }
+
     renderNextGame();
     renderTeams();
     setupScheduleFilters();
@@ -516,4 +521,5 @@ document.addEventListener("DOMContentLoaded", () => {
     setupPlayerFilters();
     renderStandingsPlaceholder();
     renderSponsors();
+
 });
