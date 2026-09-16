@@ -159,16 +159,22 @@ const message = document.getElementById("invite-message");
 
 async function checkInvitationSession() {
 
+    // TEMP DIAGNOSTIC LOGGING — remove once the flow is confirmed working.
+    console.log("URL hash on load:", window.location.hash);
+
     const {
         data: { session },
         error
     } = await supabaseClient.auth.getSession();
 
+    console.log("getSession() result:", { session, error });
+
 
     if (error || !session) {
 
-        message.textContent =
-            "This invitation is invalid or has expired. Please request a new invitation.";
+        message.textContent = error
+            ? `This invitation link couldn't be verified: ${error.message}`
+            : "This invitation is invalid or has expired. Please request a new invitation.";
 
         form.style.display = "none";
 
@@ -217,20 +223,25 @@ form.addEventListener("submit", async function(event) {
         "Activating your account...";
 
 
-    const { error } =
+    const { data, error } =
         await supabaseClient.auth.updateUser({
 
             password: password
 
         });
 
+    // TEMP DIAGNOSTIC LOGGING — remove once the flow is confirmed working.
+    console.log("updateUser() result:", { data, error });
+
 
     if (error) {
 
         console.error(error);
 
+        // Show the real reason instead of a generic message, so we can
+        // actually see what Supabase is rejecting.
         message.textContent =
-            "There was a problem activating your account. Please try again.";
+            `There was a problem activating your account: ${error.message} (status ${error.status ?? "n/a"})`;
 
         return;
 
