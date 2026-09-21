@@ -426,6 +426,47 @@ function renderStandingsPlaceholder() {
 
 
 /* =========================================
+   NAV — LOGIN / LOGOUT / ADMIN LINK
+   ========================================= */
+
+async function setupAuthNav() {
+    const slot = document.getElementById("nav-auth-slot");
+    if (!slot) return;
+
+    const {
+        data: { session }
+    } = await supabaseClient.auth.getSession();
+
+    if (!session) {
+        slot.innerHTML = `<a href="login.html">Login</a>`;
+        return;
+    }
+
+    let isAdmin = false;
+
+    const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", session.user.id)
+        .single();
+
+    if (profile && profile.is_admin) {
+        isAdmin = true;
+    }
+
+    slot.innerHTML = `
+        ${isAdmin ? `<a href="admin.html">Admin</a>` : ""}
+        <a href="#" id="nav-logout-link">Logout</a>
+    `;
+
+    document.getElementById("nav-logout-link").addEventListener("click", function(event) {
+        event.preventDefault();
+        logout();
+    });
+}
+
+
+/* =========================================
    MOBILE NAV TOGGLE
    ========================================= */
 
@@ -458,6 +499,7 @@ function setupMobileNav() {
 document.addEventListener("DOMContentLoaded", async () => {
 
     setupMobileNav();
+    setupAuthNav();
 
     const loaded = await loadLeagueData();
 
