@@ -340,4 +340,292 @@ function initAdminPage() {
 
     document.getElementById("admin-save-btn")
         .addEventListener("click", saveGameResults);
+
+    setupAdminTabs();
+    initPlayersAdmin();
+}
+
+
+/* =========================================
+   ADMIN TABS
+   ========================================= */
+
+function setupAdminTabs() {
+    const tabs = document.querySelectorAll(".admin-tab");
+    if (tabs.length === 0) return;
+
+    tabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            tabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+
+            document.querySelectorAll(".admin-tab-panel").forEach(panel => {
+                panel.style.display = "none";
+            });
+
+            document.getElementById(`admin-tab-${tab.dataset.tab}`).style.display = "";
+        });
+    });
+}
+
+
+/* =========================================
+   PLAYERS MANAGEMENT
+   ========================================= */
+
+function teamOptionsHtml(selectedCode) {
+    return TEAMS.map(t => `
+        <option value="${t.code}" ${t.code === selectedCode ? "selected" : ""}>
+            ${t.name}
+        </option>
+    `).join("");
+}
+
+function positionOptionsHtml(selected) {
+    return `
+        <option value="Skater" ${selected !== "G" ? "selected" : ""}>Skater</option>
+        <option value="G" ${selected === "G" ? "selected" : ""}>Goalie</option>
+    `;
+}
+
+function playerViewRowHtml(player) {
+    return `
+        <tr data-player-id="${player.id}">
+            <td>${player.last}</td>
+            <td>${player.first}</td>
+            <td>
+                <div class="roster-team">
+                    ${teamBadge(player.team)}
+                    <span>${teamName(player.team)}</span>
+                </div>
+            </td>
+            <td>${player.position === "G" ? "Goalie" : "Skater"}</td>
+            <td class="admin-player-row-view">
+                <button type="button" class="admin-player-action-btn" data-action="edit">Edit</button>
+                <button type="button" class="admin-player-action-btn danger" data-action="delete">Delete</button>
+            </td>
+        </tr>
+    `;
+}
+
+function playerEditRowHtml(player) {
+    return `
+        <tr data-player-id="${player.id}" data-editing="true">
+            <td><input type="text" class="edit-last" value="${player.last}"></td>
+            <td><input type="text" class="edit-first" value="${player.first}"></td>
+            <td><select class="edit-team">${teamOptionsHtml(player.team)}</select></td>
+            <td><select class="edit-position">${positionOptionsHtml(player.position)}</select></td>
+            <td class="admin-player-row-view">
+                <button type="button" class="admin-player-action-btn" data-action="save">Save</button>
+                <button type="button" class="admin-player-action-btn" data-action="cancel">Cancel</button>
+            </td>
+        </tr>
+    `;
+}
+
+function renderAdminPlayersTable() {
+    const tbody = document.getElementById("admin-players-table");
+    if (!tbody) return;
+
+    const search = (document.getElementById("admin-players-search")?.value || "").toLowerCase();
+
+    const players = PLAYERS
+        .filter(p => `${p.first} ${p.last}`.toLowerCase().includes(search))
+        .sort((a, b) => a.last.localeCompare(b.last));
+
+    if (players.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5">No players found.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = players.map(p => playerViewRowHtml(p)).join("");
+}
+
+async function savePlayerRow(row) {
+    const playerId = row.dataset.playerId;
+    const lastName = row.querySelector(".edit-last").value.trim();
+    const firstName = row.querySelector(".edit-first").value.trim();
+    const teamCode = row.querySelector(".edit-team").value;
+    const position = row.querySelector(".edit-position").value;
+    const message = document.getElementById("admin-players-message");
+
+    if (!lastName || !firstName) {
+        message.textContent = "First and last name are required.";
+        return;
+    }
+
+    const team = getTeam(teamCode);
+
+    message.textContent = "Saving...";
+
+    const { error } = await supabaseClient
+        .from("players")
+        .update({
+            first_name: firstName,
+            last_name: lastName,
+            team_id: team.id,
+            position: position
+        })
+        .eq("id", playerId);
+
+    if (error) {
+        console.error(error);
+        message.textContent = "There was a problem saving: " + error.message;
+        return;
+    }
+
+    // Update the in-memory copy so the table reflects the change
+    // immediately without a full reload.
+    const localPlayer = PLAYERS.find(p => String(p.id) === String(playerId));
+    if (localPlayer) {
+        localPlayer.first = firstName;
+        localPlayer.last = lastName;
+        localPlayer.team = teamCode;
+        localPlayer.position = position;
+    }
+
+    message.textContent = "Saved!";
+    renderAdminPlayersTable();
+}
+
+async function deletePlayerRow(playerId) {
+    const player = PLAYERS.find(p => String(p.id) === String(playerId));
+    const label = player ? `${player.first} ${player.last}` : "this player";
+
+    if (!confirm(`Delete ${label}? This can't be undone.`)) return;
+
+    const message = document.getElementById("admin-players-message");
+    message.textContent = "Deleting...";
+
+    const { error } = await supabaseClient
+        .from("players")
+        .delete()
+        .eq("id", playerId);
+
+    if (error) {
+        console.error(error);
+        message.textContent = "There was a problem deleting: " + error.message;
+        return;
+    }
+
+    PLAYERS = PLAYERS.filter(p => String(p.id) !== String(playerId));
+
+    message.textContent = "Deleted.";
+    renderAdminPlayersTable();
+}
+
+function showAddPlayerForm() {
+    const container = document.getElementById("admin-add-player-row");
+
+    container.innerHTML = `
+        <div class="admin-add-player-grid">
+            <input type="text" id="new-player-first" placeholder="First name">
+            <input type="text" id="new-player-last" placeholder="Last name">
+            <select id="new-player-team">${teamOptionsHtml(TEAMS[0]?.code)}</select>
+            <select id="new-player-position">${positionOptionsHtml("Skater")}</select>
+            <button type="button" class="btn btn-primary" id="new-player-save">Save</button>
+            <button type="button" class="btn" id="new-player-cancel">Cancel</button>
+        </div>
+    `;
+
+    container.style.display = "";
+
+    document.getElementById("new-player-save").addEventListener("click", saveNewPlayer);
+    document.getElementById("new-player-cancel").addEventListener("click", () => {
+        container.style.display = "none";
+        container.innerHTML = "";
+    });
+}
+
+async function saveNewPlayer() {
+    const first = document.getElementById("new-player-first").value.trim();
+    const last = document.getElementById("new-player-last").value.trim();
+    const teamCode = document.getElementById("new-player-team").value;
+    const position = document.getElementById("new-player-position").value;
+    const message = document.getElementById("admin-players-message");
+
+    if (!first || !last) {
+        message.textContent = "First and last name are required.";
+        return;
+    }
+
+    const team = getTeam(teamCode);
+
+    message.textContent = "Adding player...";
+
+    const { data, error } = await supabaseClient
+        .from("players")
+        .insert({
+            first_name: first,
+            last_name: last,
+            team_id: team.id,
+            position: position
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error(error);
+        message.textContent = "There was a problem adding the player: " + error.message;
+        return;
+    }
+
+    PLAYERS.push({
+        id: data.id,
+        first: first,
+        last: last,
+        team: teamCode,
+        position: position
+    });
+
+    document.getElementById("admin-add-player-row").style.display = "none";
+    document.getElementById("admin-add-player-row").innerHTML = "";
+
+    message.textContent = "Player added!";
+    renderAdminPlayersTable();
+}
+
+function initPlayersAdmin() {
+    const table = document.getElementById("admin-players-table");
+    if (!table) return;
+
+    renderAdminPlayersTable();
+
+    document.getElementById("admin-players-search")
+        .addEventListener("input", renderAdminPlayersTable);
+
+    document.getElementById("admin-add-player-btn")
+        .addEventListener("click", showAddPlayerForm);
+
+    // Event delegation for Edit / Delete / Save / Cancel, since rows
+    // are re-rendered often.
+    table.addEventListener("click", (event) => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) return;
+
+        const row = button.closest("tr");
+        const playerId = row.dataset.playerId;
+        const action = button.dataset.action;
+
+        if (action === "edit") {
+            const player = PLAYERS.find(p => String(p.id) === String(playerId));
+            row.outerHTML = playerEditRowHtml(player);
+            return;
+        }
+
+        if (action === "cancel") {
+            renderAdminPlayersTable();
+            return;
+        }
+
+        if (action === "save") {
+            savePlayerRow(row);
+            return;
+        }
+
+        if (action === "delete") {
+            deletePlayerRow(playerId);
+            return;
+        }
+    });
 }

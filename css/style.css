@@ -1148,6 +1148,42 @@ footer {
 
 
 /* =========================================
+   ADMIN — TABS
+   ========================================= */
+
+.admin-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 22px;
+    border-bottom: 2px solid #e5e9ec;
+}
+
+.admin-tab {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+
+    padding: 12px 18px;
+    margin-bottom: -2px;
+
+    font-weight: bold;
+    font-size: 15px;
+    color: #687681;
+
+    cursor: pointer;
+}
+
+.admin-tab:hover {
+    color: #17212b;
+}
+
+.admin-tab.active {
+    color: #c8102e;
+    border-bottom-color: #c8102e;
+}
+
+
+/* =========================================
    ADMIN — GAME RESULTS ENTRY
    ========================================= */
 
@@ -1297,10 +1333,104 @@ footer {
 
 
 /* =========================================
+   ADMIN — PLAYERS MANAGEMENT
+   ========================================= */
+
+.admin-players-toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.admin-players-toolbar input {
+    flex: 1;
+    padding: 11px 14px;
+    border: 1px solid #ccd3d9;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.admin-players-toolbar .btn {
+    flex-shrink: 0;
+}
+
+#admin-players-table select,
+#admin-players-table input,
+#admin-add-player-row select,
+#admin-add-player-row input {
+    padding: 8px;
+    border: 1px solid #ccd3d9;
+    border-radius: 5px;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.admin-player-row-view {
+    display: flex;
+    gap: 8px;
+}
+
+.admin-player-action-btn {
+    background: none;
+    border: 1px solid #ccd3d9;
+    border-radius: 5px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #45525c;
+}
+
+.admin-player-action-btn:hover {
+    background: #f6f8fa;
+}
+
+.admin-player-action-btn.danger {
+    color: #c8102e;
+    border-color: #e8b4bc;
+}
+
+.admin-player-action-btn.danger:hover {
+    background: #fdf0f1;
+}
+
+#admin-add-player-row {
+    background: #f6f8fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 18px;
+}
+
+.admin-add-player-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto auto;
+    gap: 10px;
+    align-items: center;
+}
+
+#admin-players-message {
+    margin-top: 14px;
+    font-size: 14px;
+    color: #45525c;
+}
+
+
+/* =========================================
    MOBILE
    ========================================= */
 
 @media (max-width: 800px) {
+
+    .admin-add-player-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+
+    .admin-players-toolbar {
+        flex-direction: column;
+    }
+
 
     .admin-team-columns {
         grid-template-columns: 1fr;
