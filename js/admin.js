@@ -4,8 +4,30 @@
    ========================================= */
 
 let ADMIN_GAMES = [];
+let ADMIN_TEAMS = [];
+let ADMIN_SPONSORS = [];
 let ADMIN_SEASON_ID = null;
 let editingGameId = null;
+let editingTeamId = null;
+let editingSponsorId = null;
+
+
+/* =========================================
+   TABS
+   ========================================= */
+
+function setupAdminTabs() {
+    const tabs = document.querySelectorAll(".admin-tab");
+    tabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            tabs.forEach(t => t.classList.remove("active"));
+            document.querySelectorAll(".admin-tab-panel").forEach(p => p.classList.remove("active"));
+
+            tab.classList.add("active");
+            document.getElementById(`admin-tab-${tab.dataset.tab}`).classList.add("active");
+        });
+    });
+}
 
 
 /* =========================================
@@ -283,6 +305,260 @@ async function deleteGame(id) {
 
 
 /* =========================================
+   TEAMS ADMIN
+   ========================================= */
+
+async function loadAdminTeams() {
+    const { data, error } = await supabaseClient
+        .from("teams")
+        .select("id, code, name, class, logo")
+        .order("name");
+
+    if (error) {
+        console.error("Error loading teams:", error);
+        return;
+    }
+
+    ADMIN_TEAMS = data;
+    renderAdminTeamsTable();
+}
+
+function renderAdminTeamsTable() {
+    const element = document.getElementById("admin-teams-table");
+    if (!element) return;
+
+    if (ADMIN_TEAMS.length === 0) {
+        element.innerHTML = `<tr><td colspan="5">No teams yet. Add one below.</td></tr>`;
+        return;
+    }
+
+    element.innerHTML = ADMIN_TEAMS.map(team => `
+        <tr>
+            <td><img class="admin-logo-preview" src="${team.logo || ''}" alt="${team.name}" onerror="this.style.visibility='hidden';"></td>
+            <td>${team.code}</td>
+            <td>${team.name}</td>
+            <td>${team.class || ""}</td>
+            <td>
+                <button class="link-button" onclick="editTeam(${team.id})">Edit</button>
+                <button class="link-button danger" onclick="deleteTeam(${team.id})">Delete</button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+function resetTeamForm() {
+    editingTeamId = null;
+    document.getElementById("team-form-title").textContent = "Add a Team";
+    document.getElementById("team-form").reset();
+    document.getElementById("team-id").value = "";
+}
+
+function editTeam(id) {
+    const team = ADMIN_TEAMS.find(t => t.id === id);
+    if (!team) return;
+
+    editingTeamId = id;
+    document.getElementById("team-form-title").textContent = `Edit ${team.name}`;
+    document.getElementById("team-id").value = team.id;
+    document.getElementById("team-code").value = team.code;
+    document.getElementById("team-name").value = team.name;
+    document.getElementById("team-class").value = team.class || "";
+    document.getElementById("team-logo").value = team.logo || "";
+
+    document.getElementById("team-form-panel").scrollIntoView({ behavior: "smooth" });
+}
+
+async function saveTeam(event) {
+    event.preventDefault();
+
+    const message = document.getElementById("team-form-message");
+    message.textContent = "Saving...";
+
+    const payload = {
+        season_id: ADMIN_SEASON_ID,
+        code: document.getElementById("team-code").value.trim().toUpperCase(),
+        name: document.getElementById("team-name").value.trim(),
+        class: document.getElementById("team-class").value.trim() || null,
+        logo: document.getElementById("team-logo").value.trim() || null
+    };
+
+    if (!payload.code || !payload.name) {
+        message.textContent = "Please fill in a code and team name.";
+        return;
+    }
+
+    let error;
+
+    if (editingTeamId) {
+        ({ error } = await supabaseClient
+            .from("teams")
+            .update(payload)
+            .eq("id", editingTeamId));
+    } else {
+        ({ error } = await supabaseClient
+            .from("teams")
+            .insert(payload));
+    }
+
+    if (error) {
+        console.error(error);
+        message.textContent = "There was a problem saving this team.";
+        return;
+    }
+
+    message.textContent = editingTeamId ? "Team updated." : "Team added.";
+    resetTeamForm();
+    await loadAdminTeams();
+    await loadLeagueData();
+}
+
+async function deleteTeam(id) {
+    if (!confirm("Delete this team? This will fail if the team still has players, games or sponsors linked to it.")) return;
+
+    const { error } = await supabaseClient
+        .from("teams")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+        console.error(error);
+        alert("This team can't be deleted — it likely still has players, games or sponsors linked to it.");
+        return;
+    }
+
+    await loadAdminTeams();
+    await loadLeagueData();
+}
+
+
+/* =========================================
+   SPONSORS ADMIN
+   ========================================= */
+
+async function loadAdminSponsors() {
+    const { data, error } = await supabaseClient
+        .from("sponsors")
+        .select("id, name, url, blurb, team_id")
+        .order("name");
+
+    if (error) {
+        console.error("Error loading sponsors:", error);
+        return;
+    }
+
+    ADMIN_SPONSORS = data;
+    renderAdminSponsorsTable();
+}
+
+function renderAdminSponsorsTable() {
+    const element = document.getElementById("admin-sponsors-table");
+    if (!element) return;
+
+    if (ADMIN_SPONSORS.length === 0) {
+        element.innerHTML = `<tr><td colspan="4">No sponsors yet. Add one below.</td></tr>`;
+        return;
+    }
+
+    element.innerHTML = ADMIN_SPONSORS.map(sponsor => `
+        <tr>
+            <td>${sponsor.name}</td>
+            <td>${sponsor.team_id ? teamNameById(sponsor.team_id) : "—"}</td>
+            <td>${sponsor.url ? `<a href="${sponsor.url}" target="_blank" rel="noopener">${sponsor.url}</a>` : "—"}</td>
+            <td>
+                <button class="link-button" onclick="editSponsor(${sponsor.id})">Edit</button>
+                <button class="link-button danger" onclick="deleteSponsor(${sponsor.id})">Delete</button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+function resetSponsorForm() {
+    editingSponsorId = null;
+    document.getElementById("sponsor-form-title").textContent = "Add a Sponsor";
+    document.getElementById("sponsor-form").reset();
+    document.getElementById("sponsor-id").value = "";
+    document.getElementById("sponsor-team").value = "";
+}
+
+function editSponsor(id) {
+    const sponsor = ADMIN_SPONSORS.find(s => s.id === id);
+    if (!sponsor) return;
+
+    editingSponsorId = id;
+    document.getElementById("sponsor-form-title").textContent = `Edit ${sponsor.name}`;
+    document.getElementById("sponsor-id").value = sponsor.id;
+    document.getElementById("sponsor-name").value = sponsor.name;
+    document.getElementById("sponsor-team").value = sponsor.team_id || "";
+    document.getElementById("sponsor-url").value = sponsor.url || "";
+    document.getElementById("sponsor-blurb").value = sponsor.blurb || "";
+
+    document.getElementById("sponsor-form-panel").scrollIntoView({ behavior: "smooth" });
+}
+
+async function saveSponsor(event) {
+    event.preventDefault();
+
+    const message = document.getElementById("sponsor-form-message");
+    message.textContent = "Saving...";
+
+    const payload = {
+        season_id: ADMIN_SEASON_ID,
+        name: document.getElementById("sponsor-name").value.trim(),
+        team_id: document.getElementById("sponsor-team").value || null,
+        url: document.getElementById("sponsor-url").value.trim() || null,
+        blurb: document.getElementById("sponsor-blurb").value.trim() || null
+    };
+
+    if (!payload.name) {
+        message.textContent = "Please enter a sponsor name.";
+        return;
+    }
+
+    let error;
+
+    if (editingSponsorId) {
+        ({ error } = await supabaseClient
+            .from("sponsors")
+            .update(payload)
+            .eq("id", editingSponsorId));
+    } else {
+        ({ error } = await supabaseClient
+            .from("sponsors")
+            .insert(payload));
+    }
+
+    if (error) {
+        console.error(error);
+        message.textContent = "There was a problem saving this sponsor.";
+        return;
+    }
+
+    message.textContent = editingSponsorId ? "Sponsor updated." : "Sponsor added.";
+    resetSponsorForm();
+    await loadAdminSponsors();
+    await loadLeagueData();
+}
+
+async function deleteSponsor(id) {
+    if (!confirm("Delete this sponsor?")) return;
+
+    const { error } = await supabaseClient
+        .from("sponsors")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+        console.error(error);
+        alert("There was a problem deleting this sponsor.");
+        return;
+    }
+
+    await loadAdminSponsors();
+    await loadLeagueData();
+}
+
+
+/* =========================================
    INIT
    ========================================= */
 
@@ -301,17 +577,28 @@ async function initAdminPage() {
 
     await loadActiveSeason();
 
+    setupAdminTabs();
+
     document.getElementById("game-away-team").innerHTML = teamOptionsHtml();
     document.getElementById("game-home-team").innerHTML = teamOptionsHtml();
+    document.getElementById("sponsor-team").innerHTML = teamOptionsHtml();
 
     document.getElementById("game-form").addEventListener("submit", saveGame);
     document.getElementById("game-no-games").addEventListener("change", toggleGameFormSections);
     document.getElementById("game-status").addEventListener("change", toggleGameFormSections);
     document.getElementById("game-form-cancel").addEventListener("click", resetGameForm);
 
+    document.getElementById("team-form").addEventListener("submit", saveTeam);
+    document.getElementById("team-form-cancel").addEventListener("click", resetTeamForm);
+
+    document.getElementById("sponsor-form").addEventListener("submit", saveSponsor);
+    document.getElementById("sponsor-form-cancel").addEventListener("click", resetSponsorForm);
+
     toggleGameFormSections();
 
     await loadAdminGames();
+    await loadAdminTeams();
+    await loadAdminSponsors();
 }
 
 // Note: js/app.js's own DOMContentLoaded listener already runs
