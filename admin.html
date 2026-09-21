@@ -319,6 +319,11 @@
                 </div>
 
                 <div>
+                    <label for="player-email">Email</label>
+                    <input type="email" id="player-email" placeholder="player@example.com">
+                </div>
+
+                <div>
                     <label for="player-team-select">Team</label>
                     <select id="player-team-select"></select>
                 </div>
@@ -359,6 +364,11 @@
             </div>
         </div>
 
+        <div class="admin-form-actions" style="margin-bottom:16px;">
+            <button type="button" class="button" id="invite-all-button" onclick="inviteAllPlayers()">Send All Invites</button>
+            <span id="invite-all-status"></span>
+        </div>
+
         <div class="table-wrapper">
             <table>
                 <thead>
@@ -366,6 +376,7 @@
                         <th>Name</th>
                         <th>Team</th>
                         <th>Position</th>
+                        <th>Email</th>
                         <th></th>
                     </tr>
                 </thead>

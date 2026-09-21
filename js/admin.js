@@ -570,7 +570,7 @@ async function deleteSponsor(id) {
 async function loadAdminPlayers() {
     const { data, error } = await supabaseClient
         .from("players")
-        .select("id, first_name, last_name, position, team_id")
+        .select("id, first_name, last_name, position, team_id, email")
         .order("last_name");
 
     if (error) {
@@ -597,7 +597,7 @@ function renderAdminPlayersTable() {
     });
 
     if (filtered.length === 0) {
-        element.innerHTML = `<tr><td colspan="4">No players found.</td></tr>`;
+        element.innerHTML = `<tr><td colspan="5">No players found.</td></tr>`;
         return;
     }
 
@@ -606,9 +606,11 @@ function renderAdminPlayersTable() {
             <td>${player.last_name}, ${player.first_name}</td>
             <td>${teamNameById(player.team_id)}</td>
             <td>${player.position || "Skater"}</td>
+            <td>${player.email || `<span style="color:#c8102e;">missing</span>`}</td>
             <td>
                 <button class="link-button" onclick="editPlayer(${player.id})">Edit</button>
                 <button class="link-button danger" onclick="deletePlayer(${player.id})">Delete</button>
+                ${player.email ? `<button class="link-button" onclick="inviteOnePlayer(${player.id}, this)">Invite</button>` : ""}
             </td>
         </tr>
     `).join("");
@@ -631,6 +633,7 @@ function editPlayer(id) {
     document.getElementById("player-id").value = player.id;
     document.getElementById("player-first-name").value = player.first_name;
     document.getElementById("player-last-name").value = player.last_name;
+    document.getElementById("player-email").value = player.email || "";
     document.getElementById("player-team-select").innerHTML = teamOptionsHtml(player.team_id);
     document.getElementById("player-position-select").value = player.position || "Skater";
 
@@ -647,6 +650,7 @@ async function savePlayer(event) {
         season_id: ADMIN_SEASON_ID,
         first_name: document.getElementById("player-first-name").value.trim(),
         last_name: document.getElementById("player-last-name").value.trim(),
+        email: document.getElementById("player-email").value.trim() || null,
         team_id: document.getElementById("player-team-select").value || null,
         position: document.getElementById("player-position-select").value
     };
@@ -697,6 +701,92 @@ async function deletePlayer(id) {
 
     await loadAdminPlayers();
     await loadLeagueData();
+}
+
+
+/* =========================================
+   PLAYER INVITES
+   ========================================= */
+
+async function callInviteFunction(emails) {
+    const { data, error } = await supabaseClient.functions.invoke("invite-players", {
+        body: { emails }
+    });
+
+    if (error) {
+        console.error(error);
+        throw error;
+    }
+
+    return data;
+}
+
+async function inviteOnePlayer(id, buttonEl) {
+    const player = ADMIN_PLAYERS.find(p => p.id === id);
+    if (!player || !player.email) return;
+
+    const originalText = buttonEl.textContent;
+    buttonEl.textContent = "Sending...";
+    buttonEl.disabled = true;
+
+    try {
+        const data = await callInviteFunction([player.email]);
+        const result = data.results && data.results[0];
+
+        if (result && result.ok) {
+            buttonEl.textContent = result.note ? "Resent" : "Invited";
+        } else {
+            buttonEl.textContent = "Failed";
+            console.error(result);
+            alert(`Could not invite ${player.email}: ${result ? result.error : "unknown error"}`);
+        }
+    } catch (err) {
+        buttonEl.textContent = "Failed";
+        alert(`There was a problem sending this invite. ${err.message || ""}`);
+    }
+
+    setTimeout(() => {
+        buttonEl.textContent = originalText;
+        buttonEl.disabled = false;
+    }, 3000);
+}
+
+async function inviteAllPlayers() {
+    const emails = ADMIN_PLAYERS.filter(p => p.email).map(p => p.email);
+
+    if (emails.length === 0) {
+        alert("No player emails on file yet.");
+        return;
+    }
+
+    if (!confirm(`Send an invite email to all ${emails.length} players with an email on file? Anyone who already has an account will instead get a fresh sign-in link.`)) {
+        return;
+    }
+
+    const button = document.getElementById("invite-all-button");
+    const status = document.getElementById("invite-all-status");
+
+    button.disabled = true;
+    status.textContent = `Sending ${emails.length} invites... this may take a minute.`;
+
+    try {
+        const data = await callInviteFunction(emails);
+        const failed = data.results.filter(r => !r.ok);
+        const resent = data.results.filter(r => r.ok && r.note);
+        const invited = data.results.filter(r => r.ok && !r.note);
+
+        status.textContent = `Done: ${invited.length} invited, ${resent.length} resent, ${failed.length} failed.`;
+
+        if (failed.length > 0) {
+            console.error("Failed invites:", failed);
+            alert(`${failed.length} invite(s) failed:\n` + failed.map(f => `${f.email}: ${f.error}`).join("\n"));
+        }
+    } catch (err) {
+        status.textContent = "There was a problem sending invites.";
+        alert(err.message || "There was a problem sending invites.");
+    }
+
+    button.disabled = false;
 }
 
 
