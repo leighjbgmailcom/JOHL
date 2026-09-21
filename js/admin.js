@@ -6,10 +6,15 @@
 let ADMIN_GAMES = [];
 let ADMIN_TEAMS = [];
 let ADMIN_SPONSORS = [];
+let ADMIN_PLAYERS = [];
 let ADMIN_SEASON_ID = null;
 let editingGameId = null;
 let editingTeamId = null;
 let editingSponsorId = null;
+let editingPlayerId = null;
+let resultGoalRows = { away: [], home: [] };
+let resultPenaltyRows = { away: [], home: [] };
+let resultRowSeq = 0;
 
 
 /* =========================================
@@ -559,6 +564,393 @@ async function deleteSponsor(id) {
 
 
 /* =========================================
+   PLAYERS ADMIN
+   ========================================= */
+
+async function loadAdminPlayers() {
+    const { data, error } = await supabaseClient
+        .from("players")
+        .select("id, first_name, last_name, position, team_id")
+        .order("last_name");
+
+    if (error) {
+        console.error("Error loading players:", error);
+        return;
+    }
+
+    ADMIN_PLAYERS = data;
+    renderAdminPlayersTable();
+}
+
+function renderAdminPlayersTable() {
+    const element = document.getElementById("admin-players-table");
+    if (!element) return;
+
+    const search = document.getElementById("admin-player-search")?.value.toLowerCase() || "";
+    const teamFilter = document.getElementById("admin-player-team-filter")?.value || "ALL";
+
+    const filtered = ADMIN_PLAYERS.filter(player => {
+        const fullName = `${player.first_name} ${player.last_name}`.toLowerCase();
+        const matchesSearch = fullName.includes(search);
+        const matchesTeam = teamFilter === "ALL" || String(player.team_id) === String(teamFilter);
+        return matchesSearch && matchesTeam;
+    });
+
+    if (filtered.length === 0) {
+        element.innerHTML = `<tr><td colspan="4">No players found.</td></tr>`;
+        return;
+    }
+
+    element.innerHTML = filtered.map(player => `
+        <tr>
+            <td>${player.last_name}, ${player.first_name}</td>
+            <td>${teamNameById(player.team_id)}</td>
+            <td>${player.position || "Skater"}</td>
+            <td>
+                <button class="link-button" onclick="editPlayer(${player.id})">Edit</button>
+                <button class="link-button danger" onclick="deletePlayer(${player.id})">Delete</button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+function resetPlayerForm() {
+    editingPlayerId = null;
+    document.getElementById("player-form-title").textContent = "Add a Player";
+    document.getElementById("player-form").reset();
+    document.getElementById("player-id").value = "";
+    document.getElementById("player-team-select").innerHTML = teamOptionsHtml();
+}
+
+function editPlayer(id) {
+    const player = ADMIN_PLAYERS.find(p => p.id === id);
+    if (!player) return;
+
+    editingPlayerId = id;
+    document.getElementById("player-form-title").textContent = `Edit ${player.first_name} ${player.last_name}`;
+    document.getElementById("player-id").value = player.id;
+    document.getElementById("player-first-name").value = player.first_name;
+    document.getElementById("player-last-name").value = player.last_name;
+    document.getElementById("player-team-select").innerHTML = teamOptionsHtml(player.team_id);
+    document.getElementById("player-position-select").value = player.position || "Skater";
+
+    document.getElementById("player-form-panel").scrollIntoView({ behavior: "smooth" });
+}
+
+async function savePlayer(event) {
+    event.preventDefault();
+
+    const message = document.getElementById("player-form-message");
+    message.textContent = "Saving...";
+
+    const payload = {
+        season_id: ADMIN_SEASON_ID,
+        first_name: document.getElementById("player-first-name").value.trim(),
+        last_name: document.getElementById("player-last-name").value.trim(),
+        team_id: document.getElementById("player-team-select").value || null,
+        position: document.getElementById("player-position-select").value
+    };
+
+    if (!payload.first_name || !payload.last_name) {
+        message.textContent = "Please enter a first and last name.";
+        return;
+    }
+
+    let error;
+
+    if (editingPlayerId) {
+        ({ error } = await supabaseClient
+            .from("players")
+            .update(payload)
+            .eq("id", editingPlayerId));
+    } else {
+        ({ error } = await supabaseClient
+            .from("players")
+            .insert(payload));
+    }
+
+    if (error) {
+        console.error(error);
+        message.textContent = "There was a problem saving this player.";
+        return;
+    }
+
+    message.textContent = editingPlayerId ? "Player updated." : "Player added.";
+    resetPlayerForm();
+    await loadAdminPlayers();
+    await loadLeagueData();
+}
+
+async function deletePlayer(id) {
+    if (!confirm("Delete this player? This cannot be undone.")) return;
+
+    const { error } = await supabaseClient
+        .from("players")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+        console.error(error);
+        alert("This player can't be deleted — they likely have goals or penalties recorded against them.");
+        return;
+    }
+
+    await loadAdminPlayers();
+    await loadLeagueData();
+}
+
+
+/* =========================================
+   GAME RESULTS ADMIN
+   ========================================= */
+
+function resultGameOptionsHtml() {
+    const playable = ADMIN_GAMES.filter(g => !g.no_games);
+    return `<option value="">— Select a game —</option>` +
+        playable.map(game => {
+            const label = `${game.game_date} — ${teamNameById(game.away_team_id)} @ ${teamNameById(game.home_team_id)}` +
+                (game.status === "final" ? " (Final)" : "");
+            return `<option value="${game.id}">${label}</option>`;
+        }).join("");
+}
+
+function playersForTeam(teamId) {
+    return PLAYERS.filter(p => {
+        const team = TEAMS.find(t => t.code === p.team);
+        return team && String(team.id) === String(teamId);
+    });
+}
+
+function playerOptionsHtml(teamId, selectedId) {
+    const players = [...playersForTeam(teamId)].sort((a, b) => a.last.localeCompare(b.last));
+    return `<option value="">—</option>` +
+        players.map(p =>
+            `<option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""}>${p.first} ${p.last}</option>`
+        ).join("");
+}
+
+function periodOptionsHtml(selected) {
+    return ["1", "2", "3", "OT", "SO"].map(p =>
+        `<option value="${p}" ${p === selected ? "selected" : ""}>${p === "1" || p === "2" || p === "3" ? "Period " + p : p}</option>`
+    ).join("");
+}
+
+async function onResultGameChange() {
+    const gameId = document.getElementById("result-game-select").value;
+    const editor = document.getElementById("result-editor");
+
+    if (!gameId) {
+        editor.style.display = "none";
+        return;
+    }
+
+    const game = ADMIN_GAMES.find(g => String(g.id) === String(gameId));
+    if (!game) return;
+
+    editor.style.display = "";
+    document.getElementById("result-away-team-name").textContent = teamNameById(game.away_team_id);
+    document.getElementById("result-home-team-name").textContent = teamNameById(game.home_team_id);
+    document.getElementById("result-is-final").checked = game.status === "final";
+
+    resultGoalRows = { away: [], home: [] };
+    resultPenaltyRows = { away: [], home: [] };
+
+    const [{ data: goals }, { data: penalties }] = await Promise.all([
+        supabaseClient.from("game_goals").select("*").eq("game_id", gameId),
+        supabaseClient.from("game_penalties").select("*").eq("game_id", gameId)
+    ]);
+
+    (goals || []).forEach(goal => {
+        const side = String(goal.team_id) === String(game.away_team_id) ? "away" : "home";
+        resultGoalRows[side].push({
+            key: ++resultRowSeq,
+            id: goal.id,
+            scorer_id: goal.scorer_id,
+            assist1_id: goal.assist1_id,
+            assist2_id: goal.assist2_id,
+            period: goal.period,
+            game_time: goal.game_time
+        });
+    });
+
+    (penalties || []).forEach(penalty => {
+        const side = String(penalty.team_id) === String(game.away_team_id) ? "away" : "home";
+        resultPenaltyRows[side].push({
+            key: ++resultRowSeq,
+            id: penalty.id,
+            player_id: penalty.player_id,
+            infraction: penalty.infraction,
+            minutes: penalty.minutes,
+            period: penalty.period,
+            game_time: penalty.game_time
+        });
+    });
+
+    renderResultRows();
+}
+
+function addGoalRow(side) {
+    resultGoalRows[side].push({ key: ++resultRowSeq, scorer_id: "", assist1_id: "", assist2_id: "", period: "1", game_time: "" });
+    renderResultRows();
+}
+
+function removeGoalRow(side, key) {
+    resultGoalRows[side] = resultGoalRows[side].filter(r => r.key !== key);
+    renderResultRows();
+}
+
+function addPenaltyRow(side) {
+    resultPenaltyRows[side].push({ key: ++resultRowSeq, player_id: "", infraction: "", minutes: 2, period: "1", game_time: "" });
+    renderResultRows();
+}
+
+function removePenaltyRow(side, key) {
+    resultPenaltyRows[side] = resultPenaltyRows[side].filter(r => r.key !== key);
+    renderResultRows();
+}
+
+function currentResultTeamId(side) {
+    const gameId = document.getElementById("result-game-select").value;
+    const game = ADMIN_GAMES.find(g => String(g.id) === String(gameId));
+    if (!game) return null;
+    return side === "away" ? game.away_team_id : game.home_team_id;
+}
+
+function renderResultRows() {
+    ["away", "home"].forEach(side => {
+        const teamId = currentResultTeamId(side);
+
+        document.getElementById(`result-${side}-goals`).innerHTML = resultGoalRows[side].map(row => `
+            <div class="result-row" data-key="${row.key}">
+                <select onchange="resultGoalRows.${side}.find(r => r.key === ${row.key}).scorer_id = this.value">
+                    ${playerOptionsHtml(teamId, row.scorer_id)}
+                </select>
+                <select onchange="resultGoalRows.${side}.find(r => r.key === ${row.key}).assist1_id = this.value">
+                    ${playerOptionsHtml(teamId, row.assist1_id)}
+                </select>
+                <select onchange="resultGoalRows.${side}.find(r => r.key === ${row.key}).assist2_id = this.value">
+                    ${playerOptionsHtml(teamId, row.assist2_id)}
+                </select>
+                <select onchange="resultGoalRows.${side}.find(r => r.key === ${row.key}).period = this.value">
+                    ${periodOptionsHtml(row.period)}
+                </select>
+                <input type="text" placeholder="Time" value="${row.game_time || ""}" onchange="resultGoalRows.${side}.find(r => r.key === ${row.key}).game_time = this.value">
+                <button type="button" class="link-button danger" onclick="removeGoalRow('${side}', ${row.key})">✕</button>
+            </div>
+        `).join("") || `<p style="color:#97a3ac; font-size:13px;">No goals yet.</p>`;
+
+        document.getElementById(`result-${side}-penalties`).innerHTML = resultPenaltyRows[side].map(row => `
+            <div class="result-row penalty-row" data-key="${row.key}">
+                <select onchange="resultPenaltyRows.${side}.find(r => r.key === ${row.key}).player_id = this.value">
+                    ${playerOptionsHtml(teamId, row.player_id)}
+                </select>
+                <input type="text" placeholder="Infraction" value="${row.infraction || ""}" onchange="resultPenaltyRows.${side}.find(r => r.key === ${row.key}).infraction = this.value">
+                <input type="number" placeholder="Min" min="2" value="${row.minutes ?? 2}" onchange="resultPenaltyRows.${side}.find(r => r.key === ${row.key}).minutes = this.value">
+                <select onchange="resultPenaltyRows.${side}.find(r => r.key === ${row.key}).period = this.value">
+                    ${periodOptionsHtml(row.period)}
+                </select>
+                <button type="button" class="link-button danger" onclick="removePenaltyRow('${side}', ${row.key})">✕</button>
+            </div>
+        `).join("") || `<p style="color:#97a3ac; font-size:13px;">No penalties yet.</p>`;
+    });
+
+    const awayGoals = resultGoalRows.away.filter(r => r.scorer_id).length;
+    const homeGoals = resultGoalRows.home.filter(r => r.scorer_id).length;
+    document.getElementById("result-score-preview").textContent =
+        `${document.getElementById("result-away-team-name").textContent} ${awayGoals} — ${homeGoals} ${document.getElementById("result-home-team-name").textContent}`;
+}
+
+async function saveGameResults() {
+    const gameId = document.getElementById("result-game-select").value;
+    const message = document.getElementById("result-form-message");
+    if (!gameId) return;
+
+    message.textContent = "Saving...";
+
+    const game = ADMIN_GAMES.find(g => String(g.id) === String(gameId));
+    const isFinal = document.getElementById("result-is-final").checked;
+
+    // Delete existing goals/penalties for this game, then re-insert current rows.
+    await supabaseClient.from("game_goals").delete().eq("game_id", gameId);
+    await supabaseClient.from("game_penalties").delete().eq("game_id", gameId);
+
+    const goalRows = [];
+    ["away", "home"].forEach(side => {
+        const teamId = currentResultTeamId(side);
+        resultGoalRows[side].forEach(row => {
+            if (!row.scorer_id) return;
+            goalRows.push({
+                game_id: gameId,
+                team_id: teamId,
+                scorer_id: row.scorer_id,
+                assist1_id: row.assist1_id || null,
+                assist2_id: row.assist2_id || null,
+                period: row.period,
+                game_time: row.game_time || null
+            });
+        });
+    });
+
+    const penaltyRows = [];
+    ["away", "home"].forEach(side => {
+        const teamId = currentResultTeamId(side);
+        resultPenaltyRows[side].forEach(row => {
+            if (!row.player_id) return;
+            penaltyRows.push({
+                game_id: gameId,
+                team_id: teamId,
+                player_id: row.player_id,
+                infraction: row.infraction || null,
+                minutes: row.minutes || 2,
+                period: row.period,
+                game_time: row.game_time || null
+            });
+        });
+    });
+
+    let error;
+
+    if (goalRows.length > 0) {
+        ({ error } = await supabaseClient.from("game_goals").insert(goalRows));
+        if (error) console.error(error);
+    }
+
+    if (!error && penaltyRows.length > 0) {
+        ({ error } = await supabaseClient.from("game_penalties").insert(penaltyRows));
+        if (error) console.error(error);
+    }
+
+    if (error) {
+        message.textContent = "There was a problem saving results.";
+        return;
+    }
+
+    const awayScore = goalRows.filter(g => String(g.team_id) === String(game.away_team_id)).length;
+    const homeScore = goalRows.filter(g => String(g.team_id) === String(game.home_team_id)).length;
+
+    const { error: gameError } = await supabaseClient
+        .from("games")
+        .update({
+            status: isFinal ? "final" : "scheduled",
+            away_score: isFinal ? awayScore : null,
+            home_score: isFinal ? homeScore : null
+        })
+        .eq("id", gameId);
+
+    if (gameError) {
+        console.error(gameError);
+        message.textContent = "Results saved, but there was a problem updating the game status.";
+        return;
+    }
+
+    message.textContent = "Results saved.";
+    await loadAdminGames();
+    document.getElementById("result-game-select").innerHTML = resultGameOptionsHtml();
+    document.getElementById("result-game-select").value = gameId;
+}
+
+
+/* =========================================
    INIT
    ========================================= */
 
@@ -582,6 +974,12 @@ async function initAdminPage() {
     document.getElementById("game-away-team").innerHTML = teamOptionsHtml();
     document.getElementById("game-home-team").innerHTML = teamOptionsHtml();
     document.getElementById("sponsor-team").innerHTML = teamOptionsHtml();
+    document.getElementById("player-team-select").innerHTML = teamOptionsHtml();
+    document.getElementById("admin-player-team-filter").innerHTML =
+        `<option value="ALL">All Teams</option>` +
+        [...TEAMS].sort((a, b) => a.name.localeCompare(b.name))
+            .map(team => `<option value="${team.id}">${team.name}</option>`)
+            .join("");
 
     document.getElementById("game-form").addEventListener("submit", saveGame);
     document.getElementById("game-no-games").addEventListener("change", toggleGameFormSections);
@@ -594,11 +992,21 @@ async function initAdminPage() {
     document.getElementById("sponsor-form").addEventListener("submit", saveSponsor);
     document.getElementById("sponsor-form-cancel").addEventListener("click", resetSponsorForm);
 
+    document.getElementById("player-form").addEventListener("submit", savePlayer);
+    document.getElementById("player-form-cancel").addEventListener("click", resetPlayerForm);
+    document.getElementById("admin-player-search").addEventListener("input", renderAdminPlayersTable);
+    document.getElementById("admin-player-team-filter").addEventListener("change", renderAdminPlayersTable);
+
+    document.getElementById("result-game-select").addEventListener("change", onResultGameChange);
+
     toggleGameFormSections();
 
     await loadAdminGames();
     await loadAdminTeams();
     await loadAdminSponsors();
+    await loadAdminPlayers();
+
+    document.getElementById("result-game-select").innerHTML = resultGameOptionsHtml();
 }
 
 // Note: js/app.js's own DOMContentLoaded listener already runs

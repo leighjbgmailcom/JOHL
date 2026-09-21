@@ -125,6 +125,63 @@
             object-fit: contain;
             vertical-align: middle;
         }
+
+        .result-score-preview {
+            font-size: 22px;
+            font-weight: 900;
+            margin-bottom: 18px;
+        }
+
+        .result-team-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .result-team-column h4 {
+            margin-bottom: 12px;
+        }
+
+        .result-team-column h5 {
+            font-size: 12px;
+            letter-spacing: .5px;
+            color: #75818b;
+            margin: 14px 0 8px;
+            text-transform: uppercase;
+        }
+
+        .result-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 70px 70px auto;
+            gap: 6px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .penalty-row {
+            grid-template-columns: 1fr 1fr 70px 70px auto;
+        }
+
+        .result-row select,
+        .result-row input {
+            padding: 7px;
+            border: 1px solid #ccd3d9;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 100%;
+        }
+
+        .result-row .link-button {
+            margin: 0;
+            color: #97a3ac;
+        }
+
+        @media (max-width: 800px) {
+            .result-team-columns {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 
@@ -153,7 +210,6 @@
             <a href="standings.html">Standings</a>
             <a href="teams.html">Teams</a>
             <a href="players.html">Rosters</a>
-            <a href="admin.html" class="active">Admin</a>
             <span id="nav-auth-slot"></span>
         </nav>
 
@@ -166,17 +222,163 @@
     <div class="page-title">
         <p class="eyebrow">ADMIN</p>
         <h2>League Management</h2>
-        <p>Manage the schedule, teams and sponsors for the 2026-27 season.</p>
+        <p>Manage game results, players, the schedule, teams and sponsors for the 2026-27 season.</p>
     </div>
 
     <div class="admin-tabs">
-        <button class="admin-tab active" data-tab="schedule">Schedule</button>
+        <button class="admin-tab active" data-tab="results">Game Results</button>
+        <button class="admin-tab" data-tab="players">Players</button>
+        <button class="admin-tab" data-tab="schedule">Schedule</button>
         <button class="admin-tab" data-tab="teams">Teams</button>
         <button class="admin-tab" data-tab="sponsors">Sponsors</button>
     </div>
 
 
-    <div class="admin-tab-panel active" id="admin-tab-schedule">
+    <div class="admin-tab-panel active" id="admin-tab-results">
+
+    <div class="admin-panel">
+
+        <h3>Enter Game Results</h3>
+
+        <div class="admin-form-grid">
+            <div>
+                <label for="result-game-select">Select Game</label>
+                <select id="result-game-select"></select>
+            </div>
+        </div>
+
+        <div id="result-editor" style="display:none;">
+
+            <div class="result-score-preview" id="result-score-preview"></div>
+
+            <div class="admin-checkbox-field">
+                <input type="checkbox" id="result-is-final">
+                <label for="result-is-final">Mark this game as Final</label>
+            </div>
+
+            <div class="result-team-columns">
+
+                <div class="result-team-column">
+                    <h4 id="result-away-team-name"></h4>
+
+                    <h5>Goals</h5>
+                    <div id="result-away-goals"></div>
+                    <button type="button" class="link-button" onclick="addGoalRow('away')">+ Add Goal</button>
+
+                    <h5>Penalties</h5>
+                    <div id="result-away-penalties"></div>
+                    <button type="button" class="link-button" onclick="addPenaltyRow('away')">+ Add Penalty</button>
+                </div>
+
+                <div class="result-team-column">
+                    <h4 id="result-home-team-name"></h4>
+
+                    <h5>Goals</h5>
+                    <div id="result-home-goals"></div>
+                    <button type="button" class="link-button" onclick="addGoalRow('home')">+ Add Goal</button>
+
+                    <h5>Penalties</h5>
+                    <div id="result-home-penalties"></div>
+                    <button type="button" class="link-button" onclick="addPenaltyRow('home')">+ Add Penalty</button>
+                </div>
+
+            </div>
+
+            <div class="admin-form-actions">
+                <button type="button" class="button" onclick="saveGameResults()">Save Results</button>
+                <span id="result-form-message"></span>
+            </div>
+
+        </div>
+
+    </div>
+
+    </div>
+
+
+    <div class="admin-tab-panel" id="admin-tab-players">
+
+    <div class="admin-panel" id="player-form-panel">
+
+        <h3 id="player-form-title">Add a Player</h3>
+
+        <form id="player-form">
+
+            <input type="hidden" id="player-id">
+
+            <div class="admin-form-grid">
+
+                <div>
+                    <label for="player-first-name">First Name</label>
+                    <input type="text" id="player-first-name" required>
+                </div>
+
+                <div>
+                    <label for="player-last-name">Last Name</label>
+                    <input type="text" id="player-last-name" required>
+                </div>
+
+                <div>
+                    <label for="player-team-select">Team</label>
+                    <select id="player-team-select"></select>
+                </div>
+
+                <div>
+                    <label for="player-position-select">Position</label>
+                    <select id="player-position-select">
+                        <option value="Skater">Skater</option>
+                        <option value="Goalie">Goalie</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="admin-form-actions">
+                <button type="submit" class="button">Save Player</button>
+                <button type="button" id="player-form-cancel" class="link-button">Cancel / New Player</button>
+                <span id="player-form-message"></span>
+            </div>
+
+        </form>
+
+    </div>
+
+
+    <div class="admin-panel">
+
+        <h3>All Players</h3>
+
+        <div class="admin-form-grid" style="margin-bottom:12px;">
+            <div>
+                <label for="admin-player-search">Search</label>
+                <input type="text" id="admin-player-search" placeholder="Search by name...">
+            </div>
+            <div>
+                <label for="admin-player-team-filter">Filter by Team</label>
+                <select id="admin-player-team-filter"></select>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Team</th>
+                        <th>Position</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="admin-players-table"></tbody>
+            </table>
+        </div>
+
+    </div>
+
+    </div>
+
+
+    <div class="admin-tab-panel" id="admin-tab-schedule">
 
     <div class="admin-panel" id="game-form-panel">
 
