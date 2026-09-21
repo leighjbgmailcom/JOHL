@@ -570,7 +570,7 @@ async function deleteSponsor(id) {
 async function loadAdminPlayers() {
     const { data, error } = await supabaseClient
         .from("players")
-        .select("id, first_name, last_name, position, team_id, email")
+        .select("id, first_name, last_name, position, team_id, email, jersey_number")
         .order("last_name");
 
     if (error) {
@@ -589,20 +589,28 @@ function renderAdminPlayersTable() {
     const search = document.getElementById("admin-player-search")?.value.toLowerCase() || "";
     const teamFilter = document.getElementById("admin-player-team-filter")?.value || "ALL";
 
-    const filtered = ADMIN_PLAYERS.filter(player => {
-        const fullName = `${player.first_name} ${player.last_name}`.toLowerCase();
-        const matchesSearch = fullName.includes(search);
-        const matchesTeam = teamFilter === "ALL" || String(player.team_id) === String(teamFilter);
-        return matchesSearch && matchesTeam;
-    });
+    const filtered = ADMIN_PLAYERS
+        .filter(player => {
+            const fullName = `${player.first_name} ${player.last_name}`.toLowerCase();
+            const matchesSearch = fullName.includes(search);
+            const matchesTeam = teamFilter === "ALL" || String(player.team_id) === String(teamFilter);
+            return matchesSearch && matchesTeam;
+        })
+        .sort((a, b) => {
+            if (a.jersey_number != null && b.jersey_number != null) return a.jersey_number - b.jersey_number;
+            if (a.jersey_number != null) return -1;
+            if (b.jersey_number != null) return 1;
+            return a.last_name.localeCompare(b.last_name);
+        });
 
     if (filtered.length === 0) {
-        element.innerHTML = `<tr><td colspan="5">No players found.</td></tr>`;
+        element.innerHTML = `<tr><td colspan="6">No players found.</td></tr>`;
         return;
     }
 
     element.innerHTML = filtered.map(player => `
         <tr>
+            <td>${player.jersey_number != null ? `#${player.jersey_number}` : "—"}</td>
             <td>${player.last_name}, ${player.first_name}</td>
             <td>${teamNameById(player.team_id)}</td>
             <td>${player.position || "Skater"}</td>
@@ -634,6 +642,7 @@ function editPlayer(id) {
     document.getElementById("player-first-name").value = player.first_name;
     document.getElementById("player-last-name").value = player.last_name;
     document.getElementById("player-email").value = player.email || "";
+    document.getElementById("player-jersey-number").value = player.jersey_number ?? "";
     document.getElementById("player-team-select").innerHTML = teamOptionsHtml(player.team_id);
     document.getElementById("player-position-select").value = player.position || "Skater";
 
@@ -646,13 +655,16 @@ async function savePlayer(event) {
     const message = document.getElementById("player-form-message");
     message.textContent = "Saving...";
 
+    const jerseyNumberRaw = document.getElementById("player-jersey-number").value.trim();
+
     const payload = {
         season_id: ADMIN_SEASON_ID,
         first_name: document.getElementById("player-first-name").value.trim(),
         last_name: document.getElementById("player-last-name").value.trim(),
         email: document.getElementById("player-email").value.trim() || null,
         team_id: document.getElementById("player-team-select").value || null,
-        position: document.getElementById("player-position-select").value
+        position: document.getElementById("player-position-select").value,
+        jersey_number: jerseyNumberRaw === "" ? null : Number(jerseyNumberRaw)
     };
 
     if (!payload.first_name || !payload.last_name) {
@@ -812,11 +824,18 @@ function playersForTeam(teamId) {
 }
 
 function playerOptionsHtml(teamId, selectedId) {
-    const players = [...playersForTeam(teamId)].sort((a, b) => a.last.localeCompare(b.last));
+    const players = [...playersForTeam(teamId)].sort((a, b) => {
+        if (a.number != null && b.number != null) return a.number - b.number;
+        if (a.number != null) return -1;
+        if (b.number != null) return 1;
+        return a.last.localeCompare(b.last);
+    });
+
     return `<option value="">—</option>` +
-        players.map(p =>
-            `<option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""}>${p.first} ${p.last}</option>`
-        ).join("");
+        players.map(p => {
+            const label = p.number != null ? `#${p.number} ${p.first} ${p.last}` : `${p.first} ${p.last}`;
+            return `<option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""}>${label}</option>`;
+        }).join("");
 }
 
 function periodOptionsHtml(selected) {

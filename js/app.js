@@ -320,6 +320,11 @@ function renderPlayers() {
         })
         .sort((a, b) => {
             if (a.team !== b.team) return a.team.localeCompare(b.team);
+            // Numbered players first, ordered by number; unnumbered players
+            // fall to the end, sorted by last name.
+            if (a.number != null && b.number != null) return a.number - b.number;
+            if (a.number != null) return -1;
+            if (b.number != null) return 1;
             return a.last.localeCompare(b.last);
         });
 
@@ -330,6 +335,7 @@ function renderPlayers() {
 
     element.innerHTML = filtered.map(player => `
         <tr>
+            <td>${player.number != null ? `#${player.number}` : "—"}</td>
             <td><strong>${player.last}, ${player.first}</strong></td>
             <td>
                 <div class="roster-team">

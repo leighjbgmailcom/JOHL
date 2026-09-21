@@ -7,8 +7,6 @@ let TEAMS = [];
 let PLAYERS = [];
 let SPONSORS = [];
 let SCHEDULE = [];
-let GOALS = [];
-let PENALTIES = [];
 
 
 /* =========================================
@@ -53,6 +51,7 @@ async function loadPlayers() {
             last_name,
             position,
             team_id,
+            jersey_number,
             teams (
                 code
             )
@@ -69,7 +68,8 @@ async function loadPlayers() {
         first: player.first_name,
         last: player.last_name,
         position: player.position,
-        team: player.teams ? player.teams.code : null
+        team: player.teams ? player.teams.code : null,
+        number: player.jersey_number
     }));
 
     return true;
@@ -171,85 +171,6 @@ async function loadSchedule() {
 
 
 /* =========================================
-   LOAD GOALS
-   (only completed games have any -- used to
-   calculate standings)
-   ========================================= */
-
-async function loadGoals() {
-
-    const { data, error } = await supabaseClient
-        .from("game_goals")
-        .select(`
-            id,
-            game_id,
-            team_id,
-            scorer_id,
-            assist1_id,
-            assist2_id,
-            period,
-            teams (
-                code
-            )
-        `);
-
-    if (error) {
-        console.error("Error loading goals:", error);
-        return false;
-    }
-
-    GOALS = data.map(goal => ({
-        id: goal.id,
-        gameId: goal.game_id,
-        team: goal.teams ? goal.teams.code : null,
-        scorerId: goal.scorer_id,
-        assist1Id: goal.assist1_id,
-        assist2Id: goal.assist2_id,
-        period: goal.period
-    }));
-
-    return true;
-}
-
-
-/* =========================================
-   LOAD PENALTIES
-   (used for the player leaderboard's PIM column)
-   ========================================= */
-
-async function loadPenalties() {
-
-    const { data, error } = await supabaseClient
-        .from("game_penalties")
-        .select(`
-            id,
-            game_id,
-            team_id,
-            player_id,
-            minutes,
-            teams (
-                code
-            )
-        `);
-
-    if (error) {
-        console.error("Error loading penalties:", error);
-        return false;
-    }
-
-    PENALTIES = data.map(penalty => ({
-        id: penalty.id,
-        gameId: penalty.game_id,
-        team: penalty.teams ? penalty.teams.code : null,
-        playerId: penalty.player_id,
-        minutes: penalty.minutes
-    }));
-
-    return true;
-}
-
-
-/* =========================================
    LOAD EVERYTHING
    ========================================= */
 
@@ -259,9 +180,7 @@ async function loadLeagueData() {
         loadTeams(),
         loadPlayers(),
         loadSponsors(),
-        loadSchedule(),
-        loadGoals(),
-        loadPenalties()
+        loadSchedule()
     ]);
 
     const success = results.every(result => result === true);
@@ -272,8 +191,6 @@ async function loadLeagueData() {
         console.log("Players:", PLAYERS.length);
         console.log("Sponsors:", SPONSORS.length);
         console.log("Schedule entries:", SCHEDULE.length);
-        console.log("Goals:", GOALS.length);
-        console.log("Penalties:", PENALTIES.length);
     }
 
     return success;
