@@ -1,297 +1,284 @@
 /* =========================================
    JORDAN OLDTIMERS HOCKEY LEAGUE
-   Admin — game results entry
-   Depends on: db.js (TEAMS, PLAYERS, SCHEDULE),
-   app.js (teamBadge, teamName), supabaseClient
+   Admin — Schedule Management
    ========================================= */
 
-let rowCounter = 0;
+let ADMIN_GAMES = [];
+let ADMIN_SEASON_ID = null;
+let editingGameId = null;
 
 
 /* =========================================
-   HELPERS
+   ACCESS CONTROL
    ========================================= */
 
-function playersForTeamCode(code) {
-    return PLAYERS.filter(p => p.team === code)
-        .sort((a, b) => a.last.localeCompare(b.last));
-}
+async function requireAdmin() {
 
-function playerOptionsHtml(teamCode, selectedId, allowNone) {
-    const players = playersForTeamCode(teamCode);
+    const {
+        data: { session }
+    } = await supabaseClient.auth.getSession();
 
-    const none = allowNone
-        ? `<option value="">${allowNone === "assist" ? "No assist" : "Select player"}</option>`
-        : "";
+    if (!session) {
+        window.location.href = "login.html";
+        return false;
+    }
 
-    return none + players.map(p => `
-        <option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""}>
-            ${p.first} ${p.last}
-        </option>
-    `).join("");
-}
+    const { data: profile, error } = await supabaseClient
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", session.user.id)
+        .single();
 
-function periodOptionsHtml(selected) {
-    return ["1", "2", "3", "OT", "SO"].map(p => `
-        <option value="${p}" ${p === selected ? "selected" : ""}>
-            ${p === "1" ? "1st" : p === "2" ? "2nd" : p === "3" ? "3rd" : p}
-        </option>
-    `).join("");
+    if (error || !profile || !profile.is_admin) {
+        window.location.href = "index.html";
+        return false;
+    }
+
+    return true;
 }
 
 
 /* =========================================
-   ROW BUILDERS
+   LOAD DATA
    ========================================= */
 
-function addGoalRow(side, teamCode, existing) {
-    const container = document.getElementById(`${side}-goals-list`);
-    const id = `goal-row-${rowCounter++}`;
+async function loadActiveSeason() {
+    const { data, error } = await supabaseClient
+        .from("seasons")
+        .select("id")
+        .eq("active", true)
+        .limit(1)
+        .single();
 
-    const wrapper = document.createElement("div");
-    wrapper.className = "admin-row";
-    wrapper.id = id;
-    wrapper.dataset.teamCode = teamCode;
-
-    wrapper.innerHTML = `
-        <select class="admin-period">${periodOptionsHtml(existing?.period)}</select>
-        <input type="text" class="admin-time" placeholder="mm:ss" value="${existing?.game_time || ""}">
-        <select class="admin-scorer">${playerOptionsHtml(teamCode, existing?.scorer_id)}</select>
-        <select class="admin-assist1">${playerOptionsHtml(teamCode, existing?.assist1_id, "assist")}</select>
-        <select class="admin-assist2">${playerOptionsHtml(teamCode, existing?.assist2_id, "assist")}</select>
-        <button type="button" class="admin-remove-btn" aria-label="Remove">&times;</button>
-    `;
-
-    wrapper.querySelector(".admin-remove-btn").addEventListener("click", () => {
-        wrapper.remove();
-        updateScorePreview();
-    });
-
-    wrapper.querySelectorAll("select, input").forEach(el => {
-        el.addEventListener("change", updateScorePreview);
-    });
-
-    container.appendChild(wrapper);
-    updateScorePreview();
+    if (!error && data) {
+        ADMIN_SEASON_ID = data.id;
+    }
 }
 
-function addPenaltyRow(side, teamCode, existing) {
-    const container = document.getElementById(`${side}-penalties-list`);
-    const id = `penalty-row-${rowCounter++}`;
+async function loadAdminGames() {
 
-    const wrapper = document.createElement("div");
-    wrapper.className = "admin-row";
-    wrapper.id = id;
-    wrapper.dataset.teamCode = teamCode;
+    const { data, error } = await supabaseClient
+        .from("games")
+        .select(`
+            id,
+            season_id,
+            game_no,
+            game_date,
+            game_time,
+            location,
+            away_team_id,
+            home_team_id,
+            away_score,
+            home_score,
+            note,
+            no_games,
+            status
+        `)
+        .order("game_date")
+        .order("game_time");
 
-    wrapper.innerHTML = `
-        <select class="admin-period">${periodOptionsHtml(existing?.period)}</select>
-        <input type="text" class="admin-time" placeholder="mm:ss" value="${existing?.game_time || ""}">
-        <select class="admin-player">${playerOptionsHtml(teamCode, existing?.player_id)}</select>
-        <input type="text" class="admin-infraction" placeholder="Tripping" value="${existing?.infraction || ""}">
-        <select class="admin-minutes">
-            ${[2, 4, 5, 10].map(m => `<option value="${m}" ${existing?.minutes === m ? "selected" : ""}>${m} min</option>`).join("")}
-        </select>
-        <button type="button" class="admin-remove-btn" aria-label="Remove">&times;</button>
-    `;
+    if (error) {
+        console.error("Error loading games:", error);
+        return;
+    }
 
-    wrapper.querySelector(".admin-remove-btn").addEventListener("click", () => wrapper.remove());
-
-    container.appendChild(wrapper);
+    ADMIN_GAMES = data;
+    renderAdminGamesTable();
 }
 
 
 /* =========================================
-   LIVE SCORE PREVIEW
+   TEAM SELECT OPTIONS
    ========================================= */
 
-function updateScorePreview() {
-    const preview = document.getElementById("admin-score-preview");
-    if (!preview) return;
+function teamOptionsHtml(selectedId) {
+    const sorted = [...TEAMS].sort((a, b) => a.name.localeCompare(b.name));
+    return `<option value="">— Select team —</option>` +
+        sorted.map(team =>
+            `<option value="${team.id}" ${String(team.id) === String(selectedId) ? "selected" : ""}>${team.name}</option>`
+        ).join("");
+}
 
-    const awayCode = document.getElementById("admin-game-editor").dataset.away;
-    const homeCode = document.getElementById("admin-game-editor").dataset.home;
-
-    const awayGoals = document.querySelectorAll("#away-goals-list .admin-row").length;
-    const homeGoals = document.querySelectorAll("#home-goals-list .admin-row").length;
-
-    preview.innerHTML = `
-        <div class="admin-score-line">
-            ${teamBadge(awayCode)}
-            <span>${teamName(awayCode)}</span>
-            <strong>${awayGoals}</strong>
-            <span class="at-symbol">vs.</span>
-            <strong>${homeGoals}</strong>
-            <span>${teamName(homeCode)}</span>
-            ${teamBadge(homeCode)}
-        </div>
-    `;
+function teamNameById(id) {
+    const team = TEAMS.find(t => String(t.id) === String(id));
+    return team ? team.name : (id ? `Team #${id}` : "TBD");
 }
 
 
 /* =========================================
-   LOAD A GAME INTO THE EDITOR
+   RENDER GAMES TABLE
    ========================================= */
 
-async function loadGameIntoEditor(gameId) {
-    const game = SCHEDULE.find(g => String(g.id) === String(gameId));
+function renderAdminGamesTable() {
+    const element = document.getElementById("admin-games-table");
+    if (!element) return;
+
+    if (ADMIN_GAMES.length === 0) {
+        element.innerHTML = `<tr><td colspan="7">No games yet. Add one below.</td></tr>`;
+        return;
+    }
+
+    element.innerHTML = ADMIN_GAMES.map(game => {
+        if (game.no_games) {
+            return `
+                <tr>
+                    <td>${game.game_date}</td>
+                    <td colspan="4"><em>${game.note || "No games"}</em></td>
+                    <td>
+                        <button class="link-button" onclick="editGame(${game.id})">Edit</button>
+                        <button class="link-button danger" onclick="deleteGame(${game.id})">Delete</button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        const score = game.status === "final"
+            ? `${game.away_score ?? 0} – ${game.home_score ?? 0}`
+            : "—";
+
+        return `
+            <tr>
+                <td>${game.game_date}</td>
+                <td>${formatTime12h(game.game_time ? game.game_time.substring(0, 5) : "")}</td>
+                <td>${teamNameById(game.away_team_id)} @ ${teamNameById(game.home_team_id)}</td>
+                <td>${game.status === "final" ? "Final" : "Scheduled"}</td>
+                <td>${score}</td>
+                <td>${game.game_no ?? ""}</td>
+                <td>
+                    <button class="link-button" onclick="editGame(${game.id})">Edit</button>
+                    <button class="link-button danger" onclick="deleteGame(${game.id})">Delete</button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+}
+
+
+/* =========================================
+   ADD / EDIT FORM
+   ========================================= */
+
+function resetGameForm() {
+    editingGameId = null;
+    document.getElementById("game-form-title").textContent = "Add a Game";
+    document.getElementById("game-form").reset();
+    document.getElementById("game-id").value = "";
+    document.getElementById("game-location").value = "Jordan Arena";
+    document.getElementById("game-no-games").checked = false;
+    document.getElementById("game-status").value = "scheduled";
+    toggleGameFormSections();
+}
+
+function editGame(id) {
+    const game = ADMIN_GAMES.find(g => g.id === id);
     if (!game) return;
 
-    const editor = document.getElementById("admin-game-editor");
-    editor.style.display = "";
-    editor.dataset.gameId = game.id;
-    editor.dataset.away = game.away;
-    editor.dataset.home = game.home;
+    editingGameId = id;
 
-    document.getElementById("away-team-heading").innerHTML =
-        `${teamBadge(game.away)} <span>${teamName(game.away)}</span>`;
-    document.getElementById("home-team-heading").innerHTML =
-        `${teamBadge(game.home)} <span>${teamName(game.home)}</span>`;
+    document.getElementById("game-form-title").textContent = `Edit Game${game.game_no ? " #" + game.game_no : ""}`;
+    document.getElementById("game-id").value = game.id;
+    document.getElementById("game-date").value = game.game_date;
+    document.getElementById("game-time").value = game.game_time ? game.game_time.substring(0, 5) : "";
+    document.getElementById("game-location").value = game.location || "Jordan Arena";
+    document.getElementById("game-no").value = game.game_no || "";
+    document.getElementById("game-note").value = game.note || "";
+    document.getElementById("game-no-games").checked = !!game.no_games;
+    document.getElementById("game-away-team").innerHTML = teamOptionsHtml(game.away_team_id);
+    document.getElementById("game-home-team").innerHTML = teamOptionsHtml(game.home_team_id);
+    document.getElementById("game-status").value = game.status || "scheduled";
+    document.getElementById("game-away-score").value = game.away_score ?? "";
+    document.getElementById("game-home-score").value = game.home_score ?? "";
 
-    ["away-goals-list", "home-goals-list", "away-penalties-list", "home-penalties-list"]
-        .forEach(id => document.getElementById(id).innerHTML = "");
+    toggleGameFormSections();
 
-    document.getElementById("admin-mark-final").checked = (game.status === "final");
-    document.getElementById("admin-message").textContent = "";
-
-    // Load any existing goals/penalties for this game so they can be edited.
-    const [{ data: goals, error: goalsError }, { data: penalties, error: penError }] =
-        await Promise.all([
-            supabaseClient
-                .from("game_goals")
-                .select("*, teams(code)")
-                .eq("game_id", game.id),
-            supabaseClient
-                .from("game_penalties")
-                .select("*, teams(code)")
-                .eq("game_id", game.id)
-        ]);
-
-    if (goalsError) console.error("Error loading existing goals:", goalsError);
-    if (penError) console.error("Error loading existing penalties:", penError);
-
-    (goals || []).forEach(g => {
-        const side = g.teams?.code === game.away ? "away" : "home";
-        addGoalRow(side, g.teams?.code, g);
-    });
-
-    (penalties || []).forEach(p => {
-        const side = p.teams?.code === game.away ? "away" : "home";
-        addPenaltyRow(side, p.teams?.code, p);
-    });
-
-    updateScorePreview();
+    document.getElementById("game-form-panel").scrollIntoView({ behavior: "smooth" });
 }
 
+function toggleGameFormSections() {
+    const isByeWeek = document.getElementById("game-no-games").checked;
+    const isFinal = document.getElementById("game-status").value === "final";
 
-/* =========================================
-   SAVE
-   ========================================= */
+    document.querySelectorAll(".game-teams-field").forEach(el => {
+        el.style.display = isByeWeek ? "none" : "";
+    });
 
-async function saveGameResults() {
-    const editor = document.getElementById("admin-game-editor");
-    const gameId = editor.dataset.gameId;
-    const awayCode = editor.dataset.away;
-    const homeCode = editor.dataset.home;
-    const message = document.getElementById("admin-message");
+    document.getElementById("game-score-fields").style.display =
+        (!isByeWeek && isFinal) ? "" : "none";
+}
 
+async function saveGame(event) {
+    event.preventDefault();
+
+    const message = document.getElementById("game-form-message");
     message.textContent = "Saving...";
 
-    const goalRows = [];
-    document.querySelectorAll("#away-goals-list .admin-row, #home-goals-list .admin-row")
-        .forEach(row => {
-            const teamCode = row.dataset.teamCode;
-            const team = getTeam(teamCode);
-            const scorerId = row.querySelector(".admin-scorer").value;
+    const isByeWeek = document.getElementById("game-no-games").checked;
+    const status = document.getElementById("game-status").value;
 
-            if (!scorerId) return; // skip incomplete rows
+    const payload = {
+        season_id: ADMIN_SEASON_ID,
+        game_date: document.getElementById("game-date").value,
+        game_time: isByeWeek ? null : (document.getElementById("game-time").value || null),
+        location: document.getElementById("game-location").value || "Jordan Arena",
+        game_no: document.getElementById("game-no").value || null,
+        note: document.getElementById("game-note").value || null,
+        no_games: isByeWeek,
+        away_team_id: isByeWeek ? null : (document.getElementById("game-away-team").value || null),
+        home_team_id: isByeWeek ? null : (document.getElementById("game-home-team").value || null),
+        status: isByeWeek ? "scheduled" : status,
+        away_score: (!isByeWeek && status === "final") ? Number(document.getElementById("game-away-score").value || 0) : null,
+        home_score: (!isByeWeek && status === "final") ? Number(document.getElementById("game-home-score").value || 0) : null
+    };
 
-            goalRows.push({
-                game_id: gameId,
-                team_id: team.id,
-                scorer_id: scorerId,
-                assist1_id: row.querySelector(".admin-assist1").value || null,
-                assist2_id: row.querySelector(".admin-assist2").value || null,
-                period: row.querySelector(".admin-period").value,
-                game_time: row.querySelector(".admin-time").value || null
-            });
-        });
-
-    const penaltyRows = [];
-    document.querySelectorAll("#away-penalties-list .admin-row, #home-penalties-list .admin-row")
-        .forEach(row => {
-            const teamCode = row.dataset.teamCode;
-            const team = getTeam(teamCode);
-            const playerId = row.querySelector(".admin-player").value;
-
-            if (!playerId) return;
-
-            penaltyRows.push({
-                game_id: gameId,
-                team_id: team.id,
-                player_id: playerId,
-                infraction: row.querySelector(".admin-infraction").value || null,
-                minutes: parseInt(row.querySelector(".admin-minutes").value, 10),
-                period: row.querySelector(".admin-period").value,
-                game_time: row.querySelector(".admin-time").value || null
-            });
-        });
-
-    const isFinal = document.getElementById("admin-mark-final").checked;
-
-    const awayScore = document.querySelectorAll("#away-goals-list .admin-row").length;
-    const homeScore = document.querySelectorAll("#home-goals-list .admin-row").length;
-
-    // Simplest reliable approach for a small rec league: clear this
-    // game's existing goals/penalties, then re-insert the current
-    // set from the form.
-    const { error: deleteGoalsError } =
-        await supabaseClient.from("game_goals").delete().eq("game_id", gameId);
-
-    const { error: deletePenaltiesError } =
-        await supabaseClient.from("game_penalties").delete().eq("game_id", gameId);
-
-    if (deleteGoalsError || deletePenaltiesError) {
-        console.error(deleteGoalsError || deletePenaltiesError);
-        message.textContent = "There was a problem saving (clearing old entries failed).";
+    if (!payload.game_date) {
+        message.textContent = "Please choose a date.";
         return;
     }
 
-    if (goalRows.length > 0) {
-        const { error } = await supabaseClient.from("game_goals").insert(goalRows);
-        if (error) {
-            console.error(error);
-            message.textContent = "There was a problem saving goals: " + error.message;
-            return;
-        }
+    if (!isByeWeek && (!payload.away_team_id || !payload.home_team_id)) {
+        message.textContent = "Please choose both teams.";
+        return;
     }
 
-    if (penaltyRows.length > 0) {
-        const { error } = await supabaseClient.from("game_penalties").insert(penaltyRows);
-        if (error) {
-            console.error(error);
-            message.textContent = "There was a problem saving penalties: " + error.message;
-            return;
-        }
-    }
+    let error;
 
-    const { error: gameUpdateError } =
-        await supabaseClient
+    if (editingGameId) {
+        ({ error } = await supabaseClient
             .from("games")
-            .update({
-                status: isFinal ? "final" : "scheduled",
-                away_score: awayScore,
-                home_score: homeScore
-            })
-            .eq("id", gameId);
+            .update(payload)
+            .eq("id", editingGameId));
+    } else {
+        ({ error } = await supabaseClient
+            .from("games")
+            .insert(payload));
+    }
 
-    if (gameUpdateError) {
-        console.error(gameUpdateError);
-        message.textContent = "Results saved, but updating the game record failed: " + gameUpdateError.message;
+    if (error) {
+        console.error(error);
+        message.textContent = "There was a problem saving this game.";
         return;
     }
 
-    message.textContent = "Saved!";
+    message.textContent = editingGameId ? "Game updated." : "Game added.";
+    resetGameForm();
+    await loadAdminGames();
+}
+
+async function deleteGame(id) {
+    if (!confirm("Delete this game? This cannot be undone.")) return;
+
+    const { error } = await supabaseClient
+        .from("games")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+        console.error(error);
+        alert("There was a problem deleting this game.");
+        return;
+    }
+
+    await loadAdminGames();
 }
 
 
@@ -299,333 +286,37 @@ async function saveGameResults() {
    INIT
    ========================================= */
 
-function initAdminPage() {
-    const select = document.getElementById("admin-game-select");
-    if (!select) return; // not on the admin page
+async function initAdminPage() {
 
-    const games = SCHEDULE
-        .filter(g => !g.noGames && g.away !== "TBD" && g.home !== "TBD")
-        .slice()
-        .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    const ok = await requireAdmin();
+    if (!ok) return;
 
-    select.innerHTML = `<option value="">Select a game&hellip;</option>` +
-        games.map(g => `
-            <option value="${g.id}">
-                ${g.date} — ${teamName(g.away)} @ ${teamName(g.home)}
-                ${g.status === "final" ? " (Final)" : ""}
-            </option>
-        `).join("");
+    document.getElementById("admin-page-content").style.display = "";
 
-    select.addEventListener("change", () => {
-        if (select.value) {
-            loadGameIntoEditor(select.value);
-        } else {
-            document.getElementById("admin-game-editor").style.display = "none";
-        }
-    });
-
-    document.querySelectorAll(".admin-add-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const side = btn.dataset.side;
-            const kind = btn.dataset.kind;
-            const teamCode = document.getElementById("admin-game-editor").dataset[side];
-
-            if (kind === "goal") {
-                addGoalRow(side, teamCode);
-            } else {
-                addPenaltyRow(side, teamCode);
-            }
-        });
-    });
-
-    document.getElementById("admin-save-btn")
-        .addEventListener("click", saveGameResults);
-
-    setupAdminTabs();
-    initPlayersAdmin();
-}
-
-
-/* =========================================
-   ADMIN TABS
-   ========================================= */
-
-function setupAdminTabs() {
-    const tabs = document.querySelectorAll(".admin-tab");
-    if (tabs.length === 0) return;
-
-    tabs.forEach(tab => {
-        tab.addEventListener("click", () => {
-            tabs.forEach(t => t.classList.remove("active"));
-            tab.classList.add("active");
-
-            document.querySelectorAll(".admin-tab-panel").forEach(panel => {
-                panel.style.display = "none";
-            });
-
-            document.getElementById(`admin-tab-${tab.dataset.tab}`).style.display = "";
-        });
-    });
-}
-
-
-/* =========================================
-   PLAYERS MANAGEMENT
-   ========================================= */
-
-function teamOptionsHtml(selectedCode) {
-    return TEAMS.map(t => `
-        <option value="${t.code}" ${t.code === selectedCode ? "selected" : ""}>
-            ${t.name}
-        </option>
-    `).join("");
-}
-
-function positionOptionsHtml(selected) {
-    return `
-        <option value="Skater" ${selected !== "G" ? "selected" : ""}>Skater</option>
-        <option value="G" ${selected === "G" ? "selected" : ""}>Goalie</option>
-    `;
-}
-
-function playerViewRowHtml(player) {
-    return `
-        <tr data-player-id="${player.id}">
-            <td>${player.last}</td>
-            <td>${player.first}</td>
-            <td>
-                <div class="roster-team">
-                    ${teamBadge(player.team)}
-                    <span>${teamName(player.team)}</span>
-                </div>
-            </td>
-            <td>${player.position === "G" ? "Goalie" : "Skater"}</td>
-            <td class="admin-player-row-view">
-                <button type="button" class="admin-player-action-btn" data-action="edit">Edit</button>
-                <button type="button" class="admin-player-action-btn danger" data-action="delete">Delete</button>
-            </td>
-        </tr>
-    `;
-}
-
-function playerEditRowHtml(player) {
-    return `
-        <tr data-player-id="${player.id}" data-editing="true">
-            <td><input type="text" class="edit-last" value="${player.last}"></td>
-            <td><input type="text" class="edit-first" value="${player.first}"></td>
-            <td><select class="edit-team">${teamOptionsHtml(player.team)}</select></td>
-            <td><select class="edit-position">${positionOptionsHtml(player.position)}</select></td>
-            <td class="admin-player-row-view">
-                <button type="button" class="admin-player-action-btn" data-action="save">Save</button>
-                <button type="button" class="admin-player-action-btn" data-action="cancel">Cancel</button>
-            </td>
-        </tr>
-    `;
-}
-
-function renderAdminPlayersTable() {
-    const tbody = document.getElementById("admin-players-table");
-    if (!tbody) return;
-
-    const search = (document.getElementById("admin-players-search")?.value || "").toLowerCase();
-
-    const players = PLAYERS
-        .filter(p => `${p.first} ${p.last}`.toLowerCase().includes(search))
-        .sort((a, b) => a.last.localeCompare(b.last));
-
-    if (players.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5">No players found.</td></tr>`;
+    const loaded = await loadLeagueData();
+    if (!loaded) {
+        console.error("Could not load JOHL data from Supabase.");
         return;
     }
 
-    tbody.innerHTML = players.map(p => playerViewRowHtml(p)).join("");
+    await loadActiveSeason();
+
+    document.getElementById("game-away-team").innerHTML = teamOptionsHtml();
+    document.getElementById("game-home-team").innerHTML = teamOptionsHtml();
+
+    document.getElementById("game-form").addEventListener("submit", saveGame);
+    document.getElementById("game-no-games").addEventListener("change", toggleGameFormSections);
+    document.getElementById("game-status").addEventListener("change", toggleGameFormSections);
+    document.getElementById("game-form-cancel").addEventListener("click", resetGameForm);
+
+    toggleGameFormSections();
+
+    await loadAdminGames();
 }
 
-async function savePlayerRow(row) {
-    const playerId = row.dataset.playerId;
-    const lastName = row.querySelector(".edit-last").value.trim();
-    const firstName = row.querySelector(".edit-first").value.trim();
-    const teamCode = row.querySelector(".edit-team").value;
-    const position = row.querySelector(".edit-position").value;
-    const message = document.getElementById("admin-players-message");
-
-    if (!lastName || !firstName) {
-        message.textContent = "First and last name are required.";
-        return;
-    }
-
-    const team = getTeam(teamCode);
-
-    message.textContent = "Saving...";
-
-    const { error } = await supabaseClient
-        .from("players")
-        .update({
-            first_name: firstName,
-            last_name: lastName,
-            team_id: team.id,
-            position: position
-        })
-        .eq("id", playerId);
-
-    if (error) {
-        console.error(error);
-        message.textContent = "There was a problem saving: " + error.message;
-        return;
-    }
-
-    // Update the in-memory copy so the table reflects the change
-    // immediately without a full reload.
-    const localPlayer = PLAYERS.find(p => String(p.id) === String(playerId));
-    if (localPlayer) {
-        localPlayer.first = firstName;
-        localPlayer.last = lastName;
-        localPlayer.team = teamCode;
-        localPlayer.position = position;
-    }
-
-    message.textContent = "Saved!";
-    renderAdminPlayersTable();
-}
-
-async function deletePlayerRow(playerId) {
-    const player = PLAYERS.find(p => String(p.id) === String(playerId));
-    const label = player ? `${player.first} ${player.last}` : "this player";
-
-    if (!confirm(`Delete ${label}? This can't be undone.`)) return;
-
-    const message = document.getElementById("admin-players-message");
-    message.textContent = "Deleting...";
-
-    const { error } = await supabaseClient
-        .from("players")
-        .delete()
-        .eq("id", playerId);
-
-    if (error) {
-        console.error(error);
-        message.textContent = "There was a problem deleting: " + error.message;
-        return;
-    }
-
-    PLAYERS = PLAYERS.filter(p => String(p.id) !== String(playerId));
-
-    message.textContent = "Deleted.";
-    renderAdminPlayersTable();
-}
-
-function showAddPlayerForm() {
-    const container = document.getElementById("admin-add-player-row");
-
-    container.innerHTML = `
-        <div class="admin-add-player-grid">
-            <input type="text" id="new-player-first" placeholder="First name">
-            <input type="text" id="new-player-last" placeholder="Last name">
-            <select id="new-player-team">${teamOptionsHtml(TEAMS[0]?.code)}</select>
-            <select id="new-player-position">${positionOptionsHtml("Skater")}</select>
-            <button type="button" class="btn btn-primary" id="new-player-save">Save</button>
-            <button type="button" class="btn" id="new-player-cancel">Cancel</button>
-        </div>
-    `;
-
-    container.style.display = "";
-
-    document.getElementById("new-player-save").addEventListener("click", saveNewPlayer);
-    document.getElementById("new-player-cancel").addEventListener("click", () => {
-        container.style.display = "none";
-        container.innerHTML = "";
-    });
-}
-
-async function saveNewPlayer() {
-    const first = document.getElementById("new-player-first").value.trim();
-    const last = document.getElementById("new-player-last").value.trim();
-    const teamCode = document.getElementById("new-player-team").value;
-    const position = document.getElementById("new-player-position").value;
-    const message = document.getElementById("admin-players-message");
-
-    if (!first || !last) {
-        message.textContent = "First and last name are required.";
-        return;
-    }
-
-    const team = getTeam(teamCode);
-
-    message.textContent = "Adding player...";
-
-    const { data, error } = await supabaseClient
-        .from("players")
-        .insert({
-            first_name: first,
-            last_name: last,
-            team_id: team.id,
-            position: position
-        })
-        .select()
-        .single();
-
-    if (error) {
-        console.error(error);
-        message.textContent = "There was a problem adding the player: " + error.message;
-        return;
-    }
-
-    PLAYERS.push({
-        id: data.id,
-        first: first,
-        last: last,
-        team: teamCode,
-        position: position
-    });
-
-    document.getElementById("admin-add-player-row").style.display = "none";
-    document.getElementById("admin-add-player-row").innerHTML = "";
-
-    message.textContent = "Player added!";
-    renderAdminPlayersTable();
-}
-
-function initPlayersAdmin() {
-    const table = document.getElementById("admin-players-table");
-    if (!table) return;
-
-    renderAdminPlayersTable();
-
-    document.getElementById("admin-players-search")
-        .addEventListener("input", renderAdminPlayersTable);
-
-    document.getElementById("admin-add-player-btn")
-        .addEventListener("click", showAddPlayerForm);
-
-    // Event delegation for Edit / Delete / Save / Cancel, since rows
-    // are re-rendered often.
-    table.addEventListener("click", (event) => {
-        const button = event.target.closest("button[data-action]");
-        if (!button) return;
-
-        const row = button.closest("tr");
-        const playerId = row.dataset.playerId;
-        const action = button.dataset.action;
-
-        if (action === "edit") {
-            const player = PLAYERS.find(p => String(p.id) === String(playerId));
-            row.outerHTML = playerEditRowHtml(player);
-            return;
-        }
-
-        if (action === "cancel") {
-            renderAdminPlayersTable();
-            return;
-        }
-
-        if (action === "save") {
-            savePlayerRow(row);
-            return;
-        }
-
-        if (action === "delete") {
-            deletePlayerRow(playerId);
-            return;
-        }
-    });
-}
+// Note: js/app.js's own DOMContentLoaded listener already runs
+// setupMobileNav() and loadLeagueData() for this page (its other
+// render calls are no-ops here since their elements don't exist).
+document.addEventListener("DOMContentLoaded", () => {
+    initAdminPage();
+});

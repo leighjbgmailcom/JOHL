@@ -51,6 +51,18 @@ function todayISO() {
     return `${y}-${m}-${day}`;
 }
 
+// "18:30" (24-hour) -> "6:30 PM". Returns "" for empty/missing input.
+function formatTime12h(time) {
+    if (!time) return "";
+    const [hStr, mStr] = time.split(":");
+    let hours = parseInt(hStr, 10);
+    const minutes = mStr || "00";
+    const suffix = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    return `${hours}:${minutes} ${suffix}`;
+}
+
 function formatDateISO(iso) {
     // iso = "YYYY-MM-DD" -> parse as local date, not UTC
     const [y, m, d] = iso.split("-").map(Number);
@@ -131,7 +143,7 @@ function renderNextGame() {
             <div class="homepage-games">
                 ${games.map(game => `
                     <div class="homepage-game">
-                        <div class="homepage-game-time">${game.time || ""}</div>
+                        <div class="homepage-game-time">${formatTime12h(game.time)}</div>
 
                         <div class="homepage-team">
                             ${teamBadge(game.away)}
@@ -227,44 +239,32 @@ function renderSchedule(filter = "ALL") {
 
                 ${group.entries.map(game => {
                     const isTbd = game.home === "TBD" || game.away === "TBD";
-                    const isFinal = game.status === "final";
-
-                    const awayWon = isFinal && game.awayScore > game.homeScore;
-                    const homeWon = isFinal && game.homeScore > game.awayScore;
-                    const awayLost = isFinal && game.awayScore < game.homeScore;
-                    const homeLost = isFinal && game.homeScore < game.awayScore;
 
                     return `
                         <div class="schedule-game ${isTbd ? "is-tbd" : ""}">
 
                             <div class="schedule-time">
-                                ${game.time || ""}
+                                ${formatTime12h(game.time)}
                             </div>
 
                             <div>
                                 <div class="schedule-matchup">
-                                    <div class="schedule-team ${awayWon ? "schedule-winner" : ""} ${awayLost ? "schedule-loser" : ""}">
+                                    <div class="schedule-team">
                                         ${teamBadge(game.away)}
                                         <span>${teamName(game.away)}</span>
                                     </div>
                                     <span class="at-symbol">vs.</span>
-                                    <div class="schedule-team ${homeWon ? "schedule-winner" : ""} ${homeLost ? "schedule-loser" : ""}">
+                                    <div class="schedule-team">
                                         ${teamBadge(game.home)}
                                         <span>${teamName(game.home)}</span>
                                     </div>
                                     ${game.note ? `<span class="note-tag">${game.note}</span>` : ""}
                                 </div>
-                                ${game.location ? `<div class="schedule-location">${game.location}</div>` : ""}
+                                ${game.location && game.location !== "Jordan Arena" ? `<div class="schedule-location">${game.location}</div>` : ""}
                             </div>
 
                             <div class="schedule-score">
-                                ${
-                                    isTbd
-                                        ? "TBD"
-                                        : isFinal
-                                            ? `<span class="score-final-badge">FINAL</span><span class="score-value">${game.awayScore} – ${game.homeScore}</span>`
-                                            : "GAME " + game.gameNo
-                                }
+                                ${isTbd ? "TBD" : "GAME " + game.gameNo}
                             </div>
 
                         </div>
@@ -365,10 +365,6 @@ function setupPlayerFilters() {
     if (search) search.addEventListener("input", renderPlayers);
     if (team) team.addEventListener("change", renderPlayers);
 
-    // Setting .value above doesn't fire a "change" event, so the
-    // very first render needs to happen here explicitly once the
-    // dropdown reflects the ?team= param -- otherwise the list stays
-    // unfiltered until the person manually touches the dropdown.
     renderPlayers();
 }
 
@@ -399,219 +395,39 @@ function renderSponsors() {
 
 
 /* =========================================
-   STANDINGS
-   Calculated from GOALS + completed games.
-   Points: 2 for a win (regulation, OT, or SO),
-   1 for an OT/SO loss, 1 each for a tie,
-   0 for a regulation loss.
+   STANDINGS (placeholder — pre-season)
    ========================================= */
 
-function calculateStandings() {
-
-    const table = {};
-
-    TEAMS.forEach(team => {
-        table[team.code] = {
-            team: team,
-            gp: 0, w: 0, l: 0, t: 0, ot: 0,
-            gf: 0, ga: 0, pts: 0
-        };
-    });
-
-    const finalGames = SCHEDULE.filter(
-        game => !game.noGames && game.status === "final"
-    );
-
-    finalGames.forEach(game => {
-        const homeGoals = GOALS.filter(
-            g => String(g.gameId) === String(game.id) && g.team === game.home
-        );
-        const awayGoals = GOALS.filter(
-            g => String(g.gameId) === String(game.id) && g.team === game.away
-        );
-
-        const isExtraTime = p => p === "OT" || p === "SO";
-
-        const homeReg = homeGoals.filter(g => !isExtraTime(g.period)).length;
-        const awayReg = awayGoals.filter(g => !isExtraTime(g.period)).length;
-
-        const homeFinal = homeGoals.length;
-        const awayFinal = awayGoals.length;
-
-        const home = table[game.home];
-        const away = table[game.away];
-
-        if (!home || !away) return; // TBD / playoff placeholder games
-
-        home.gp++;
-        away.gp++;
-        home.gf += homeFinal;
-        home.ga += awayFinal;
-        away.gf += awayFinal;
-        away.ga += homeFinal;
-
-        if (homeFinal === awayFinal) {
-            // Tied at the final buzzer, no OT/SO played -- a tie.
-            home.t++;
-            away.t++;
-            home.pts += 1;
-            away.pts += 1;
-        } else if (homeReg === awayReg) {
-            // Tied after regulation, decided in OT/SO.
-            const winner = homeFinal > awayFinal ? home : away;
-            const loser = homeFinal > awayFinal ? away : home;
-            winner.w++;
-            winner.pts += 2;
-            loser.ot++;
-            loser.pts += 1;
-        } else {
-            // Decided in regulation.
-            const winner = homeFinal > awayFinal ? home : away;
-            const loser = homeFinal > awayFinal ? away : home;
-            winner.w++;
-            winner.pts += 2;
-            loser.l++;
-        }
-    });
-
-    return Object.values(table).sort((a, b) => {
-        if (b.pts !== a.pts) return b.pts - a.pts;
-        if (b.gf - b.ga !== a.gf - a.ga) return (b.gf - b.ga) - (a.gf - a.ga);
-        return a.team.name.localeCompare(b.team.name);
-    });
-}
-
-function renderStandings() {
+function renderStandingsPlaceholder() {
     const element = document.getElementById("standings-table");
     if (!element) return;
 
-    const standings = calculateStandings();
+    const sorted = [...TEAMS].sort((a, b) => a.name.localeCompare(b.name));
 
-    element.innerHTML = standings.map(row => `
+    element.innerHTML = sorted.map(team => `
         <tr>
             <td class="team-name-cell">
                 <div class="standings-team">
-                    ${teamBadge(row.team.code)}
-                    <span>${row.team.name}</span>
+                    ${teamBadge(team.code)}
+                    <span>${team.name}</span>
                 </div>
             </td>
-            <td>${row.gp}</td>
-            <td>${row.w}</td>
-            <td>${row.l}</td>
-            <td>${row.t}</td>
-            <td>${row.ot}</td>
-            <td>${row.gf}</td>
-            <td>${row.ga}</td>
-            <td><strong>${row.pts}</strong></td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td><strong>0</strong></td>
         </tr>
     `).join("");
 }
 
 
 /* =========================================
-   PLAYER LEADERBOARD (leaders.html)
-   Calculated from GOALS + PENALTIES, counting
-   only games marked final.
+   MOBILE NAV TOGGLE
    ========================================= */
-
-function calculatePlayerStats() {
-
-    const finalGameIds = new Set(
-        SCHEDULE
-            .filter(game => game.status === "final")
-            .map(game => String(game.id))
-    );
-
-    const stats = {};
-
-    PLAYERS.forEach(player => {
-        stats[player.id] = { player: player, g: 0, a: 0, pim: 0 };
-    });
-
-    GOALS.forEach(goal => {
-        if (!finalGameIds.has(String(goal.gameId))) return;
-
-        if (goal.scorerId && stats[goal.scorerId]) {
-            stats[goal.scorerId].g++;
-        }
-        if (goal.assist1Id && stats[goal.assist1Id]) {
-            stats[goal.assist1Id].a++;
-        }
-        if (goal.assist2Id && stats[goal.assist2Id]) {
-            stats[goal.assist2Id].a++;
-        }
-    });
-
-    PENALTIES.forEach(penalty => {
-        if (!finalGameIds.has(String(penalty.gameId))) return;
-
-        if (penalty.playerId && stats[penalty.playerId]) {
-            stats[penalty.playerId].pim += (penalty.minutes || 0);
-        }
-    });
-
-    return Object.values(stats)
-        .map(row => ({ ...row, pts: row.g + row.a }))
-        .sort((a, b) => {
-            if (b.pts !== a.pts) return b.pts - a.pts;
-            if (b.g !== a.g) return b.g - a.g;
-            return a.player.last.localeCompare(b.player.last);
-        });
-}
-
-function renderLeaders() {
-    const element = document.getElementById("leaders-table");
-    if (!element) return;
-
-    const search = document.getElementById("leaders-search")?.value.toLowerCase() || "";
-    const selectedTeam = document.getElementById("leaders-team")?.value || "ALL";
-
-    const rows = calculatePlayerStats().filter(row => {
-        const fullName = `${row.player.first} ${row.player.last}`.toLowerCase();
-        const matchesSearch = fullName.includes(search);
-        const matchesTeam = selectedTeam === "ALL" || row.player.team === selectedTeam;
-        return matchesSearch && matchesTeam;
-    });
-
-    if (rows.length === 0) {
-        element.innerHTML = `<tr><td colspan="7">No players found.</td></tr>`;
-        return;
-    }
-
-    element.innerHTML = rows.map((row, index) => `
-        <tr>
-            <td>${index + 1}</td>
-            <td><strong>${row.player.last}, ${row.player.first}</strong></td>
-            <td>
-                <div class="roster-team">
-                    ${teamBadge(row.player.team)}
-                    <span>${teamName(row.player.team)}</span>
-                </div>
-            </td>
-            <td>${row.g}</td>
-            <td>${row.a}</td>
-            <td><strong>${row.pts}</strong></td>
-            <td>${row.pim}</td>
-        </tr>
-    `).join("");
-
-    const countEl = document.getElementById("leaders-count");
-    if (countEl) {
-        countEl.textContent = `${rows.length} player${rows.length === 1 ? "" : "s"}`;
-    }
-}
-
-function setupLeadersFilters() {
-    const search = document.getElementById("leaders-search");
-    const team = document.getElementById("leaders-team");
-
-    if (search) search.addEventListener("input", renderLeaders);
-    if (team) team.addEventListener("change", renderLeaders);
-
-    renderLeaders();
-}
-
-
 
 function setupMobileNav() {
     const toggle = document.getElementById("nav-toggle");
@@ -636,256 +452,12 @@ function setupMobileNav() {
 
 
 /* =========================================
-   AUTH NAV (Login / Logout link + protected
-   nav items)
-   ========================================= */
-
-function setupAuthNav() {
-    const link = document.getElementById("auth-link");
-    if (!link) return;
-
-    // If js/supabase.js hasn't been loaded on this page for some
-    // reason, fail quietly rather than breaking the rest of the nav.
-    if (typeof supabaseClient === "undefined") return;
-
-    const protectedLinks = document.querySelectorAll("#site-nav a[data-protected]");
-
-    function showLoggedIn() {
-        link.textContent = "Logout";
-        link.href = "#";
-
-        protectedLinks.forEach(item => {
-            item.style.display = "";
-        });
-    }
-
-    function showLoggedOut() {
-        link.textContent = "Login";
-        link.href = "login.html";
-
-        protectedLinks.forEach(item => {
-            item.style.display = "none";
-        });
-    }
-
-    async function refresh() {
-        const {
-            data: { session }
-        } = await supabaseClient.auth.getSession();
-
-        if (session) {
-            showLoggedIn();
-        } else {
-            showLoggedOut();
-        }
-    }
-
-    link.addEventListener("click", async (event) => {
-        // Only intercept the click when we're in the logged-in
-        // (Logout) state -- otherwise the login modal handler (see
-        // setupLoginModal) takes care of the click instead.
-        if (link.textContent !== "Logout") return;
-
-        event.preventDefault();
-
-        await supabaseClient.auth.signOut();
-
-        window.location.href = "index.html";
-    });
-
-    // Keep the link + protected nav items in sync if auth state
-    // changes while the page is open (e.g. session expires, or the
-    // user logs out in another tab).
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
-        if (session) {
-            showLoggedIn();
-        } else {
-            showLoggedOut();
-        }
-    });
-
-    refresh();
-}
-
-
-/* =========================================
-   LOGIN MODAL
-   ========================================= */
-
-function setupLoginModal() {
-    const authLink = document.getElementById("auth-link");
-    const modal = document.getElementById("login-modal");
-    const modalCard = modal ? modal.querySelector(".modal-card") : null;
-    const closeBtn = document.getElementById("login-modal-close");
-    const form = document.getElementById("modal-login-form");
-    const message = document.getElementById("modal-login-message");
-
-    if (!authLink || !modal || !form) return;
-
-    function positionDropdown() {
-        const header = document.querySelector(".site-header");
-        if (!header || !modalCard) return;
-
-        const rect = header.getBoundingClientRect();
-
-        modalCard.style.top = (rect.bottom + 10) + "px";
-    }
-
-    function openModal() {
-        positionDropdown();
-        modal.classList.add("open");
-        document.getElementById("modal-email")?.focus();
-    }
-
-    function closeModal() {
-        modal.classList.remove("open");
-        message.textContent = "";
-        form.reset();
-    }
-
-    window.addEventListener("resize", () => {
-        if (modal.classList.contains("open")) positionDropdown();
-    });
-
-    authLink.addEventListener("click", (event) => {
-        // Only intercept the click when we're in the logged-out
-        // (Login) state -- the Logout behaviour is handled in
-        // setupAuthNav instead.
-        if (authLink.textContent !== "Login") return;
-
-        event.preventDefault();
-        openModal();
-    });
-
-    closeBtn.addEventListener("click", closeModal);
-
-    modal.addEventListener("click", (event) => {
-        if (event.target === modal) closeModal();
-    });
-
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && modal.classList.contains("open")) {
-            closeModal();
-        }
-    });
-
-    form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-
-        if (typeof supabaseClient === "undefined") return;
-
-        const email = document.getElementById("modal-email").value.trim();
-        const password = document.getElementById("modal-password").value;
-
-        message.textContent = "Logging in...";
-
-        const { error } =
-            await supabaseClient.auth.signInWithPassword({
-                email: email,
-                password: password
-            });
-
-        if (error) {
-            console.error(error);
-            message.textContent =
-                "Login failed. Please check your email and password.";
-            return;
-        }
-
-        message.textContent = "Success! Refreshing...";
-
-        // Reload so nav state, protected links, and any page-level
-        // auth guard (checkLogin) all re-evaluate against the fresh
-        // session, rather than hard-redirecting away from wherever
-        // the person happened to be.
-        window.location.reload();
-    });
-
-    const forgotLink = document.getElementById("forgot-password-link");
-
-    if (forgotLink) {
-        forgotLink.addEventListener("click", async () => {
-
-            if (typeof supabaseClient === "undefined") return;
-
-            const emailField = document.getElementById("modal-email");
-            const email = emailField.value.trim();
-
-            if (!email) {
-                message.textContent =
-                    "Enter your email above first, then click \u201cForgot your password?\u201d again.";
-                emailField.focus();
-                return;
-            }
-
-            message.textContent = "Sending reset link...";
-
-            const { error } =
-                await supabaseClient.auth.resetPasswordForEmail(email, {
-                    redirectTo: "https://jordanohl.ca/reset-password.html"
-                });
-
-            if (error) {
-                console.error(error);
-                message.textContent =
-                    "There was a problem sending the reset email. Please try again.";
-                return;
-            }
-
-            message.textContent =
-                "Check your email for a link to reset your password.";
-        });
-    }
-}
-
-
-/* =========================================
-   ADMIN NAV LINK
-   Shows an "Admin" nav item only for users
-   whose profiles.is_admin flag is true.
-   ========================================= */
-
-async function setupAdminNav() {
-    const link = document.getElementById("admin-link");
-    if (!link) return;
-    if (typeof supabaseClient === "undefined") return;
-
-    async function refresh() {
-        const {
-            data: { session }
-        } = await supabaseClient.auth.getSession();
-
-        if (!session) {
-            link.style.display = "none";
-            return;
-        }
-
-        const { data: profile } =
-            await supabaseClient
-                .from("profiles")
-                .select("is_admin")
-                .eq("id", session.user.id)
-                .single();
-
-        link.style.display = (profile && profile.is_admin) ? "" : "none";
-    }
-
-    supabaseClient.auth.onAuthStateChange(() => refresh());
-
-    refresh();
-}
-
-
-/* =========================================
    START WEBSITE
    ========================================= */
 
 document.addEventListener("DOMContentLoaded", async () => {
 
     setupMobileNav();
-    setupAuthNav();
-    setupLoginModal();
-    setupAdminNav();
 
     const loaded = await loadLeagueData();
 
@@ -897,13 +469,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderNextGame();
     renderTeams();
     setupScheduleFilters();
+    renderPlayers();
     setupPlayerFilters();
-    renderStandings();
+    renderStandingsPlaceholder();
     renderSponsors();
-    setupLeadersFilters();
-
-    if (typeof initAdminPage === "function") {
-        initAdminPage();
-    }
 
 });
