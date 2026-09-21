@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Schedule Admin | Jordan Oldtimers Hockey League</title>
+    <title>Admin | Jordan Oldtimers Hockey League</title>
     <link rel="stylesheet" href="css/style.css">
 
     <style>
@@ -80,9 +80,50 @@
             color: #75818b;
         }
 
-        #game-form-message {
+        #game-form-message,
+        #team-form-message,
+        #sponsor-form-message {
             font-size: 13px;
             color: #45525c;
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .admin-tab {
+            border: 1px solid #ccd3d9;
+            background: white;
+            padding: 10px 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .admin-tab:hover,
+        .admin-tab.active {
+            background: #071a2b;
+            color: white;
+            border-color: #071a2b;
+        }
+
+        .admin-tab-panel {
+            display: none;
+        }
+
+        .admin-tab-panel.active {
+            display: block;
+        }
+
+        .admin-logo-preview {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            vertical-align: middle;
         }
     </style>
 </head>
@@ -113,7 +154,7 @@
             <a href="teams.html">Teams</a>
             <a href="players.html">Rosters</a>
             <a href="admin.html" class="active">Admin</a>
-            <a href="#" id="admin-logout-link">Logout</a>
+            <span id="nav-auth-slot"></span>
         </nav>
 
     </div>
@@ -124,10 +165,18 @@
 
     <div class="page-title">
         <p class="eyebrow">ADMIN</p>
-        <h2>Schedule Management</h2>
-        <p>Add, edit or remove games on the 2026-27 schedule.</p>
+        <h2>League Management</h2>
+        <p>Manage the schedule, teams and sponsors for the 2026-27 season.</p>
     </div>
 
+    <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="schedule">Schedule</button>
+        <button class="admin-tab" data-tab="teams">Teams</button>
+        <button class="admin-tab" data-tab="sponsors">Sponsors</button>
+    </div>
+
+
+    <div class="admin-tab-panel active" id="admin-tab-schedule">
 
     <div class="admin-panel" id="game-form-panel">
 
@@ -241,6 +290,145 @@
 
     </div>
 
+    </div>
+
+
+    <div class="admin-tab-panel" id="admin-tab-teams">
+
+    <div class="admin-panel" id="team-form-panel">
+
+        <h3 id="team-form-title">Add a Team</h3>
+
+        <form id="team-form">
+
+            <input type="hidden" id="team-id">
+
+            <div class="admin-form-grid">
+
+                <div>
+                    <label for="team-code">Code</label>
+                    <input type="text" id="team-code" maxlength="4" placeholder="e.g. TML" required style="text-transform:uppercase;">
+                </div>
+
+                <div>
+                    <label for="team-name">Team Name</label>
+                    <input type="text" id="team-name" placeholder="e.g. ColdBreak Leafs" required>
+                </div>
+
+                <div>
+                    <label for="team-class">Badge Class</label>
+                    <input type="text" id="team-class" placeholder="e.g. Leafs">
+                </div>
+
+                <div>
+                    <label for="team-logo">Logo Path</label>
+                    <input type="text" id="team-logo" placeholder="images/Leafs.png">
+                </div>
+
+            </div>
+
+            <div class="admin-form-actions">
+                <button type="submit" class="button">Save Team</button>
+                <button type="button" id="team-form-cancel" class="link-button">Cancel / New Team</button>
+                <span id="team-form-message"></span>
+            </div>
+
+        </form>
+
+    </div>
+
+
+    <div class="admin-panel">
+
+        <h3>All Teams</h3>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Logo</th>
+                        <th>Code</th>
+                        <th>Team Name</th>
+                        <th>Badge Class</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="admin-teams-table"></tbody>
+            </table>
+        </div>
+
+    </div>
+
+    </div>
+
+
+    <div class="admin-tab-panel" id="admin-tab-sponsors">
+
+    <div class="admin-panel" id="sponsor-form-panel">
+
+        <h3 id="sponsor-form-title">Add a Sponsor</h3>
+
+        <form id="sponsor-form">
+
+            <input type="hidden" id="sponsor-id">
+
+            <div class="admin-form-grid">
+
+                <div>
+                    <label for="sponsor-name">Sponsor Name</label>
+                    <input type="text" id="sponsor-name" required>
+                </div>
+
+                <div>
+                    <label for="sponsor-team">Sponsors Team (optional)</label>
+                    <select id="sponsor-team"></select>
+                </div>
+
+                <div>
+                    <label for="sponsor-url">Website URL (optional)</label>
+                    <input type="text" id="sponsor-url" placeholder="https://...">
+                </div>
+
+                <div>
+                    <label for="sponsor-blurb">Blurb (optional)</label>
+                    <input type="text" id="sponsor-blurb" placeholder="Short description">
+                </div>
+
+            </div>
+
+            <div class="admin-form-actions">
+                <button type="submit" class="button">Save Sponsor</button>
+                <button type="button" id="sponsor-form-cancel" class="link-button">Cancel / New Sponsor</button>
+                <span id="sponsor-form-message"></span>
+            </div>
+
+        </form>
+
+    </div>
+
+
+    <div class="admin-panel">
+
+        <h3>All Sponsors</h3>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Team</th>
+                        <th>Website</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="admin-sponsors-table"></tbody>
+            </table>
+        </div>
+
+    </div>
+
+    </div>
+
 </main>
 
 
@@ -266,13 +454,6 @@
 <script src="js/app.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/admin.js"></script>
-
-<script>
-    document.getElementById("admin-logout-link").addEventListener("click", function(event) {
-        event.preventDefault();
-        logout();
-    });
-</script>
 
 </body>
 </html>

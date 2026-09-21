@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Standings | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=20260916h">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
@@ -29,12 +29,10 @@
         <nav id="site-nav">
             <a href="index.html">Home</a>
             <a href="schedule.html">Schedule</a>
-            <a href="standings.html" class="active" data-protected style="display:none;">Standings</a>
-            <a href="leaders.html" data-protected style="display:none;">Leaders</a>
-            <a href="teams.html" data-protected style="display:none;">Teams</a>
-            <a href="players.html" data-protected style="display:none;">Rosters</a>
-            <a href="admin.html" id="admin-link" style="display:none;">Admin</a>
-            <a href="login.html" id="auth-link">Login</a>
+            <a href="standings.html" class="active">Standings</a>
+            <a href="teams.html">Teams</a>
+            <a href="players.html">Rosters</a>
+            <span id="nav-auth-slot"></span>
         </nav>
 
     </div>
@@ -94,45 +92,12 @@
 
 </footer>
 
-<!-- LOGIN MODAL -->
-
-<div class="modal-overlay" id="login-modal">
-
-    <div class="modal-card">
-
-        <button class="modal-close" id="login-modal-close" aria-label="Close">&times;</button>
-
-        <h3>League Members Login</h3>
-
-        <form id="modal-login-form">
-
-            <label for="modal-email">Email</label>
-            <input type="email" id="modal-email" required autocomplete="email">
-
-            <label for="modal-password">Password</label>
-            <input type="password" id="modal-password" required autocomplete="current-password">
-
-            <button type="submit" class="btn btn-primary">Login</button>
-
-            <p id="modal-login-message"></p>
-
-        </form>
-
-        <p class="modal-footer-link">
-            <button type="button" id="forgot-password-link" class="link-button">Forgot your password?</button>
-        </p>
-
-    </div>
-
-</div>
-
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=20260916h"></script>
-<script src="js/db.js?v=20260916h"></script>
-<script src="js/app.js?v=20260916h"></script>
+<script src="js/supabase.js"></script>
+<script src="js/db.js"></script>
+<script src="js/app.js"></script>
 
-    <script src="js/auth.js?v=20260916h"></script>
+    <script src="js/auth.js"></script>
 
 <script>
     checkLogin();
