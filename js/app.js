@@ -432,6 +432,84 @@ function renderStandingsPlaceholder() {
 
 
 /* =========================================
+   LEADERS (leaders.html)
+   ========================================= */
+
+async function renderLeaders() {
+    const table = document.getElementById("leaders-table");
+    if (!table) return;
+
+    const { data, error } = await supabaseClient
+        .from("game_goals")
+        .select("scorer_id, assist1_id, assist2_id");
+
+    if (error) {
+        console.error("Error loading leaders:", error);
+        table.innerHTML = `<tr><td colspan="7">Unable to load the leaderboard right now.</td></tr>`;
+        return;
+    }
+
+    const stats = {};
+
+    function bump(playerId, field) {
+        if (!playerId) return;
+        if (!stats[playerId]) {
+            stats[playerId] = { goals: 0, assists: 0 };
+        }
+        stats[playerId][field]++;
+    }
+
+    (data || []).forEach(goal => {
+        bump(goal.scorer_id, "goals");
+        bump(goal.assist1_id, "assists");
+        bump(goal.assist2_id, "assists");
+    });
+
+    const rows = Object.keys(stats)
+        .map(id => {
+            const player = PLAYERS.find(p => String(p.id) === String(id));
+            if (!player) return null;
+
+            const team = TEAMS.find(t => t.code === player.team);
+            const goals = stats[id].goals;
+            const assists = stats[id].assists;
+
+            return {
+                player,
+                team,
+                goals,
+                assists,
+                points: goals + assists
+            };
+        })
+        .filter(row => row !== null);
+
+    rows.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.goals !== a.goals) return b.goals - a.goals;
+        return (a.player.last || "").localeCompare(b.player.last || "");
+    });
+
+    if (!rows.length) {
+        table.innerHTML = `<tr><td colspan="7">No goals have been recorded yet this season.</td></tr>`;
+        return;
+    }
+
+    table.innerHTML = rows.map((row, index) => `
+        <tr>
+            <td>${index + 1}</td>
+            <td>${row.player.number != null ? "#" + row.player.number : "—"}</td>
+            <td>${row.player.last}, ${row.player.first}</td>
+            <td>${row.team ? row.team.name : ""}</td>
+            <td>${row.goals}</td>
+            <td>${row.assists}</td>
+            <td><strong>${row.points}</strong></td>
+        </tr>
+    `).join("");
+}
+
+
+/* =========================================
    NAV — LOGIN / LOGOUT / ADMIN LINK
    ========================================= */
 
@@ -444,7 +522,53 @@ async function setupAuthNav() {
     } = await supabaseClient.auth.getSession();
 
     if (!session) {
-        slot.innerHTML = `<a href="login.html">Login</a>`;
+        slot.innerHTML = `
+            <span class="nav-login-wrap" id="nav-login-wrap">
+                <a href="#" id="nav-login-link">Login</a>
+
+                <div class="login-dropdown" id="login-dropdown" hidden>
+                    <div class="login-card login-card-compact">
+
+                        <div id="nav-login-view">
+                            <h3>Member Login</h3>
+
+                            <form id="nav-login-form">
+                                <label for="nav-login-email">Email</label>
+                                <input type="email" id="nav-login-email" required autocomplete="email">
+
+                                <label for="nav-login-password">Password</label>
+                                <input type="password" id="nav-login-password" required autocomplete="current-password">
+
+                                <button type="submit" class="btn btn-primary">Login</button>
+                            </form>
+
+                            <p id="nav-login-message"></p>
+
+                            <a href="#" id="nav-forgot-link" class="login-dropdown-link">Forgot password?</a>
+                        </div>
+
+                        <div id="nav-forgot-view" hidden>
+                            <h3>Reset Password</h3>
+                            <p>Enter your email and we'll send you a link to reset your password.</p>
+
+                            <form id="nav-forgot-form">
+                                <label for="nav-forgot-email">Email</label>
+                                <input type="email" id="nav-forgot-email" required autocomplete="email">
+
+                                <button type="submit" class="btn btn-primary">Send Reset Link</button>
+                            </form>
+
+                            <p id="nav-forgot-message"></p>
+
+                            <a href="#" id="nav-back-to-login-link" class="login-dropdown-link">Back to login</a>
+                        </div>
+
+                    </div>
+                </div>
+            </span>
+        `;
+
+        setupLoginDropdown();
         return;
     }
 
@@ -469,6 +593,146 @@ async function setupAuthNav() {
         event.preventDefault();
         logout();
     });
+}
+
+
+/* =========================================
+   LOGIN DROPDOWN (pop-out login modal)
+   ========================================= */
+
+function setupLoginDropdown() {
+    const loginLink = document.getElementById("nav-login-link");
+    const dropdown = document.getElementById("login-dropdown");
+    const wrap = document.getElementById("nav-login-wrap");
+
+    const loginView = document.getElementById("nav-login-view");
+    const forgotView = document.getElementById("nav-forgot-view");
+
+    const loginForm = document.getElementById("nav-login-form");
+    const forgotForm = document.getElementById("nav-forgot-form");
+
+    const loginMessage = document.getElementById("nav-login-message");
+    const forgotMessage = document.getElementById("nav-forgot-message");
+
+    function openDropdown() {
+        dropdown.hidden = false;
+    }
+
+    function closeDropdown() {
+        dropdown.hidden = true;
+        loginView.hidden = false;
+        forgotView.hidden = true;
+        loginMessage.textContent = "";
+        forgotMessage.textContent = "";
+    }
+
+    function toggleDropdown() {
+        if (dropdown.hidden) {
+            openDropdown();
+        } else {
+            closeDropdown();
+        }
+    }
+
+    loginLink.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleDropdown();
+    });
+
+    // Close when clicking anywhere outside the dropdown.
+    document.addEventListener("click", function(event) {
+        if (!wrap.contains(event.target)) {
+            closeDropdown();
+        }
+    });
+
+    // Don't let clicks inside the dropdown bubble up and close it.
+    dropdown.addEventListener("click", function(event) {
+        event.stopPropagation();
+    });
+
+    document.getElementById("nav-forgot-link").addEventListener("click", function(event) {
+        event.preventDefault();
+        loginView.hidden = true;
+        forgotView.hidden = false;
+        loginMessage.textContent = "";
+    });
+
+    document.getElementById("nav-back-to-login-link").addEventListener("click", function(event) {
+        event.preventDefault();
+        forgotView.hidden = true;
+        loginView.hidden = false;
+        forgotMessage.textContent = "";
+    });
+
+    loginForm.addEventListener("submit", async function(event) {
+        event.preventDefault();
+
+        const email = document.getElementById("nav-login-email").value.trim();
+        const password = document.getElementById("nav-login-password").value;
+
+        loginMessage.textContent = "Logging in...";
+
+        const { error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
+
+        if (error) {
+            console.error(error);
+            loginMessage.textContent = "Login failed. Please check your email and password.";
+            return;
+        }
+
+        loginMessage.textContent = "Success! Redirecting...";
+
+        // If checkLogin() sent us here from a gated page, send the visitor
+        // back there now that they're signed in. Otherwise just reload this
+        // page (minus the ?login=1 flag) so the nav reflects the new session.
+        const params = new URLSearchParams(window.location.search);
+        const requestedRedirect = params.get("redirect");
+
+        // Only ever redirect to one of our own bare .html filenames --
+        // never to an absolute URL or path someone crafted in the query string.
+        const redirectTo =
+            requestedRedirect && /^[a-zA-Z0-9_-]+\.html$/.test(requestedRedirect)
+                ? requestedRedirect
+                : null;
+
+        if (redirectTo) {
+            window.location.href = redirectTo;
+        } else {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("login");
+            url.searchParams.delete("redirect");
+            window.location.href = url.toString();
+        }
+    });
+
+    forgotForm.addEventListener("submit", async function(event) {
+        event.preventDefault();
+
+        const email = document.getElementById("nav-forgot-email").value.trim();
+
+        forgotMessage.textContent = "Sending reset email...";
+
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+
+        if (error) {
+            console.error(error);
+            forgotMessage.textContent = "There was a problem sending the reset email.";
+            return;
+        }
+
+        forgotMessage.textContent = "Check your email for a password reset link.";
+    });
+
+    // If we were sent here by checkLogin() (index.html?login=1), open the
+    // dropdown automatically so the visitor isn't left guessing.
+    if (new URLSearchParams(window.location.search).get("login") === "1") {
+        openDropdown();
+    }
 }
 
 
@@ -521,5 +785,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupPlayerFilters();
     renderStandingsPlaceholder();
     renderSponsors();
+    renderLeaders();
 
 });
