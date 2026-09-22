@@ -1032,6 +1032,82 @@ a.sponsor-card:hover {
 
 
 /* =========================================
+   LOGIN DROPDOWN (nav pop-out login)
+   ========================================= */
+
+/*
+    Position (position/top/left/width) is computed and set inline by
+    js/app.js (setupLoginDropdown -> positionDropdown()), anchored to
+    the Login link's own on-screen position and recalculated on open
+    and on resize. That keeps it correct on any screen size without
+    depending on this stylesheet, so only the look lives here.
+*/
+.login-dropdown {
+    z-index: 500;
+}
+
+
+.login-dropdown .login-card {
+    text-align: left;
+    color: #17212b;
+}
+
+
+.login-card.login-card-compact {
+    max-width: none;
+    padding: 24px;
+}
+
+
+.login-card-compact h3 {
+    font-size: 18px;
+    margin-bottom: 6px;
+}
+
+
+.login-card-compact > div > p {
+    color: #64727e;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+
+.login-card-compact label {
+    font-size: 12px;
+}
+
+
+.login-card-compact input {
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    font-size: 14px;
+}
+
+
+.login-card-compact #nav-login-message,
+.login-card-compact #nav-forgot-message {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #45525c;
+}
+
+
+.login-dropdown-link {
+    display: inline-block;
+    margin-top: 14px;
+
+    font-size: 13px;
+    color: #c8102e;
+    text-decoration: none;
+}
+
+
+.login-dropdown-link:hover {
+    text-decoration: underline;
+}
+
+
+/* =========================================
    FOOTER
    ========================================= */
 

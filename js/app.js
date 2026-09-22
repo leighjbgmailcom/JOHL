@@ -522,51 +522,10 @@ async function setupAuthNav() {
     } = await supabaseClient.auth.getSession();
 
     if (!session) {
-        slot.innerHTML = `
-            <span class="nav-login-wrap" id="nav-login-wrap">
-                <a href="#" id="nav-login-link">Login</a>
-
-                <div class="login-dropdown" id="login-dropdown" hidden>
-                    <div class="login-card login-card-compact">
-
-                        <div id="nav-login-view">
-                            <h3>Member Login</h3>
-
-                            <form id="nav-login-form">
-                                <label for="nav-login-email">Email</label>
-                                <input type="email" id="nav-login-email" required autocomplete="email">
-
-                                <label for="nav-login-password">Password</label>
-                                <input type="password" id="nav-login-password" required autocomplete="current-password">
-
-                                <button type="submit" class="btn btn-primary">Login</button>
-                            </form>
-
-                            <p id="nav-login-message"></p>
-
-                            <a href="#" id="nav-forgot-link" class="login-dropdown-link">Forgot password?</a>
-                        </div>
-
-                        <div id="nav-forgot-view" hidden>
-                            <h3>Reset Password</h3>
-                            <p>Enter your email and we'll send you a link to reset your password.</p>
-
-                            <form id="nav-forgot-form">
-                                <label for="nav-forgot-email">Email</label>
-                                <input type="email" id="nav-forgot-email" required autocomplete="email">
-
-                                <button type="submit" class="btn btn-primary">Send Reset Link</button>
-                            </form>
-
-                            <p id="nav-forgot-message"></p>
-
-                            <a href="#" id="nav-back-to-login-link" class="login-dropdown-link">Back to login</a>
-                        </div>
-
-                    </div>
-                </div>
-            </span>
-        `;
+        // Just the link goes in the nav. The dropdown itself is built
+        // separately, attached to <body> (see setupLoginDropdown()) so
+        // its size can never push the header/nav layout around.
+        slot.innerHTML = `<a href="#" id="nav-login-link">Login</a>`;
 
         setupLoginDropdown();
         return;
@@ -602,8 +561,63 @@ async function setupAuthNav() {
 
 function setupLoginDropdown() {
     const loginLink = document.getElementById("nav-login-link");
-    const dropdown = document.getElementById("login-dropdown");
-    const wrap = document.getElementById("nav-login-wrap");
+    if (!loginLink) return;
+
+    // The dropdown is built once and attached directly to <body>, not
+    // nested inside the header/nav. That way its content can NEVER
+    // affect the header's height or push the page layout around --
+    // it's always positioned with fixed pixel coordinates computed
+    // from the Login link's own position, recalculated every time it
+    // opens (and on resize), instead of depending on CSS positioning
+    // context or load order.
+    let dropdown = document.getElementById("login-dropdown");
+
+    if (!dropdown) {
+        dropdown = document.createElement("div");
+        dropdown.id = "login-dropdown";
+        dropdown.className = "login-dropdown";
+        dropdown.hidden = true;
+        dropdown.innerHTML = `
+            <div class="login-card login-card-compact">
+
+                <div id="nav-login-view">
+                    <h3>Member Login</h3>
+
+                    <form id="nav-login-form">
+                        <label for="nav-login-email">Email</label>
+                        <input type="email" id="nav-login-email" required autocomplete="email">
+
+                        <label for="nav-login-password">Password</label>
+                        <input type="password" id="nav-login-password" required autocomplete="current-password">
+
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+
+                    <p id="nav-login-message"></p>
+
+                    <a href="#" id="nav-forgot-link" class="login-dropdown-link">Forgot password?</a>
+                </div>
+
+                <div id="nav-forgot-view" hidden>
+                    <h3>Reset Password</h3>
+                    <p>Enter your email and we'll send you a link to reset your password.</p>
+
+                    <form id="nav-forgot-form">
+                        <label for="nav-forgot-email">Email</label>
+                        <input type="email" id="nav-forgot-email" required autocomplete="email">
+
+                        <button type="submit" class="btn btn-primary">Send Reset Link</button>
+                    </form>
+
+                    <p id="nav-forgot-message"></p>
+
+                    <a href="#" id="nav-back-to-login-link" class="login-dropdown-link">Back to login</a>
+                </div>
+
+            </div>
+        `;
+        document.body.appendChild(dropdown);
+    }
 
     const loginView = document.getElementById("nav-login-view");
     const forgotView = document.getElementById("nav-forgot-view");
@@ -614,7 +628,24 @@ function setupLoginDropdown() {
     const loginMessage = document.getElementById("nav-login-message");
     const forgotMessage = document.getElementById("nav-forgot-message");
 
+    function positionDropdown() {
+        const rect = loginLink.getBoundingClientRect();
+        const width = Math.min(320, window.innerWidth - 24);
+
+        let left = rect.right - width;
+        if (left < 12) left = 12;
+        if (left + width > window.innerWidth - 12) {
+            left = window.innerWidth - 12 - width;
+        }
+
+        dropdown.style.position = "fixed";
+        dropdown.style.top = (rect.bottom + 10) + "px";
+        dropdown.style.left = left + "px";
+        dropdown.style.width = width + "px";
+    }
+
     function openDropdown() {
+        positionDropdown();
         dropdown.hidden = false;
     }
 
@@ -640,9 +671,9 @@ function setupLoginDropdown() {
         toggleDropdown();
     });
 
-    // Close when clicking anywhere outside the dropdown.
+    // Close when clicking anywhere outside the dropdown (or the link).
     document.addEventListener("click", function(event) {
-        if (!wrap.contains(event.target)) {
+        if (!dropdown.contains(event.target) && event.target !== loginLink) {
             closeDropdown();
         }
     });
@@ -650,6 +681,11 @@ function setupLoginDropdown() {
     // Don't let clicks inside the dropdown bubble up and close it.
     dropdown.addEventListener("click", function(event) {
         event.stopPropagation();
+    });
+
+    // Keep it anchored to the Login link if the window is resized while open.
+    window.addEventListener("resize", function() {
+        if (!dropdown.hidden) positionDropdown();
     });
 
     document.getElementById("nav-forgot-link").addEventListener("click", function(event) {
@@ -768,8 +804,10 @@ function setupMobileNav() {
 
 document.addEventListener("DOMContentLoaded", async () => {
 
-    setupMobileNav();
-    setupAuthNav();
+    // setupMobileNav() and setupAuthNav() are now kicked off by
+    // js/header.js once it has fetched and injected the shared
+    // header partial -- calling them here would be a no-op anyway
+    // since the header elements wouldn't exist in the DOM yet.
 
     const loaded = await loadLeagueData();
 
