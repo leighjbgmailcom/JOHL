@@ -720,9 +720,9 @@ async function deletePlayer(id) {
    PLAYER INVITES
    ========================================= */
 
-async function callInviteFunction(emails) {
+async function callInviteFunction(emails, options = {}) {
     const { data, error } = await supabaseClient.functions.invoke("invite-players", {
-        body: { emails }
+        body: { emails, force: options.force === true }
     });
 
     if (error) {
@@ -742,7 +742,10 @@ async function inviteOnePlayer(id, buttonEl) {
     buttonEl.disabled = true;
 
     try {
-        const data = await callInviteFunction([player.email]);
+        // force: true -- a deliberate click on a single player's Invite/Resend
+        // button should always send, regardless of whether they're already
+        // confirmed or were emailed recently (unlike the bulk "Send All").
+        const data = await callInviteFunction([player.email], { force: true });
         const result = data.results && data.results[0];
 
         if (result && result.ok) {
@@ -750,7 +753,12 @@ async function inviteOnePlayer(id, buttonEl) {
         } else {
             buttonEl.textContent = "Failed";
             console.error(result);
-            alert(`Could not invite ${player.email}: ${result ? result.error : "unknown error"}`);
+            const errorText = result ? result.error : "unknown error";
+            if (/rate limit/i.test(errorText)) {
+                alert(`Could not invite ${player.email}: this Supabase project's email rate limit has been reached. Wait a while and try again (the limit resets hourly).`);
+            } else {
+                alert(`Could not invite ${player.email}: ${errorText}`);
+            }
         }
     } catch (err) {
         buttonEl.textContent = "Failed";
@@ -771,7 +779,7 @@ async function inviteAllPlayers() {
         return;
     }
 
-    if (!confirm(`Send an invite email to all ${emails.length} players with an email on file? Anyone who already has an account will instead get a fresh sign-in link.`)) {
+    if (!confirm(`Send an invite email to all ${emails.length} players with an email on file?\n\nAnyone already registered will be skipped entirely. Anyone still pending will only get a fresh link if it's been 24+ hours since their last one.`)) {
         return;
     }
 
@@ -779,19 +787,35 @@ async function inviteAllPlayers() {
     const status = document.getElementById("invite-all-status");
 
     button.disabled = true;
-    status.textContent = `Sending ${emails.length} invites... this may take a minute.`;
+    status.textContent = `Checking ${emails.length} players and sending what's needed... this may take a minute.`;
 
     try {
         const data = await callInviteFunction(emails);
-        const failed = data.results.filter(r => !r.ok);
-        const resent = data.results.filter(r => r.ok && r.note);
-        const invited = data.results.filter(r => r.ok && !r.note);
+        const notAttempted = data.results.filter(r => !r.ok && /not attempted/i.test(r.error || ""));
+        const failed = data.results.filter(r => !r.ok && !/not attempted/i.test(r.error || ""));
+        const alreadyRegistered = data.results.filter(r => r.ok && r.skipped && /already registered/i.test(r.note || ""));
+        const cooldown = data.results.filter(r => r.ok && r.skipped && !/already registered/i.test(r.note || ""));
+        const resent = data.results.filter(r => r.ok && !r.skipped && r.note);
+        const invited = data.results.filter(r => r.ok && !r.skipped && !r.note);
 
-        status.textContent = `Done: ${invited.length} invited, ${resent.length} resent, ${failed.length} failed.`;
+        let statusText = `Done: ${invited.length} invited, ${resent.length} resent, ${alreadyRegistered.length} already registered (skipped), ${cooldown.length} waiting on cooldown, ${failed.length} failed.`;
+        if (notAttempted.length > 0) {
+            statusText += ` ${notAttempted.length} not sent yet (hit the email rate limit) -- wait a bit and click "Send All Invites" again to cover the rest.`;
+        }
+        status.textContent = statusText;
 
-        if (failed.length > 0) {
+        if (data.rateLimited) {
+            console.warn("Hit the project's email rate limit partway through this batch.", data.results);
+            alert(
+                `Sent ${invited.length + resent.length} email(s), then hit this Supabase project's email rate limit, so ${notAttempted.length} player(s) haven't been emailed yet.\n\n` +
+                `Wait a while (the limit resets hourly) and click "Send All Invites" again -- it will skip anyone already emailed and pick up the rest.\n\n` +
+                `To raise this limit permanently: Supabase dashboard -> Authentication -> Rate Limits -> "Rate limit for sending emails" (requires custom SMTP to be configured).`
+            );
+        } else if (failed.length > 0) {
             console.error("Failed invites:", failed);
-            alert(`${failed.length} invite(s) failed:\n` + failed.map(f => `${f.email}: ${f.error}`).join("\n"));
+            const preview = failed.slice(0, 10).map(f => `${f.email}: ${f.error}`).join("\n");
+            const more = failed.length > 10 ? `\n...and ${failed.length - 10} more (see browser console for the full list).` : "";
+            alert(`${failed.length} invite(s) failed:\n${preview}${more}`);
         }
     } catch (err) {
         status.textContent = "There was a problem sending invites.";
