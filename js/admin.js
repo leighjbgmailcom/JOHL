@@ -99,7 +99,8 @@ async function loadAdminGames() {
             home_score,
             note,
             no_games,
-            status
+            status,
+            went_ot
         `)
         .order("game_date")
         .order("game_time");
@@ -159,16 +160,22 @@ function renderAdminGamesTable() {
             `;
         }
 
-        const score = game.status === "final"
+        const score = (game.status === "final" || game.status === "live")
             ? `${game.away_score ?? 0} – ${game.home_score ?? 0}`
             : "—";
+
+        const statusLabel = game.status === "final"
+            ? `Final${game.went_ot ? " (OT)" : ""}`
+            : game.status === "live"
+                ? "Live"
+                : "Scheduled";
 
         return `
             <tr>
                 <td>${game.game_date}</td>
                 <td>${formatTime12h(game.game_time ? game.game_time.substring(0, 5) : "")}</td>
                 <td>${teamNameById(game.away_team_id)} @ ${teamNameById(game.home_team_id)}</td>
-                <td>${game.status === "final" ? "Final" : "Scheduled"}</td>
+                <td>${statusLabel}</td>
                 <td>${score}</td>
                 <td>${game.game_no ?? ""}</td>
                 <td>
@@ -193,6 +200,7 @@ function resetGameForm() {
     document.getElementById("game-location").value = "Jordan Arena";
     document.getElementById("game-no-games").checked = false;
     document.getElementById("game-status").value = "scheduled";
+    document.getElementById("game-went-ot").checked = false;
     toggleGameFormSections();
 }
 
@@ -215,6 +223,7 @@ function editGame(id) {
     document.getElementById("game-status").value = game.status || "scheduled";
     document.getElementById("game-away-score").value = game.away_score ?? "";
     document.getElementById("game-home-score").value = game.home_score ?? "";
+    document.getElementById("game-went-ot").checked = !!game.went_ot;
 
     toggleGameFormSections();
 
@@ -223,13 +232,18 @@ function editGame(id) {
 
 function toggleGameFormSections() {
     const isByeWeek = document.getElementById("game-no-games").checked;
-    const isFinal = document.getElementById("game-status").value === "final";
+    const status = document.getElementById("game-status").value;
+    const isFinal = status === "final";
+    const isLive = status === "live";
 
     document.querySelectorAll(".game-teams-field").forEach(el => {
         el.style.display = isByeWeek ? "none" : "";
     });
 
     document.getElementById("game-score-fields").style.display =
+        (!isByeWeek && (isFinal || isLive)) ? "" : "none";
+
+    document.getElementById("game-went-ot-field").style.display =
         (!isByeWeek && isFinal) ? "" : "none";
 }
 
@@ -253,8 +267,9 @@ async function saveGame(event) {
         away_team_id: isByeWeek ? null : (document.getElementById("game-away-team").value || null),
         home_team_id: isByeWeek ? null : (document.getElementById("game-home-team").value || null),
         status: isByeWeek ? "scheduled" : status,
-        away_score: (!isByeWeek && status === "final") ? Number(document.getElementById("game-away-score").value || 0) : null,
-        home_score: (!isByeWeek && status === "final") ? Number(document.getElementById("game-home-score").value || 0) : null
+        away_score: (!isByeWeek && (status === "final" || status === "live")) ? Number(document.getElementById("game-away-score").value || 0) : null,
+        home_score: (!isByeWeek && (status === "final" || status === "live")) ? Number(document.getElementById("game-home-score").value || 0) : null,
+        went_ot: (!isByeWeek && status === "final") ? document.getElementById("game-went-ot").checked : false
     };
 
     if (!payload.game_date) {
@@ -835,7 +850,7 @@ function resultGameOptionsHtml() {
     return `<option value="">— Select a game —</option>` +
         playable.map(game => {
             const label = `${game.game_date} — ${teamNameById(game.away_team_id)} @ ${teamNameById(game.home_team_id)}` +
-                (game.status === "final" ? " (Final)" : "");
+                (game.status === "final" ? " (Final)" : game.status === "live" ? " (Live)" : "");
             return `<option value="${game.id}">${label}</option>`;
         }).join("");
 }
@@ -884,6 +899,7 @@ async function onResultGameChange() {
     document.getElementById("result-away-team-name").textContent = teamNameById(game.away_team_id);
     document.getElementById("result-home-team-name").textContent = teamNameById(game.home_team_id);
     document.getElementById("result-is-final").checked = game.status === "final";
+    document.getElementById("result-went-ot").checked = !!game.went_ot;
 
     resultGoalRows = { away: [], home: [] };
     resultPenaltyRows = { away: [], home: [] };
@@ -1002,6 +1018,7 @@ async function saveGameResults() {
 
     const game = ADMIN_GAMES.find(g => String(g.id) === String(gameId));
     const isFinal = document.getElementById("result-is-final").checked;
+    const wentOT = document.getElementById("result-went-ot").checked;
 
     // Delete existing goals/penalties for this game, then re-insert current rows.
     await supabaseClient.from("game_goals").delete().eq("game_id", gameId);
@@ -1066,7 +1083,8 @@ async function saveGameResults() {
         .update({
             status: isFinal ? "final" : "scheduled",
             away_score: isFinal ? awayScore : null,
-            home_score: isFinal ? homeScore : null
+            home_score: isFinal ? homeScore : null,
+            went_ot: isFinal ? wentOT : false
         })
         .eq("id", gameId);
 

@@ -345,6 +345,47 @@ section {
     font-weight: bold;
 }
 
+.homepage-vs.is-final {
+    color: #45525c;
+    font-size: 12px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.homepage-score {
+    margin-left: auto;
+    font-size: 22px;
+    font-weight: 900;
+    color: #071a2b;
+}
+
+.homepage-game.is-live {
+    background: #fff7f7;
+    border-radius: 6px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/* Small pulsing "Live" pill used on the homepage next-game box and on
+   the schedule page for any game whose status is set to "live" in admin. */
+.live-badge {
+    display: inline-block;
+    background: #c8102e;
+    color: white;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .55; }
+}
+
 
 .team-badge,
 .team-badge-logo {
@@ -712,6 +753,26 @@ tbody tr:hover {
     font-size: 18px;
 
     font-weight: 900;
+}
+
+.schedule-score-final {
+    font-size: 20px;
+}
+
+.schedule-final-tag {
+    font-size: 11px;
+    font-weight: bold;
+    color: #97a3ac;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+
+.schedule-game.is-live {
+    box-shadow: 0 2px 8px rgba(200,16,46,.18);
+}
+
+.schedule-score .live-badge {
+    margin-bottom: 6px;
 }
 
 

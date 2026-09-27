@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=3">
+    <link rel="stylesheet" href="css/style.css?v=4">
 
     <style>
         .admin-panel {
@@ -229,6 +229,11 @@
                 <label for="result-is-final">Mark this game as Final</label>
             </div>
 
+            <div class="admin-checkbox-field">
+                <input type="checkbox" id="result-went-ot">
+                <label for="result-went-ot">Went to overtime (loser gets an OT loss point)</label>
+            </div>
+
             <div class="result-team-columns">
 
                 <div class="result-team-column">
@@ -428,6 +433,7 @@
                     <label for="game-status">Status</label>
                     <select id="game-status">
                         <option value="scheduled">Scheduled</option>
+                        <option value="live">Live</option>
                         <option value="final">Final</option>
                     </select>
                 </div>
@@ -446,6 +452,11 @@
                     <input type="number" id="game-home-score" min="0">
                 </div>
 
+            </div>
+
+            <div class="admin-checkbox-field" id="game-went-ot-field" style="display:none;">
+                <input type="checkbox" id="game-went-ot">
+                <label for="game-went-ot">Went to overtime (loser gets an OT loss point)</label>
             </div>
 
             <div class="admin-form-actions">
@@ -641,12 +652,12 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=3"></script>
-<script src="js/header.js?v=3"></script>
-<script src="js/db.js?v=3"></script>
-<script src="js/app.js?v=3"></script>
-<script src="js/auth.js?v=3"></script>
-<script src="js/admin.js?v=3"></script>
+<script src="js/supabase.js?v=4"></script>
+<script src="js/header.js?v=4"></script>
+<script src="js/db.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
+<script src="js/auth.js?v=4"></script>
+<script src="js/admin.js?v=4"></script>
 
 </body>
 </html>

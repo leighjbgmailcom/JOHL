@@ -132,6 +132,7 @@ async function loadSchedule() {
             note,
             no_games,
             status,
+            went_ot,
             away_team_id,
             home_team_id,
             away_team:teams!games_away_team_id_fkey (
@@ -163,10 +164,35 @@ async function loadSchedule() {
         homeScore: game.home_score,
         note: game.note,
         noGames: game.no_games,
-        status: game.status
+        status: game.status,
+        wentOT: game.went_ot
     }));
 
     return true;
+}
+
+
+/* =========================================
+   LIVE UPDATES
+   ========================================= */
+
+// Subscribes to changes on the "games" table (Supabase Realtime) so that
+// when an admin saves a score/status change in admin.html, any visitor
+// with a page open (Home, Schedule, Standings) picks it up automatically
+// -- no manual refresh needed. Reloads the schedule from Supabase, then
+// calls onUpdate() so the page can re-render whatever it shows.
+function subscribeToGameUpdates(onUpdate) {
+    return supabaseClient
+        .channel("games-changes")
+        .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "games" },
+            async () => {
+                await loadSchedule();
+                if (typeof onUpdate === "function") onUpdate();
+            }
+        )
+        .subscribe();
 }
 
 

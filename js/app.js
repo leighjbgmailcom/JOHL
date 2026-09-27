@@ -141,23 +141,33 @@ function renderNextGame() {
             </div>
 
             <div class="homepage-games">
-                ${games.map(game => `
-                    <div class="homepage-game">
-                        <div class="homepage-game-time">${formatTime12h(game.time)}</div>
+                ${games.map(game => {
+                    const isLive = game.status === "live";
+                    const isFinal = game.status === "final";
+                    const hasScore = isLive || isFinal;
+
+                    return `
+                    <div class="homepage-game ${isLive ? "is-live" : ""}">
+                        <div class="homepage-game-time">
+                            ${isLive ? `<span class="live-badge">Live</span>` : formatTime12h(game.time)}
+                        </div>
 
                         <div class="homepage-team">
                             ${teamBadge(game.away)}
                             <span>${teamName(game.away)}</span>
+                            ${hasScore ? `<span class="homepage-score">${game.awayScore ?? 0}</span>` : ""}
                         </div>
 
-                        <div class="homepage-vs">vs.</div>
+                        <div class="homepage-vs ${isFinal ? "is-final" : ""}">${isFinal ? "Final" : "vs."}</div>
 
                         <div class="homepage-team">
                             ${teamBadge(game.home)}
                             <span>${teamName(game.home)}</span>
+                            ${hasScore ? `<span class="homepage-score">${game.homeScore ?? 0}</span>` : ""}
                         </div>
                     </div>
-                `).join("")}
+                `;
+                }).join("")}
             </div>
 
         </div>
@@ -239,9 +249,22 @@ function renderSchedule(filter = "ALL") {
 
                 ${group.entries.map(game => {
                     const isTbd = game.home === "TBD" || game.away === "TBD";
+                    const isLive = game.status === "live";
+                    const isFinal = game.status === "final";
+
+                    let scoreHtml;
+                    if (isTbd) {
+                        scoreHtml = "TBD";
+                    } else if (isLive) {
+                        scoreHtml = `<span class="live-badge">Live</span><div>${game.awayScore ?? 0} – ${game.homeScore ?? 0}</div>`;
+                    } else if (isFinal) {
+                        scoreHtml = `<div class="schedule-score-final">${game.awayScore ?? 0} – ${game.homeScore ?? 0}</div><div class="schedule-final-tag">Final${game.wentOT ? " (OT)" : ""}</div>`;
+                    } else {
+                        scoreHtml = "GAME " + game.gameNo;
+                    }
 
                     return `
-                        <div class="schedule-game ${isTbd ? "is-tbd" : ""}">
+                        <div class="schedule-game ${isTbd ? "is-tbd" : ""} ${isLive ? "is-live" : ""}">
 
                             <div class="schedule-time">
                                 ${formatTime12h(game.time)}
@@ -264,7 +287,7 @@ function renderSchedule(filter = "ALL") {
                             </div>
 
                             <div class="schedule-score">
-                                ${isTbd ? "TBD" : "GAME " + game.gameNo}
+                                ${scoreHtml}
                             </div>
 
                         </div>
@@ -274,6 +297,11 @@ function renderSchedule(filter = "ALL") {
         `;
     }).join("");
 }
+
+// Tracks whichever team filter is currently selected on schedule.html so a
+// live update (from subscribeToGameUpdates) can re-render with the same
+// filter still applied instead of resetting it to "ALL".
+let currentScheduleFilter = "ALL";
 
 function setupScheduleFilters() {
     const buttons = document.querySelectorAll(".filter-button");
@@ -292,11 +320,13 @@ function setupScheduleFilters() {
         button.addEventListener("click", () => {
             buttons.forEach(btn => btn.classList.remove("active"));
             button.classList.add("active");
-            renderSchedule(button.dataset.team);
+            currentScheduleFilter = button.dataset.team;
+            renderSchedule(currentScheduleFilter);
         });
     });
 
-    renderSchedule(initialTeam || "ALL");
+    currentScheduleFilter = initialTeam || "ALL";
+    renderSchedule(currentScheduleFilter);
 }
 
 
@@ -401,31 +431,80 @@ function renderSponsors() {
 
 
 /* =========================================
-   STANDINGS (placeholder — pre-season)
+   STANDINGS (standings.html)
    ========================================= */
 
-function renderStandingsPlaceholder() {
+// Standard beer-league points: Win = 2, OT/shootout loss = 1, Tie = 1,
+// regulation loss = 0. Only "final" games count; live/scheduled games
+// (and bye weeks) are ignored until they're marked final in admin.
+function computeStandings() {
+    const stats = {};
+
+    TEAMS.forEach(team => {
+        stats[team.code] = { code: team.code, gp: 0, w: 0, l: 0, t: 0, otl: 0, gf: 0, ga: 0 };
+    });
+
+    SCHEDULE.forEach(game => {
+        if (game.noGames || game.status !== "final") return;
+        if (game.home === "TBD" || game.away === "TBD") return;
+
+        const home = stats[game.home];
+        const away = stats[game.away];
+        if (!home || !away) return;
+
+        const homeScore = game.homeScore ?? 0;
+        const awayScore = game.awayScore ?? 0;
+
+        home.gp++; away.gp++;
+        home.gf += homeScore; home.ga += awayScore;
+        away.gf += awayScore; away.ga += homeScore;
+
+        if (homeScore === awayScore) {
+            home.t++; away.t++;
+        } else if (homeScore > awayScore) {
+            home.w++;
+            if (game.wentOT) away.otl++; else away.l++;
+        } else {
+            away.w++;
+            if (game.wentOT) home.otl++; else home.l++;
+        }
+    });
+
+    return Object.values(stats)
+        .map(s => ({ ...s, pts: s.w * 2 + s.otl + s.t }))
+        .sort((a, b) => {
+            if (b.pts !== a.pts) return b.pts - a.pts;
+            if (b.w !== a.w) return b.w - a.w;
+            const diffA = a.gf - a.ga;
+            const diffB = b.gf - b.ga;
+            if (diffB !== diffA) return diffB - diffA;
+            if (b.gf !== a.gf) return b.gf - a.gf;
+            return teamName(a.code).localeCompare(teamName(b.code));
+        });
+}
+
+function renderStandings() {
     const element = document.getElementById("standings-table");
     if (!element) return;
 
-    const sorted = [...TEAMS].sort((a, b) => a.name.localeCompare(b.name));
+    const standings = computeStandings();
 
-    element.innerHTML = sorted.map(team => `
+    element.innerHTML = standings.map(s => `
         <tr>
             <td class="team-name-cell">
                 <div class="standings-team">
-                    ${teamBadge(team.code)}
-                    <span>${team.name}</span>
+                    ${teamBadge(s.code)}
+                    <span>${teamName(s.code)}</span>
                 </div>
             </td>
-            <td>0</td>
-            <td>0</td>
-            <td>0</td>
-            <td>0</td>
-            <td>0</td>
-            <td>0</td>
-            <td>0</td>
-            <td><strong>0</strong></td>
+            <td>${s.gp}</td>
+            <td>${s.w}</td>
+            <td>${s.l}</td>
+            <td>${s.t}</td>
+            <td>${s.otl}</td>
+            <td>${s.gf}</td>
+            <td>${s.ga}</td>
+            <td><strong>${s.pts}</strong></td>
         </tr>
     `).join("");
 }
@@ -821,8 +900,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupScheduleFilters();
     renderPlayers();
     setupPlayerFilters();
-    renderStandingsPlaceholder();
+    renderStandings();
     renderSponsors();
     renderLeaders();
+
+    // Live updates: whenever a game is added/edited/deleted (e.g. an admin
+    // saving a score from the admin panel), Supabase pushes the change here
+    // in real time. Re-render whatever's currently on screen so the Home
+    // "next game" box, the Schedule page and Standings all stay current
+    // without anyone needing to refresh.
+    subscribeToGameUpdates(() => {
+        renderNextGame();
+        renderSchedule(currentScheduleFilter);
+        renderStandings();
+    });
 
 });
