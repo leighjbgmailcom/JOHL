@@ -15,8 +15,7 @@ let editingPlayerId = null;
 let resultGoalRows = { away: [], home: [] };
 let resultPenaltyRows = { away: [], home: [] };
 let resultRowSeq = 0;
-let resultGoaliePeriods = { away: {}, home: {} }; // period -> goalie_id
-const GOALIE_PERIODS = ["1", "2", "3", "OT", "SO"];
+let resultGoalieRows = { away: [], home: [] }; // flat list of { key, id, goalie_id, period, game_time }
 
 
 /* =========================================
@@ -867,8 +866,7 @@ function playersForTeam(teamId) {
 function goaliesForTeam(teamId) {
     return PLAYERS.filter(p => {
         const team = TEAMS.find(t => t.code === p.team);
-        const isGoalie = p.position === "G" || p.position === "Goalie";
-        return team && String(team.id) === String(teamId) && isGoalie;
+        return team && String(team.id) === String(teamId) && isGoaliePosition(p.position);
     });
 }
 
@@ -925,7 +923,7 @@ async function onResultGameChange() {
 
     resultGoalRows = { away: [], home: [] };
     resultPenaltyRows = { away: [], home: [] };
-    resultGoaliePeriods = { away: {}, home: {} };
+    resultGoalieRows = { away: [], home: [] };
 
     const [{ data: goals }, { data: penalties }, { data: goaliePeriods }] = await Promise.all([
         supabaseClient.from("game_goals").select("*").eq("game_id", gameId),
@@ -935,7 +933,13 @@ async function onResultGameChange() {
 
     (goaliePeriods || []).forEach(row => {
         const side = String(row.team_id) === String(game.away_team_id) ? "away" : "home";
-        resultGoaliePeriods[side][row.period] = { goalieId: row.goalie_id, timeIn: row.time_in };
+        resultGoalieRows[side].push({
+            key: ++resultRowSeq,
+            id: row.id,
+            goalie_id: row.goalie_id,
+            period: row.period,
+            game_time: row.time_in
+        });
     });
 
     (goals || []).forEach(goal => {
@@ -968,26 +972,38 @@ async function onResultGameChange() {
     renderResultGoalieRows();
 }
 
+// A flat list of goalie stints per team, same pattern as the goals/
+// penalties lists above -- one row per appearance, so a mid-period swap
+// is just another row with its own period and M:SS clock time.
 function renderResultGoalieRows() {
     ["away", "home"].forEach(side => {
         const teamId = currentResultTeamId(side);
         const container = document.getElementById(`result-${side}-goalies`);
         if (!container) return;
 
-        container.innerHTML = GOALIE_PERIODS.map(period => {
-            const entry = resultGoaliePeriods[side][period] || {};
-            return `
-            <div class="goalie-period-row">
-                <label>${period === "1" || period === "2" || period === "3" ? "Period " + period : period}</label>
-                <select onchange="resultGoaliePeriods.${side}['${period}'] = Object.assign({}, resultGoaliePeriods.${side}['${period}'], { goalieId: this.value })">
-                    ${goalieOptionsHtml(teamId, entry.goalieId)}
+        container.innerHTML = resultGoalieRows[side].map(row => `
+            <div class="result-row goalie-row" data-key="${row.key}">
+                <select onchange="resultGoalieRows.${side}.find(r => r.key === ${row.key}).goalie_id = this.value">
+                    ${goalieOptionsHtml(teamId, row.goalie_id)}
                 </select>
-                <input type="text" placeholder="M:SS" value="${entry.timeIn || ""}"
-                    onchange="resultGoaliePeriods.${side}['${period}'] = Object.assign({}, resultGoaliePeriods.${side}['${period}'], { timeIn: this.value })">
+                <select onchange="resultGoalieRows.${side}.find(r => r.key === ${row.key}).period = this.value">
+                    ${periodOptionsHtml(row.period)}
+                </select>
+                <input type="text" placeholder="M:SS" value="${row.game_time || ""}" onchange="resultGoalieRows.${side}.find(r => r.key === ${row.key}).game_time = this.value">
+                <button type="button" class="link-button danger" onclick="removeGoalieRow('${side}', ${row.key})">✕</button>
             </div>
-        `;
-        }).join("");
+        `).join("") || `<p style="color:#97a3ac; font-size:13px;">No goalies entered yet.</p>`;
     });
+}
+
+function addGoalieRow(side) {
+    resultGoalieRows[side].push({ key: ++resultRowSeq, goalie_id: "", period: "1", game_time: "" });
+    renderResultGoalieRows();
+}
+
+function removeGoalieRow(side, key) {
+    resultGoalieRows[side] = resultGoalieRows[side].filter(r => r.key !== key);
+    renderResultGoalieRows();
 }
 
 function addGoalRow(side) {
@@ -1115,10 +1131,9 @@ async function saveGameResults() {
     const goaliePeriodRows = [];
     ["away", "home"].forEach(side => {
         const teamId = currentResultTeamId(side);
-        GOALIE_PERIODS.forEach(period => {
-            const entry = resultGoaliePeriods[side][period];
-            if (!entry || !entry.goalieId) return;
-            goaliePeriodRows.push({ game_id: gameId, team_id: teamId, period, goalie_id: entry.goalieId, time_in: entry.timeIn || null });
+        resultGoalieRows[side].forEach(row => {
+            if (!row.goalie_id) return;
+            goaliePeriodRows.push({ game_id: gameId, team_id: teamId, period: row.period, goalie_id: row.goalie_id, time_in: row.game_time || null });
         });
     });
 

@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
     <link rel="icon" href="images/icons/icon-192.png">
     <title>Live Game | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=6">
+    <link rel="stylesheet" href="css/style.css?v=7">
 </head>
 
 <body>
@@ -54,11 +54,8 @@
         <div class="live-team-panels">
 
             <div class="live-team-panel">
-                <div class="live-goalie-row">
-                    <span>Goalie</span>
-                    <select id="live-away-goalie"></select>
-                    <input type="text" id="live-away-goalie-time" class="live-time-input" placeholder="M:SS" inputmode="numeric">
-                </div>
+                <div class="live-goalie-label">Goalie this period</div>
+                <div class="live-goalie-stints" id="live-away-goalie-stints"></div>
                 <div class="live-action-buttons">
                     <button type="button" class="button live-goal-button" id="live-away-goal-button">+ Goal</button>
                     <button type="button" class="button live-penalty-button" id="live-away-penalty-button">+ Penalty</button>
@@ -68,11 +65,8 @@
             </div>
 
             <div class="live-team-panel">
-                <div class="live-goalie-row">
-                    <span>Goalie</span>
-                    <select id="live-home-goalie"></select>
-                    <input type="text" id="live-home-goalie-time" class="live-time-input" placeholder="M:SS" inputmode="numeric">
-                </div>
+                <div class="live-goalie-label">Goalie this period</div>
+                <div class="live-goalie-stints" id="live-home-goalie-stints"></div>
                 <div class="live-action-buttons">
                     <button type="button" class="button live-goal-button" id="live-home-goal-button">+ Goal</button>
                     <button type="button" class="button live-penalty-button" id="live-home-penalty-button">+ Penalty</button>
@@ -181,13 +175,13 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=6"></script>
-<script src="js/header.js?v=6"></script>
-<script src="js/install.js?v=6"></script>
-<script src="js/db.js?v=6"></script>
-<script src="js/app.js?v=6"></script>
-<script src="js/auth.js?v=6"></script>
-<script src="js/live.js?v=6"></script>
+<script src="js/supabase.js?v=7"></script>
+<script src="js/header.js?v=7"></script>
+<script src="js/install.js?v=7"></script>
+<script src="js/db.js?v=7"></script>
+<script src="js/app.js?v=7"></script>
+<script src="js/auth.js?v=7"></script>
+<script src="js/live.js?v=7"></script>
 
 </body>
 </html>

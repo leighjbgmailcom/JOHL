@@ -16,7 +16,7 @@ let currentLiveGame = null;
 let currentLivePeriod = "1";
 let currentLiveGoals = [];
 let currentLivePenalties = [];
-let currentLiveGoaliePeriods = { away: {}, home: {} }; // period -> { goalieId, timeIn }
+let currentLiveGoalieStints = { away: {}, home: {} }; // period -> [{ id, goalieId, timeIn }, ...]
 let pendingGoalSide = null; // "away" | "home", while the goal modal is open
 let pendingPenaltySide = null; // "away" | "home", while the penalty modal is open
 
@@ -77,7 +77,7 @@ function playersForLiveTeam(teamId) {
 }
 
 function goaliesForLiveTeam(teamId) {
-    return playersForLiveTeam(teamId).filter(p => p.position === "G" || p.position === "Goalie");
+    return playersForLiveTeam(teamId).filter(p => isGoaliePosition(p.position));
 }
 
 function playerLabel(p) {
@@ -89,27 +89,37 @@ function playerLabel(p) {
    LOAD GAME LIST
    ========================================= */
 
+// Shows just the next 3 games coming up (today or later, not already
+// final) -- not the full season and not anything a week or two out, so
+// the timekeeper isn't hunting through a long list rink-side. A game
+// that's already "live" always stays in this list too, however its date
+// compares, so an in-progress game is never dropped mid-entry.
 async function loadLiveGames() {
+    const todayIso = new Date().toISOString().slice(0, 10);
+
     const { data, error } = await supabaseClient
         .from("games")
         .select("id, game_no, game_date, game_time, away_team_id, home_team_id, away_score, home_score, status, went_ot, no_games")
         .eq("no_games", false)
-        .order("game_date", { ascending: false })
-        .order("game_time", { ascending: false });
+        .neq("status", "final")
+        .order("game_date", { ascending: true })
+        .order("game_time", { ascending: true });
 
     if (error) {
         console.error("Error loading games:", error);
         return;
     }
 
-    LIVE_GAMES = data;
+    LIVE_GAMES = (data || [])
+        .filter(game => game.status === "live" || game.game_date >= todayIso)
+        .slice(0, 3);
 
     const select = document.getElementById("live-game-select");
     select.innerHTML = `<option value="">— Select a game —</option>` +
         LIVE_GAMES.map(game => {
             const label = `${game.game_date} ${formatTime12h(game.game_time ? game.game_time.substring(0, 5) : "")} — ` +
                 `${liveTeamNameById(game.away_team_id)} @ ${liveTeamNameById(game.home_team_id)}` +
-                (game.status === "final" ? " (Final)" : game.status === "live" ? " (Live)" : "");
+                (game.status === "live" ? " (Live)" : "");
             return `<option value="${game.id}">${label}</option>`;
         }).join("");
 }
@@ -141,7 +151,7 @@ async function onLiveGameChange() {
     await loadLiveGameDetails();
     renderLivePeriodTabs();
     renderLiveScoreboard();
-    renderLiveGoalieSelects();
+    renderLiveGoalieStints();
     renderLiveGoalsLists();
     renderLivePenaltiesLists();
 }
@@ -158,10 +168,11 @@ async function loadLiveGameDetails() {
     currentLiveGoals = goals || [];
     currentLivePenalties = penalties || [];
 
-    currentLiveGoaliePeriods = { away: {}, home: {} };
+    currentLiveGoalieStints = { away: {}, home: {} };
     (goaliePeriods || []).forEach(row => {
         const side = String(row.team_id) === String(currentLiveGame.away_team_id) ? "away" : "home";
-        currentLiveGoaliePeriods[side][row.period] = { goalieId: row.goalie_id, timeIn: row.time_in };
+        if (!currentLiveGoalieStints[side][row.period]) currentLiveGoalieStints[side][row.period] = [];
+        currentLiveGoalieStints[side][row.period].push({ id: row.id, goalieId: row.goalie_id, timeIn: row.time_in });
     });
 }
 
@@ -180,7 +191,7 @@ function renderLivePeriodTabs() {
         btn.addEventListener("click", () => {
             currentLivePeriod = btn.dataset.period;
             renderLivePeriodTabs();
-            renderLiveGoalieSelects();
+            renderLiveGoalieStints();
         });
     });
 }
@@ -213,39 +224,154 @@ function renderLiveScoreboard() {
     document.getElementById("live-go-button").disabled = currentLiveGame.status !== "scheduled";
 }
 
-// Finds the goalie assigned to a period, falling back to whatever the most
-// recent earlier period had (so a goalie "carries forward" across periods
-// until someone actually changes them, instead of resetting to blank).
-// The time-in is NOT carried forward -- it's specific to when that goalie
-// actually took over, so a carried-forward period starts with a blank time.
-function goalieForPeriod(side, period) {
-    if (currentLiveGoaliePeriods[side][period]) return currentLiveGoaliePeriods[side][period].goalieId;
+// A period can now have more than one goalie stint (an injury swap
+// mid-period, say), each with its own M:SS clock reading for when that
+// goalie took over. Sorted so the stint that started the period comes
+// first -- a stint with no time recorded is treated as "started at the
+// top of the period" (parseClockToSeconds/isGoaliePosition come from
+// js/app.js, loaded before this file).
+function sortedGoalieStints(stints) {
+    return (stints || []).slice().sort((a, b) => {
+        const as = parseClockToSeconds(a.timeIn);
+        const bs = parseClockToSeconds(b.timeIn);
+        if (as == null && bs == null) return 0;
+        if (as == null) return -1;
+        if (bs == null) return 1;
+        return bs - as;
+    });
+}
 
+// For display only, when a period has no stints of its own yet: whoever
+// finished the most recent earlier period is presumed to still be in net,
+// same rule the goalie stats page uses. Nothing is written to the
+// database until a stint is actually added for this period.
+function carriedForwardGoalieId(side, period) {
     const index = LIVE_PERIODS.indexOf(period);
     for (let i = index - 1; i >= 0; i--) {
         const earlier = LIVE_PERIODS[i];
-        if (currentLiveGoaliePeriods[side][earlier]) return currentLiveGoaliePeriods[side][earlier].goalieId;
+        const stints = currentLiveGoalieStints[side][earlier];
+        if (stints && stints.length) {
+            const sorted = sortedGoalieStints(stints);
+            return sorted[sorted.length - 1].goalieId;
+        }
     }
     return "";
 }
 
-function timeInForPeriod(side, period) {
-    const entry = currentLiveGoaliePeriods[side][period];
-    return (entry && entry.timeIn) || "";
+function goalieStintOptionsHtml(teamId, selectedId) {
+    const goalies = goaliesForLiveTeam(teamId);
+    return `<option value="">— Select goalie —</option>` +
+        goalies.map(p => `<option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""}>${playerLabel(p)}</option>`).join("");
 }
 
-function renderLiveGoalieSelects() {
+function renderLiveGoalieStints() {
     ["away", "home"].forEach(side => {
         const teamId = liveTeamIdForSide(side);
-        const select = document.getElementById(`live-${side}-goalie`);
-        const goalies = goaliesForLiveTeam(teamId);
-        const selected = goalieForPeriod(side, currentLivePeriod);
+        const container = document.getElementById(`live-${side}-goalie-stints`);
+        if (!container) return;
 
-        select.innerHTML = `<option value="">— No goalie assigned —</option>` +
-            goalies.map(p => `<option value="${p.id}" ${String(p.id) === String(selected) ? "selected" : ""}>${playerLabel(p)}</option>`).join("");
+        const stints = sortedGoalieStints(currentLiveGoalieStints[side][currentLivePeriod]);
+        let html = "";
 
-        document.getElementById(`live-${side}-goalie-time`).value = timeInForPeriod(side, currentLivePeriod);
+        if (!stints.length) {
+            const carriedId = carriedForwardGoalieId(side, currentLivePeriod);
+            const carriedPlayer = carriedId ? PLAYERS.find(p => String(p.id) === String(carriedId)) : null;
+            if (carriedPlayer) {
+                html += `<div class="live-goalie-carried">Continuing: ${playerLabel(carriedPlayer)}</div>`;
+            }
+        }
+
+        html += stints.map(stint => `
+            <div class="live-goalie-stint-row">
+                <select onchange="updateLiveGoalieStint('${side}', ${stint.id}, 'goalieId', this.value)">
+                    ${goalieStintOptionsHtml(teamId, stint.goalieId)}
+                </select>
+                <input type="text" class="live-time-input" placeholder="M:SS" inputmode="numeric" value="${stint.timeIn || ""}"
+                    onchange="updateLiveGoalieStint('${side}', ${stint.id}, 'timeIn', this.value)">
+                <button type="button" class="live-stint-remove" onclick="removeLiveGoalieStint('${side}', ${stint.id})">✕</button>
+            </div>
+        `).join("");
+
+        html += `
+            <div class="live-goalie-stint-row live-goalie-add-row">
+                <select id="live-${side}-new-goalie">${goalieStintOptionsHtml(teamId, "")}</select>
+                <input type="text" class="live-time-input" id="live-${side}-new-goalie-time" placeholder="M:SS" inputmode="numeric">
+                <button type="button" class="live-stint-add" onclick="addLiveGoalieStint('${side}')">+ Add</button>
+            </div>
+        `;
+
+        container.innerHTML = html;
     });
+}
+
+// Adds a new goalie stint to the CURRENT period (a starting goalie, or a
+// mid-period change) -- inserted right away so it's live the moment it's
+// entered.
+async function addLiveGoalieStint(side) {
+    const goalieSelect = document.getElementById(`live-${side}-new-goalie`);
+    const timeInput = document.getElementById(`live-${side}-new-goalie-time`);
+    const goalieId = goalieSelect.value;
+    const timeIn = timeInput.value.trim() || null;
+
+    if (!goalieId) {
+        goalieSelect.focus();
+        return;
+    }
+
+    const teamId = liveTeamIdForSide(side);
+    const { data, error } = await supabaseClient
+        .from("game_goalie_periods")
+        .insert({ game_id: currentLiveGame.id, team_id: teamId, period: currentLivePeriod, goalie_id: goalieId, time_in: timeIn })
+        .select()
+        .single();
+
+    if (error) {
+        console.error(error);
+        return;
+    }
+
+    if (!currentLiveGoalieStints[side][currentLivePeriod]) currentLiveGoalieStints[side][currentLivePeriod] = [];
+    currentLiveGoalieStints[side][currentLivePeriod].push({ id: data.id, goalieId: data.goalie_id, timeIn: data.time_in });
+    renderLiveGoalieStints();
+}
+
+// Edits one field of an existing stint. Clearing the goalie on an
+// existing stint just removes it, rather than leaving a blank one behind.
+async function updateLiveGoalieStint(side, id, field, value) {
+    const stints = currentLiveGoalieStints[side][currentLivePeriod] || [];
+    const stint = stints.find(s => String(s.id) === String(id));
+    if (!stint) return;
+
+    if (field === "goalieId" && !value) {
+        await removeLiveGoalieStint(side, id);
+        return;
+    }
+
+    const patch = field === "goalieId" ? { goalie_id: value } : { time_in: value.trim() || null };
+    const { error } = await supabaseClient.from("game_goalie_periods").update(patch).eq("id", id);
+
+    if (error) {
+        console.error(error);
+        return;
+    }
+
+    if (field === "goalieId") stint.goalieId = value;
+    else stint.timeIn = value.trim() || null;
+
+    renderLiveGoalieStints();
+}
+
+async function removeLiveGoalieStint(side, id) {
+    const { error } = await supabaseClient.from("game_goalie_periods").delete().eq("id", id);
+
+    if (error) {
+        console.error(error);
+        return;
+    }
+
+    currentLiveGoalieStints[side][currentLivePeriod] =
+        (currentLiveGoalieStints[side][currentLivePeriod] || []).filter(s => String(s.id) !== String(id));
+    renderLiveGoalieStints();
 }
 
 function renderLiveGoalsLists() {
@@ -490,39 +616,6 @@ async function refreshLiveScoreAndStatus() {
 
 
 /* =========================================
-   GOALIE ASSIGNMENT
-   ========================================= */
-
-// Called when either the goalie <select> or its time-in field changes --
-// always reads both together so editing one doesn't clobber the other.
-async function onLiveGoalieChange(side) {
-    const goalieId = document.getElementById(`live-${side}-goalie`).value;
-    const timeIn = document.getElementById(`live-${side}-goalie-time`).value.trim() || null;
-    const teamId = liveTeamIdForSide(side);
-
-    if (goalieId) {
-        const { error } = await supabaseClient
-            .from("game_goalie_periods")
-            .upsert(
-                { game_id: currentLiveGame.id, team_id: teamId, period: currentLivePeriod, goalie_id: goalieId, time_in: timeIn },
-                { onConflict: "game_id,team_id,period" }
-            );
-        if (error) console.error(error);
-        else currentLiveGoaliePeriods[side][currentLivePeriod] = { goalieId, timeIn };
-    } else {
-        const { error } = await supabaseClient
-            .from("game_goalie_periods")
-            .delete()
-            .eq("game_id", currentLiveGame.id)
-            .eq("team_id", teamId)
-            .eq("period", currentLivePeriod);
-        if (error) console.error(error);
-        else delete currentLiveGoaliePeriods[side][currentLivePeriod];
-    }
-}
-
-
-/* =========================================
    GAME STATUS
    ========================================= */
 
@@ -608,10 +701,9 @@ async function initLivePage() {
         if (event.target.id === "live-penalty-modal") closeLivePenaltyModal();
     });
 
-    document.getElementById("live-away-goalie").addEventListener("change", () => onLiveGoalieChange("away"));
-    document.getElementById("live-home-goalie").addEventListener("change", () => onLiveGoalieChange("home"));
-    document.getElementById("live-away-goalie-time").addEventListener("change", () => onLiveGoalieChange("away"));
-    document.getElementById("live-home-goalie-time").addEventListener("change", () => onLiveGoalieChange("home"));
+    // Goalie stint rows are (re)generated by renderLiveGoalieStints() with
+    // their own inline handlers, since the number of rows changes as
+    // stints are added/removed -- nothing to wire up here.
 }
 
 // Note: js/app.js's own DOMContentLoaded listener already runs

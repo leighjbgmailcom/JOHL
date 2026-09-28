@@ -1402,18 +1402,31 @@ a.sponsor-card:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,.06);
 }
 
-.live-goalie-row {
+.live-goalie-label {
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #687681;
+    margin-bottom: 8px;
+}
+
+.live-goalie-stints {
+    margin-bottom: 14px;
+}
+
+.live-goalie-stint-row {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 8px;
     font-size: 13px;
     font-weight: bold;
     color: #45525c;
 }
 
-.live-goalie-row select {
+.live-goalie-stint-row select {
     flex: 2 1 auto;
     min-width: 0;
     padding: 8px;
@@ -1431,6 +1444,39 @@ a.sponsor-card:hover {
     border-radius: 4px;
     font-size: 13px;
     text-align: center;
+}
+
+.live-stint-remove,
+.live-stint-add {
+    flex: 0 0 auto;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 8px 10px;
+}
+
+.live-stint-remove {
+    background: #f7f8f9;
+    color: #c8102e;
+}
+
+.live-stint-add {
+    background: #eef4ff;
+    color: #1f4fa3;
+    white-space: nowrap;
+}
+
+.live-goalie-add-row {
+    opacity: .85;
+}
+
+.live-goalie-carried {
+    font-size: 12px;
+    font-style: italic;
+    color: #97a3ac;
+    margin-bottom: 8px;
 }
 
 .live-action-buttons {

@@ -13,6 +13,26 @@ function getTeam(code) {
     return TEAMS.find(team => team.code === code);
 }
 
+// Position is stored as free text ("Goalie" / "Skater" from the admin
+// player-edit dropdown, though some older records used the single letter
+// "G"). Every goalie check in the site should go through this helper so
+// they all agree, no matter which of those a given record has.
+function isGoaliePosition(position) {
+    if (!position) return false;
+    const p = String(position).trim().toLowerCase();
+    return p === "goalie" || p === "g";
+}
+
+// Parses a "M:SS" game-clock string into total seconds. Returns null for
+// anything blank or unparseable. Used to figure out which goalie stint a
+// given goal falls under (see renderGoalieStats below).
+function parseClockToSeconds(value) {
+    if (!value) return null;
+    const match = String(value).trim().match(/^(\d+):([0-5]\d)$/);
+    if (!match) return null;
+    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+}
+
 function teamName(code) {
     if (code === "TBD") return "TBD";
     const team = getTeam(code);
@@ -374,8 +394,8 @@ function renderPlayers() {
                 </div>
             </td>
             <td>
-                <span class="position-tag ${player.position === "G" ? "goalie" : ""}">
-                    ${player.position === "G" ? "Goalie" : "Skater"}
+                <span class="position-tag ${isGoaliePosition(player.position) ? "goalie" : ""}">
+                    ${isGoaliePosition(player.position) ? "Goalie" : "Skater"}
                 </span>
             </td>
         </tr>
@@ -592,18 +612,50 @@ async function renderLeaders() {
    GOALIE STATS (leaders.html)
 
    Goals-against only (no shots-against are tracked, so no save %) --
-   each game's crease is split by period in admin ("Goalies" section of
-   Enter Game Results, or the Live Game screen), and a goalie is charged
-   with every goal scored in a period they're assigned to for their team.
+   each game's crease is split into goalie "stints" in admin ("Goalies"
+   section of Enter Game Results, or the Live Game screen). A team can
+   have more than one stint within the same period (e.g. a mid-period
+   injury swap), each with its own M:SS clock time showing when that
+   goalie took over. A goalie is charged with every goal scored, in a
+   period they're assigned to, while their stint was the one in net --
+   worked out by comparing the goal's own recorded time against the
+   stints' start times (see attributeGoalieStint below).
    ========================================= */
+
+// Given a period's stints (already sorted with the earliest-starting
+// stint first -- see below) and a goal's clock time in seconds, finds
+// which stint was in net when that goal went in. The clock counts down
+// within a period, so a stint that started at a HIGHER time reading
+// happened EARLIER; the right stint is the most recent one that had
+// already started by the time of the goal (the smallest start time
+// that's still >= the goal's time). Falls back to the period's starting
+// stint when the goal has no recorded time, or when nothing lines up.
+function attributeGoalieStint(sortedStints, goalSeconds) {
+    if (!sortedStints.length) return null;
+    if (goalSeconds == null) return sortedStints[0];
+
+    let best = null;
+    sortedStints.forEach(stint => {
+        if (stint.seconds != null && stint.seconds < goalSeconds) return;
+        if (best === null) { best = stint; return; }
+        // Prefer a stint with a known, closer start time over one with an
+        // unknown ("assume period start") start time.
+        if (stint.seconds == null) return;
+        if (best.seconds == null || stint.seconds < best.seconds) best = stint;
+    });
+
+    return best || sortedStints[0];
+}
+
+const GOALIE_STATS_PERIOD_ORDER = ["1", "2", "3", "OT", "SO"];
 
 async function renderGoalieStats() {
     const table = document.getElementById("goalies-table");
     if (!table) return;
 
     const [{ data: periods, error: periodsError }, { data: goals, error: goalsError }] = await Promise.all([
-        supabaseClient.from("game_goalie_periods").select("game_id, team_id, period, goalie_id"),
-        supabaseClient.from("game_goals").select("game_id, team_id, period")
+        supabaseClient.from("game_goalie_periods").select("game_id, team_id, period, goalie_id, time_in"),
+        supabaseClient.from("game_goals").select("game_id, team_id, period, game_time")
     ]);
 
     if (periodsError || goalsError) {
@@ -612,24 +664,95 @@ async function renderGoalieStats() {
         return;
     }
 
-    const stats = {};
-
+    // Group goalie-period rows into per game+team, per-period "stint
+    // lists", each sorted so the stint that started the period comes
+    // first (unknown start times are treated as "started at the top of
+    // the period", so they sort ahead of any known, later start time).
+    const stintsByGameTeam = {}; // `${gameId}|${teamId}` -> { period: stints[] }
     (periods || []).forEach(gp => {
-        if (!stats[gp.goalie_id]) {
-            stats[gp.goalie_id] = { goalieId: gp.goalie_id, games: new Set(), periodsPlayed: 0, ga: 0 };
-        }
-        const s = stats[gp.goalie_id];
-        s.games.add(gp.game_id);
-        s.periodsPlayed++;
+        const gtKey = `${gp.game_id}|${gp.team_id}`;
+        if (!stintsByGameTeam[gtKey]) stintsByGameTeam[gtKey] = {};
+        if (!stintsByGameTeam[gtKey][gp.period]) stintsByGameTeam[gtKey][gp.period] = [];
+        stintsByGameTeam[gtKey][gp.period].push({ goalieId: gp.goalie_id, seconds: parseClockToSeconds(gp.time_in) });
+    });
+    Object.values(stintsByGameTeam).forEach(periodMap => {
+        Object.values(periodMap).forEach(stints => {
+            stints.sort((a, b) => {
+                if (a.seconds == null && b.seconds == null) return 0;
+                if (a.seconds == null) return -1;
+                if (b.seconds == null) return 1;
+                return b.seconds - a.seconds;
+            });
+        });
+    });
 
-        // Every goal scored in this same game+period by the OTHER team
-        // (not gp.team_id) went in against this goalie.
-        const against = (goals || []).filter(g =>
-            String(g.game_id) === String(gp.game_id) &&
-            g.period === gp.period &&
-            String(g.team_id) !== String(gp.team_id)
-        );
-        s.ga += against.length;
+    // A period with no goalie entered explicitly carries forward whoever
+    // finished the most recent earlier period with one (same rule as the
+    // Live Game screen), as a single stint covering the whole period.
+    function stintsForPeriod(gtKey, period) {
+        const periodMap = stintsByGameTeam[gtKey];
+        if (!periodMap) return [];
+        if (periodMap[period] && periodMap[period].length) return periodMap[period];
+
+        const index = GOALIE_STATS_PERIOD_ORDER.indexOf(period);
+        for (let i = index - 1; i >= 0; i--) {
+            const earlier = GOALIE_STATS_PERIOD_ORDER[i];
+            if (periodMap[earlier] && periodMap[earlier].length) {
+                const mostRecent = periodMap[earlier][periodMap[earlier].length - 1];
+                return [{ goalieId: mostRecent.goalieId, seconds: null }];
+            }
+        }
+        return [];
+    }
+
+    // Which periods actually happened in each game (had a goal or a
+    // goalie entry), so carry-forward doesn't invent phantom OT/SO periods.
+    const periodsByGame = {};
+    (periods || []).forEach(gp => {
+        if (!periodsByGame[gp.game_id]) periodsByGame[gp.game_id] = new Set();
+        periodsByGame[gp.game_id].add(gp.period);
+    });
+    (goals || []).forEach(g => {
+        if (!periodsByGame[g.game_id]) periodsByGame[g.game_id] = new Set();
+        periodsByGame[g.game_id].add(g.period);
+    });
+
+    const stats = {};
+    function statsFor(goalieId) {
+        if (!stats[goalieId]) {
+            stats[goalieId] = { goalieId, games: new Set(), periodsPlayed: new Set(), ga: 0 };
+        }
+        return stats[goalieId];
+    }
+
+    Object.keys(stintsByGameTeam).forEach(gtKey => {
+        const [gameId, teamId] = gtKey.split("|");
+        const gamePeriods = periodsByGame[gameId] || new Set();
+
+        GOALIE_STATS_PERIOD_ORDER.filter(period => gamePeriods.has(period)).forEach(period => {
+            const stints = stintsForPeriod(gtKey, period);
+            if (!stints.length) return;
+
+            stints.forEach(stint => {
+                const s = statsFor(stint.goalieId);
+                s.games.add(gameId);
+                s.periodsPlayed.add(`${gameId}|${period}`);
+            });
+
+            // Every goal scored in this same game+period by the OTHER
+            // team (not this team) went in against whichever of this
+            // team's stints was in net at that moment.
+            (goals || [])
+                .filter(g =>
+                    String(g.game_id) === String(gameId) &&
+                    g.period === period &&
+                    String(g.team_id) !== String(teamId)
+                )
+                .forEach(goal => {
+                    const stint = attributeGoalieStint(stints, parseClockToSeconds(goal.game_time));
+                    if (stint) statsFor(stint.goalieId).ga++;
+                });
+        });
     });
 
     const rows = Object.values(stats)
@@ -642,7 +765,7 @@ async function renderGoalieStats() {
                 player,
                 team,
                 gp,
-                periodsPlayed: s.periodsPlayed,
+                periodsPlayed: s.periodsPlayed.size,
                 ga: s.ga,
                 gaPerGame: gp ? s.ga / gp : 0
             };
