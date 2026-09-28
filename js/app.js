@@ -654,31 +654,40 @@ function formatDateCompact(iso) {
 // always the full schedule), plus a sponsors line-up at the bottom. Called
 // fresh every time the print button is used so it always reflects the
 // latest schedule data.
+function printableScheduleRowHtml(game) {
+    const isTbd = game.home === "TBD" || game.away === "TBD";
+    const matchup = isTbd
+        ? `${teamName(game.away)} vs. ${teamName(game.home)}`
+        : `${teamName(game.away)} @ ${teamName(game.home)}`;
+    const locationLabel = game.location && game.location !== "Jordan Arena" ? ` — ${game.location}` : "";
+    let resultLabel = "";
+    if (game.status === "final") {
+        resultLabel = ` &nbsp;<strong>${game.awayScore ?? 0}–${game.homeScore ?? 0}</strong>${game.wentOT ? " (OT)" : ""}`;
+    }
+
+    return `
+        <div class="print-game-row">
+            <span class="print-game-date">${formatDateCompact(game.date)}</span>
+            <span class="print-game-time">${formatTime12h(game.time)}</span>
+            <span class="print-game-matchup">${matchup}${locationLabel}${resultLabel}</span>
+        </div>
+    `;
+}
+
 function buildPrintableScheduleHtml() {
     const games = SCHEDULE
         .filter(g => !g.noGames)
         .slice()
         .sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")));
 
-    const rowsHtml = games.map(game => {
-        const isTbd = game.home === "TBD" || game.away === "TBD";
-        const matchup = isTbd
-            ? `${teamName(game.away)} vs. ${teamName(game.home)}`
-            : `${teamName(game.away)} @ ${teamName(game.home)}`;
-        const locationLabel = game.location && game.location !== "Jordan Arena" ? ` — ${game.location}` : "";
-        let resultLabel = "";
-        if (game.status === "final") {
-            resultLabel = ` &nbsp;<strong>${game.awayScore ?? 0}–${game.homeScore ?? 0}</strong>${game.wentOT ? " (OT)" : ""}`;
-        }
-
-        return `
-            <div class="print-game-row">
-                <span class="print-game-date">${formatDateCompact(game.date)}</span>
-                <span class="print-game-time">${formatTime12h(game.time)}</span>
-                <span class="print-game-matchup">${matchup}${locationLabel}${resultLabel}</span>
-            </div>
-        `;
-    }).join("");
+    // Split into two columns ourselves (rather than relying on CSS
+    // multi-column, which several mobile browsers' print/PDF engines
+    // render unreliably -- collapsing to one column and spilling onto a
+    // second page). Two plain side-by-side blocks print consistently
+    // everywhere.
+    const midpoint = Math.ceil(games.length / 2);
+    const columnAHtml = games.slice(0, midpoint).map(printableScheduleRowHtml).join("");
+    const columnBHtml = games.slice(midpoint).map(printableScheduleRowHtml).join("");
 
     const sponsorsHtml = (typeof SPONSORS !== "undefined" ? SPONSORS : []).map(sponsor => {
         const team = getTeam(sponsor.team);
@@ -691,7 +700,8 @@ function buildPrintableScheduleHtml() {
             <p>2026–27 Season Schedule — Jordan Arena unless noted</p>
         </div>
         <div class="print-sheet-columns">
-            ${rowsHtml}
+            <div class="print-column">${columnAHtml}</div>
+            <div class="print-column">${columnBHtml}</div>
         </div>
         ${sponsorsHtml ? `
             <div class="print-sponsors">
@@ -746,11 +756,52 @@ function setupScheduleFilters() {
             button.classList.add("active");
             currentScheduleFilter = button.dataset.team;
             renderSchedule(currentScheduleFilter);
+            renderScheduleRosterPanel(currentScheduleFilter);
         });
     });
 
     currentScheduleFilter = initialTeam || "ALL";
     renderSchedule(currentScheduleFilter);
+    renderScheduleRosterPanel(currentScheduleFilter);
+}
+
+// Shows a roster sidebar (name + jersey number) next to the schedule list
+// whenever a specific team filter is selected -- hidden again for "All
+// Teams" since there's no single roster to show at that point.
+function renderScheduleRosterPanel(teamCode) {
+    const panel = document.getElementById("schedule-roster-panel");
+    if (!panel) return;
+
+    if (!teamCode || teamCode === "ALL") {
+        panel.style.display = "none";
+        return;
+    }
+
+    const team = getTeam(teamCode);
+    const nameEl = document.getElementById("schedule-roster-team-name");
+    if (nameEl) nameEl.textContent = team ? team.name : teamCode;
+
+    const roster = PLAYERS
+        .filter(p => p.team === teamCode)
+        .slice()
+        .sort((a, b) => {
+            if (a.number != null && b.number != null) return a.number - b.number;
+            if (a.number != null) return -1;
+            if (b.number != null) return 1;
+            return a.last.localeCompare(b.last);
+        });
+
+    const list = document.getElementById("schedule-roster-list");
+    if (list) {
+        list.innerHTML = roster.map(p => `
+            <div class="schedule-roster-row">
+                <span>${p.first} ${p.last}${isGoaliePosition(p.position) ? ` <span class="schedule-roster-tag">G</span>` : ""}</span>
+                <span class="schedule-roster-number">${p.number != null ? "#" + p.number : ""}</span>
+            </div>
+        `).join("") || `<p class="schedule-detail-empty">No players listed.</p>`;
+    }
+
+    panel.style.display = "";
 }
 
 

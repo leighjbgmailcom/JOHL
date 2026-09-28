@@ -689,6 +689,79 @@ tbody tr:hover {
 }
 
 
+.schedule-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+}
+
+.schedule-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.schedule-roster-panel {
+    width: 240px;
+    flex-shrink: 0;
+    background: white;
+    border-radius: 6px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    position: sticky;
+    top: 90px;
+}
+
+.schedule-roster-panel h4 {
+    font-size: 15px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #c8102e;
+}
+
+.schedule-roster-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid #f2f4f5;
+    font-size: 14px;
+}
+
+.schedule-roster-row:last-child {
+    border-bottom: none;
+}
+
+.schedule-roster-number {
+    font-weight: bold;
+    color: #687681;
+    white-space: nowrap;
+}
+
+.schedule-roster-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: bold;
+    color: #c8102e;
+    border: 1px solid #c8102e;
+    border-radius: 3px;
+    padding: 0 4px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+@media (max-width: 800px) {
+    .schedule-layout {
+        flex-direction: column;
+    }
+
+    .schedule-roster-panel {
+        width: 100%;
+        position: static;
+    }
+}
+
+
 .schedule-day {
     margin-bottom: 30px;
 }
@@ -955,17 +1028,28 @@ body.printing-schedule #schedule-print-sheet {
     color: #45525c;
 }
 
+/* Two plain side-by-side columns, built as separate blocks in JS --
+   deliberately not CSS multi-column (column-count), which several mobile
+   browsers' print/"Save as PDF" engines render unreliably (silently
+   collapsing to one column and spilling the schedule onto a second page). */
 .print-sheet-columns {
-    column-count: 2;
-    column-gap: 26px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.print-column {
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .print-game-row {
     display: flex;
-    gap: 6px;
+    gap: 5px;
     align-items: baseline;
-    font-size: 10px;
-    line-height: 1.5;
+    font-size: 9px;
+    line-height: 1.35;
     padding: 1px 0;
     border-bottom: 1px solid #e4e7ea;
     break-inside: avoid;
@@ -973,13 +1057,13 @@ body.printing-schedule #schedule-print-sheet {
 
 .print-game-date {
     font-weight: bold;
-    width: 58px;
+    width: 50px;
     flex-shrink: 0;
 }
 
 .print-game-time {
     color: #45525c;
-    width: 56px;
+    width: 48px;
     flex-shrink: 0;
 }
 
@@ -988,8 +1072,8 @@ body.printing-schedule #schedule-print-sheet {
 }
 
 .print-sponsors {
-    column-span: all;
-    margin-top: 14px;
+    width: 100%;
+    margin-top: 12px;
     padding-top: 8px;
     border-top: 2px solid #071a2b;
 }
@@ -1003,14 +1087,18 @@ body.printing-schedule #schedule-print-sheet {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 18px;
-    font-size: 10px;
+    font-size: 9px;
     color: #45525c;
 }
 
 @media print {
     @page {
-        size: portrait;
-        margin: 10mm;
+        size: letter portrait;
+        margin: 8mm;
+    }
+
+    html, body {
+        width: 100%;
     }
 }
 
