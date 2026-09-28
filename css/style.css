@@ -689,79 +689,6 @@ tbody tr:hover {
 }
 
 
-.schedule-layout {
-    display: flex;
-    align-items: flex-start;
-    gap: 24px;
-}
-
-.schedule-main {
-    flex: 1;
-    min-width: 0;
-}
-
-.schedule-roster-panel {
-    width: 240px;
-    flex-shrink: 0;
-    background: white;
-    border-radius: 6px;
-    padding: 18px 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.05);
-    position: sticky;
-    top: 90px;
-}
-
-.schedule-roster-panel h4 {
-    font-size: 15px;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #c8102e;
-}
-
-.schedule-roster-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    padding: 7px 0;
-    border-bottom: 1px solid #f2f4f5;
-    font-size: 14px;
-}
-
-.schedule-roster-row:last-child {
-    border-bottom: none;
-}
-
-.schedule-roster-number {
-    font-weight: bold;
-    color: #687681;
-    white-space: nowrap;
-}
-
-.schedule-roster-tag {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: bold;
-    color: #c8102e;
-    border: 1px solid #c8102e;
-    border-radius: 3px;
-    padding: 0 4px;
-    margin-left: 4px;
-    vertical-align: middle;
-}
-
-@media (max-width: 800px) {
-    .schedule-layout {
-        flex-direction: column;
-    }
-
-    .schedule-roster-panel {
-        width: 100%;
-        position: static;
-    }
-}
-
-
 .schedule-day {
     margin-bottom: 30px;
 }
@@ -1044,6 +971,18 @@ body.printing-schedule #schedule-print-sheet {
     min-width: 0;
 }
 
+/* When a single team's filter is active: schedule gets 2/3 of the width,
+   roster gets 1/3. */
+.print-column-schedule {
+    flex: 2 1 0;
+}
+
+.print-roster-column {
+    flex: 1 1 0;
+    border-left: 1px solid #e4e7ea;
+    padding-left: 16px;
+}
+
 .print-game-row {
     display: flex;
     gap: 5px;
@@ -1057,8 +996,9 @@ body.printing-schedule #schedule-print-sheet {
 
 .print-game-date {
     font-weight: bold;
-    width: 50px;
+    width: 76px;
     flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .print-game-time {

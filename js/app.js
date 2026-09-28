@@ -640,13 +640,15 @@ function renderScheduleGameDetail(game, goals, periods, attendance) {
    SCHEDULE — PRINT / EXPORT ONE-PAGE SCHEDULE
    ========================================= */
 
-// Compact "Sun, Sep 27" style date for the printable sheet -- the full
-// formatDateISO() output (weekday + month name + year) is too wide to fit
-// a whole season on one printed page.
+const PRINT_MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// "MMM DD, YYYY" date for the printable sheet -- no weekday (every JOHL
+// game is a Sunday, so it'd just be dead weight) and built by hand rather
+// than left to toLocaleDateString so the format never varies, and kept on
+// one line via white-space:nowrap in the print CSS.
 function formatDateCompact(iso) {
     const [y, m, d] = iso.split("-").map(Number);
-    const date = new Date(y, m - 1, d);
-    return date.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" });
+    return `${PRINT_MONTH_ABBR[m - 1]} ${String(d).padStart(2, "0")}, ${y}`;
 }
 
 // Builds the hidden print sheet's markup: every game in the season (not
@@ -721,7 +723,7 @@ function buildPrintableScheduleHtml(teamCode) {
             `<p class="schedule-detail-empty">No players listed.</p>`;
 
         columnsHtml = `
-            <div class="print-column">${gamesHtml}</div>
+            <div class="print-column print-column-schedule">${gamesHtml}</div>
             <div class="print-column print-roster-column">
                 <h4>Roster</h4>
                 ${rosterHtml}
@@ -740,12 +742,16 @@ function buildPrintableScheduleHtml(teamCode) {
         `;
     }
 
-    const sponsorsSource = (typeof SPONSORS !== "undefined" ? SPONSORS : [])
-        .filter(sponsor => !filterActive || sponsor.team === teamCode);
-    const sponsorsHtml = sponsorsSource.map(sponsor => {
-        const team = getTeam(sponsor.team);
-        return `<span class="print-sponsor-item"><strong>${team ? team.name : sponsor.team}</strong> — ${sponsor.name}${sponsor.url ? ` (${sponsor.url.replace(/^https?:\/\//, "").replace(/\/$/, "")})` : ""}</span>`;
-    }).join("");
+    // Always a full team-by-team sponsor directory at the bottom, listing
+    // every team in the league and its sponsor -- regardless of whether a
+    // team filter is active, since the ask here is specifically "list all
+    // the teams and their sponsors", not just the filtered team's own.
+    const allSponsors = typeof SPONSORS !== "undefined" ? SPONSORS : [];
+    const sponsorsHtml = TEAMS.map(t => {
+        const sponsor = allSponsors.find(s => s.team === t.code);
+        if (!sponsor) return "";
+        return `<span class="print-sponsor-item"><strong>${t.name}</strong> — ${sponsor.name}${sponsor.url ? ` (${sponsor.url.replace(/^https?:\/\//, "").replace(/\/$/, "")})` : ""}</span>`;
+    }).filter(Boolean).join("");
 
     const team = filterActive ? getTeam(teamCode) : null;
     const subtitle = filterActive
@@ -762,7 +768,7 @@ function buildPrintableScheduleHtml(teamCode) {
         </div>
         ${sponsorsHtml ? `
             <div class="print-sponsors">
-                <h4>Thank you to our sponsor${sponsorsSource.length > 1 ? "s" : ""}</h4>
+                <h4>Teams &amp; Sponsors</h4>
                 <div class="print-sponsors-list">${sponsorsHtml}</div>
             </div>
         ` : ""}
@@ -815,14 +821,12 @@ function setupScheduleFilters() {
             button.classList.add("active");
             currentScheduleFilter = button.dataset.team;
             renderSchedule(currentScheduleFilter);
-            renderScheduleRosterPanel(currentScheduleFilter);
             updateSchedulePrintButtonLabel(currentScheduleFilter);
         });
     });
 
     currentScheduleFilter = initialTeam || "ALL";
     renderSchedule(currentScheduleFilter);
-    renderScheduleRosterPanel(currentScheduleFilter);
     updateSchedulePrintButtonLabel(currentScheduleFilter);
 }
 
@@ -839,45 +843,6 @@ function updateSchedulePrintButtonLabel(teamCode) {
         const team = getTeam(teamCode);
         button.textContent = `🖨️ Print / Export ${team ? team.name : teamCode} Schedule`;
     }
-}
-
-// Shows a roster sidebar (name + jersey number) next to the schedule list
-// whenever a specific team filter is selected -- hidden again for "All
-// Teams" since there's no single roster to show at that point.
-function renderScheduleRosterPanel(teamCode) {
-    const panel = document.getElementById("schedule-roster-panel");
-    if (!panel) return;
-
-    if (!teamCode || teamCode === "ALL") {
-        panel.style.display = "none";
-        return;
-    }
-
-    const team = getTeam(teamCode);
-    const nameEl = document.getElementById("schedule-roster-team-name");
-    if (nameEl) nameEl.textContent = team ? team.name : teamCode;
-
-    const roster = PLAYERS
-        .filter(p => p.team === teamCode)
-        .slice()
-        .sort((a, b) => {
-            if (a.number != null && b.number != null) return a.number - b.number;
-            if (a.number != null) return -1;
-            if (b.number != null) return 1;
-            return a.last.localeCompare(b.last);
-        });
-
-    const list = document.getElementById("schedule-roster-list");
-    if (list) {
-        list.innerHTML = roster.map(p => `
-            <div class="schedule-roster-row">
-                <span>${p.first} ${p.last}${isGoaliePosition(p.position) ? ` <span class="schedule-roster-tag">G</span>` : ""}</span>
-                <span class="schedule-roster-number">${p.number != null ? "#" + p.number : ""}</span>
-            </div>
-        `).join("") || `<p class="schedule-detail-empty">No players listed.</p>`;
-    }
-
-    panel.style.display = "";
 }
 
 
