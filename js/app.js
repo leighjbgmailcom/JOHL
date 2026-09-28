@@ -589,6 +589,91 @@ async function renderLeaders() {
 
 
 /* =========================================
+   GOALIE STATS (leaders.html)
+
+   Goals-against only (no shots-against are tracked, so no save %) --
+   each game's crease is split by period in admin ("Goalies" section of
+   Enter Game Results, or the Live Game screen), and a goalie is charged
+   with every goal scored in a period they're assigned to for their team.
+   ========================================= */
+
+async function renderGoalieStats() {
+    const table = document.getElementById("goalies-table");
+    if (!table) return;
+
+    const [{ data: periods, error: periodsError }, { data: goals, error: goalsError }] = await Promise.all([
+        supabaseClient.from("game_goalie_periods").select("game_id, team_id, period, goalie_id"),
+        supabaseClient.from("game_goals").select("game_id, team_id, period")
+    ]);
+
+    if (periodsError || goalsError) {
+        console.error("Error loading goalie stats:", periodsError || goalsError);
+        table.innerHTML = `<tr><td colspan="7">Unable to load goalie stats right now.</td></tr>`;
+        return;
+    }
+
+    const stats = {};
+
+    (periods || []).forEach(gp => {
+        if (!stats[gp.goalie_id]) {
+            stats[gp.goalie_id] = { goalieId: gp.goalie_id, games: new Set(), periodsPlayed: 0, ga: 0 };
+        }
+        const s = stats[gp.goalie_id];
+        s.games.add(gp.game_id);
+        s.periodsPlayed++;
+
+        // Every goal scored in this same game+period by the OTHER team
+        // (not gp.team_id) went in against this goalie.
+        const against = (goals || []).filter(g =>
+            String(g.game_id) === String(gp.game_id) &&
+            g.period === gp.period &&
+            String(g.team_id) !== String(gp.team_id)
+        );
+        s.ga += against.length;
+    });
+
+    const rows = Object.values(stats)
+        .map(s => {
+            const player = PLAYERS.find(p => String(p.id) === String(s.goalieId));
+            if (!player) return null;
+            const team = TEAMS.find(t => t.code === player.team);
+            const gp = s.games.size;
+            return {
+                player,
+                team,
+                gp,
+                periodsPlayed: s.periodsPlayed,
+                ga: s.ga,
+                gaPerGame: gp ? s.ga / gp : 0
+            };
+        })
+        .filter(row => row !== null);
+
+    rows.sort((a, b) => {
+        if (a.gaPerGame !== b.gaPerGame) return a.gaPerGame - b.gaPerGame;
+        return (a.player.last || "").localeCompare(b.player.last || "");
+    });
+
+    if (!rows.length) {
+        table.innerHTML = `<tr><td colspan="7">No goalie appearances have been recorded yet this season.</td></tr>`;
+        return;
+    }
+
+    table.innerHTML = rows.map(row => `
+        <tr>
+            <td>${row.player.number != null ? "#" + row.player.number : "—"}</td>
+            <td>${row.player.last}, ${row.player.first}</td>
+            <td>${row.team ? row.team.name : ""}</td>
+            <td>${row.gp}</td>
+            <td>${row.periodsPlayed}</td>
+            <td>${row.ga}</td>
+            <td><strong>${row.gaPerGame.toFixed(2)}</strong></td>
+        </tr>
+    `).join("");
+}
+
+
+/* =========================================
    NAV — LOGIN / LOGOUT / ADMIN LINK
    ========================================= */
 
@@ -623,6 +708,7 @@ async function setupAuthNav() {
     }
 
     slot.innerHTML = `
+        ${isAdmin ? `<a href="live.html">Live Game</a>` : ""}
         ${isAdmin ? `<a href="admin.html">Admin</a>` : ""}
         <a href="#" id="nav-logout-link">Logout</a>
     `;
@@ -903,6 +989,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderStandings();
     renderSponsors();
     renderLeaders();
+    renderGoalieStats();
 
     // Live updates: whenever a game is added/edited/deleted (e.g. an admin
     // saving a score from the admin panel), Supabase pushes the change here

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#071a2b">
+    <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
+    <link rel="icon" href="images/icons/icon-192.png">
+    <title>Live Game | Jordan Oldtimers Hockey League</title>
+    <link rel="stylesheet" href="css/style.css?v=5">
+</head>
+
+<body>
+
+<div id="site-header-placeholder"></div>
+
+
+<main class="container page-content" id="live-page-content" style="display:none;">
+
+    <div class="page-title">
+        <p class="eyebrow">TIMEKEEPER</p>
+        <h2>Live Game</h2>
+        <p>Pick tonight's game, then log goals as they happen — the site updates for everyone watching, live.</p>
+    </div>
+
+    <div class="admin-panel" id="live-game-picker-panel">
+        <label for="live-game-select" style="display:block; font-size:12px; font-weight:bold; color:#45525c; margin-bottom:6px;">Select Game</label>
+        <select id="live-game-select" style="width:100%; padding:12px; border:1px solid #ccd3d9; border-radius:4px; font-size:15px;"></select>
+    </div>
+
+    <div id="live-game-panel" style="display:none;">
+
+        <div class="live-scoreboard">
+            <div class="live-scoreboard-team">
+                <div class="live-team-name" id="live-away-name"></div>
+                <div class="live-team-score" id="live-away-score">0</div>
+            </div>
+            <div class="live-scoreboard-mid">
+                <div class="live-status-badge" id="live-status-badge">Scheduled</div>
+                <div class="live-period-tabs" id="live-period-tabs"></div>
+            </div>
+            <div class="live-scoreboard-team">
+                <div class="live-team-name" id="live-home-name"></div>
+                <div class="live-team-score" id="live-home-score">0</div>
+            </div>
+        </div>
+
+        <div class="admin-form-actions" style="margin:16px 0;">
+            <button type="button" class="button" id="live-go-button">Start / Go Live</button>
+            <span id="live-status-message"></span>
+        </div>
+
+        <div class="live-team-panels">
+
+            <div class="live-team-panel">
+                <div class="live-goalie-row">
+                    <span>Goalie</span>
+                    <select id="live-away-goalie"></select>
+                </div>
+                <button type="button" class="button live-goal-button" id="live-away-goal-button">+ Goal</button>
+                <div class="live-recent-goals" id="live-away-goals"></div>
+            </div>
+
+            <div class="live-team-panel">
+                <div class="live-goalie-row">
+                    <span>Goalie</span>
+                    <select id="live-home-goalie"></select>
+                </div>
+                <button type="button" class="button live-goal-button" id="live-home-goal-button">+ Goal</button>
+                <div class="live-recent-goals" id="live-home-goals"></div>
+            </div>
+
+        </div>
+
+        <div class="admin-panel" id="live-finalize-panel">
+            <h3>Finalize Game</h3>
+            <div class="admin-checkbox-field">
+                <input type="checkbox" id="live-went-ot">
+                <label for="live-went-ot">Went to overtime</label>
+            </div>
+            <button type="button" class="button" id="live-finalize-button">Mark Final</button>
+            <span id="live-finalize-message"></span>
+        </div>
+
+    </div>
+
+</main>
+
+
+<!-- Goal entry popup -->
+<div class="install-modal-backdrop" id="live-goal-modal" hidden>
+    <div class="install-modal">
+        <h3 id="live-goal-modal-title">Add Goal</h3>
+
+        <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:12px; font-weight:bold; color:#45525c; margin-bottom:6px;">Scorer</label>
+            <select id="live-goal-scorer" style="width:100%; padding:10px; border:1px solid #ccd3d9; border-radius:4px;"></select>
+        </div>
+
+        <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:12px; font-weight:bold; color:#45525c; margin-bottom:6px;">Assist</label>
+            <select id="live-goal-assist1" style="width:100%; padding:10px; border:1px solid #ccd3d9; border-radius:4px;"></select>
+        </div>
+
+        <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:12px; font-weight:bold; color:#45525c; margin-bottom:6px;">Assist</label>
+            <select id="live-goal-assist2" style="width:100%; padding:10px; border:1px solid #ccd3d9; border-radius:4px;"></select>
+        </div>
+
+        <div class="admin-form-actions">
+            <button type="button" class="button" id="live-goal-save">Save Goal</button>
+            <button type="button" class="link-button" id="live-goal-cancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+
+<footer>
+
+    <div class="container footer-inner">
+
+        <div>
+            <strong>Jordan Oldtimers Hockey League</strong>
+            <p>Six teams. One great league.</p>
+        </div>
+
+        <p>© 2026 JOHL</p>
+
+    </div>
+
+</footer>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js?v=5"></script>
+<script src="js/header.js?v=5"></script>
+<script src="js/install.js?v=5"></script>
+<script src="js/db.js?v=5"></script>
+<script src="js/app.js?v=5"></script>
+<script src="js/auth.js?v=5"></script>
+<script src="js/live.js?v=5"></script>
+
+</body>
+</html>

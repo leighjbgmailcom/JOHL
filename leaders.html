@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#071a2b">
+    <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
+    <link rel="icon" href="images/icons/icon-192.png">
     <title>Leaders | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=4">
+    <link rel="stylesheet" href="css/style.css?v=5">
 </head>
 
 <body>
@@ -45,6 +49,30 @@
         </table>
     </div>
 
+
+    <div class="page-title" style="margin-top: 45px;">
+        <h2>Goalies</h2>
+        <p>Goals against by goalie, based on how each game's crease was split between the two goaltenders.</p>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="standings-table">
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>Goalie</th>
+                    <th>Team</th>
+                    <th>GP</th>
+                    <th>Periods</th>
+                    <th>GA</th>
+                    <th>GA/Game</th>
+                </tr>
+            </thead>
+
+            <tbody id="goalies-table"></tbody>
+        </table>
+    </div>
+
 </main>
 
 
@@ -64,11 +92,12 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=4"></script>
-<script src="js/header.js?v=4"></script>
-<script src="js/db.js?v=4"></script>
-<script src="js/app.js?v=4"></script>
-<script src="js/auth.js?v=4"></script>
+<script src="js/supabase.js?v=5"></script>
+<script src="js/header.js?v=5"></script>
+<script src="js/install.js?v=5"></script>
+<script src="js/db.js?v=5"></script>
+<script src="js/app.js?v=5"></script>
+<script src="js/auth.js?v=5"></script>
 <script>
     checkLogin();
 </script>

@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#071a2b">
+    <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
+    <link rel="icon" href="images/icons/icon-192.png">
     <title>Admin | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=4">
+    <link rel="stylesheet" href="css/style.css?v=5">
 
     <style>
         .admin-panel {
@@ -182,6 +186,28 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .goalie-period-row {
+            display: grid;
+            grid-template-columns: 70px 1fr;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .goalie-period-row label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #45525c;
+        }
+
+        .goalie-period-row select {
+            padding: 7px;
+            border: 1px solid #ccd3d9;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 100%;
+        }
     </style>
 </head>
 
@@ -232,6 +258,26 @@
             <div class="admin-checkbox-field">
                 <input type="checkbox" id="result-went-ot">
                 <label for="result-went-ot">Went to overtime (loser gets an OT loss point)</label>
+            </div>
+
+            <div class="admin-panel" style="background:#f7f8f9; box-shadow:none; padding:16px 18px; margin-bottom:20px;">
+                <h4 style="margin-bottom:4px;">Goalies</h4>
+                <p style="font-size:13px; color:#687681; margin-bottom:14px;">
+                    Who was in net each period, for each team. This drives the goalie stats on the Leaders page --
+                    a goalie is charged with every goal scored against their team in a period they're assigned to.
+                </p>
+
+                <div class="result-team-columns">
+                    <div class="result-team-column">
+                        <h5 id="result-goalie-away-label"></h5>
+                        <div id="result-away-goalies"></div>
+                    </div>
+
+                    <div class="result-team-column">
+                        <h5 id="result-goalie-home-label"></h5>
+                        <div id="result-home-goalies"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="result-team-columns">
@@ -652,12 +698,13 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=4"></script>
-<script src="js/header.js?v=4"></script>
-<script src="js/db.js?v=4"></script>
-<script src="js/app.js?v=4"></script>
-<script src="js/auth.js?v=4"></script>
-<script src="js/admin.js?v=4"></script>
+<script src="js/supabase.js?v=5"></script>
+<script src="js/header.js?v=5"></script>
+<script src="js/install.js?v=5"></script>
+<script src="js/db.js?v=5"></script>
+<script src="js/app.js?v=5"></script>
+<script src="js/auth.js?v=5"></script>
+<script src="js/admin.js?v=5"></script>
 
 </body>
 </html>

@@ -1,0 +1,484 @@
+/* =========================================
+   JORDAN OLDTIMERS HOCKEY LEAGUE
+   LIVE GAME — timekeeper's rink-side entry screen
+
+   Every action here writes straight to Supabase as it happens (no
+   "Save" button for goals), and the games table is subscribed to by
+   every visitor's Home/Schedule/Standings page (see js/db.js's
+   subscribeToGameUpdates), so a goal logged here shows up for anyone
+   watching within a second or two.
+   ========================================= */
+
+const LIVE_PERIODS = ["1", "2", "3", "OT", "SO"];
+
+let LIVE_GAMES = [];
+let currentLiveGame = null;
+let currentLivePeriod = "1";
+let currentLiveGoals = [];
+let currentLiveGoaliePeriods = { away: {}, home: {} }; // period -> goalie_id
+let pendingGoalSide = null; // "away" | "home", while the goal modal is open
+
+
+/* =========================================
+   ACCESS CONTROL (same rule as admin.html)
+   ========================================= */
+
+async function requireLiveAdmin() {
+    const {
+        data: { session }
+    } = await supabaseClient.auth.getSession();
+
+    if (!session) {
+        window.location.href = "index.html?login=1&redirect=live.html";
+        return false;
+    }
+
+    const { data: profile, error } = await supabaseClient
+        .from("profiles")
+        .select("is_admin")
+        .eq("id", session.user.id)
+        .single();
+
+    if (error || !profile || !profile.is_admin) {
+        window.location.href = "index.html";
+        return false;
+    }
+
+    return true;
+}
+
+
+/* =========================================
+   HELPERS
+   ========================================= */
+
+function liveTeamNameById(id) {
+    const team = TEAMS.find(t => String(t.id) === String(id));
+    return team ? team.name : "TBD";
+}
+
+function liveTeamIdForSide(side) {
+    if (!currentLiveGame) return null;
+    return side === "away" ? currentLiveGame.away_team_id : currentLiveGame.home_team_id;
+}
+
+function playersForLiveTeam(teamId) {
+    return PLAYERS.filter(p => {
+        const team = TEAMS.find(t => t.code === p.team);
+        return team && String(team.id) === String(teamId);
+    }).sort((a, b) => {
+        if (a.number != null && b.number != null) return a.number - b.number;
+        if (a.number != null) return -1;
+        if (b.number != null) return 1;
+        return a.last.localeCompare(b.last);
+    });
+}
+
+function goaliesForLiveTeam(teamId) {
+    return playersForLiveTeam(teamId).filter(p => p.position === "G" || p.position === "Goalie");
+}
+
+function playerLabel(p) {
+    return p.number != null ? `#${p.number} ${p.first} ${p.last}` : `${p.first} ${p.last}`;
+}
+
+
+/* =========================================
+   LOAD GAME LIST
+   ========================================= */
+
+async function loadLiveGames() {
+    const { data, error } = await supabaseClient
+        .from("games")
+        .select("id, game_no, game_date, game_time, away_team_id, home_team_id, away_score, home_score, status, went_ot, no_games")
+        .eq("no_games", false)
+        .order("game_date", { ascending: false })
+        .order("game_time", { ascending: false });
+
+    if (error) {
+        console.error("Error loading games:", error);
+        return;
+    }
+
+    LIVE_GAMES = data;
+
+    const select = document.getElementById("live-game-select");
+    select.innerHTML = `<option value="">— Select a game —</option>` +
+        LIVE_GAMES.map(game => {
+            const label = `${game.game_date} ${formatTime12h(game.game_time ? game.game_time.substring(0, 5) : "")} — ` +
+                `${liveTeamNameById(game.away_team_id)} @ ${liveTeamNameById(game.home_team_id)}` +
+                (game.status === "final" ? " (Final)" : game.status === "live" ? " (Live)" : "");
+            return `<option value="${game.id}">${label}</option>`;
+        }).join("");
+}
+
+
+/* =========================================
+   SELECTING A GAME
+   ========================================= */
+
+async function onLiveGameChange() {
+    const gameId = document.getElementById("live-game-select").value;
+    const panel = document.getElementById("live-game-panel");
+
+    if (!gameId) {
+        panel.style.display = "none";
+        currentLiveGame = null;
+        return;
+    }
+
+    currentLiveGame = LIVE_GAMES.find(g => String(g.id) === String(gameId));
+    if (!currentLiveGame) return;
+
+    panel.style.display = "";
+    currentLivePeriod = "1";
+    document.getElementById("live-went-ot").checked = !!currentLiveGame.went_ot;
+    document.getElementById("live-finalize-message").textContent = "";
+    document.getElementById("live-status-message").textContent = "";
+
+    await loadLiveGameDetails();
+    renderLivePeriodTabs();
+    renderLiveScoreboard();
+    renderLiveGoalieSelects();
+    renderLiveGoalsLists();
+}
+
+async function loadLiveGameDetails() {
+    const gameId = currentLiveGame.id;
+
+    const [{ data: goals }, { data: goaliePeriods }] = await Promise.all([
+        supabaseClient.from("game_goals").select("*").eq("game_id", gameId),
+        supabaseClient.from("game_goalie_periods").select("*").eq("game_id", gameId)
+    ]);
+
+    currentLiveGoals = goals || [];
+
+    currentLiveGoaliePeriods = { away: {}, home: {} };
+    (goaliePeriods || []).forEach(row => {
+        const side = String(row.team_id) === String(currentLiveGame.away_team_id) ? "away" : "home";
+        currentLiveGoaliePeriods[side][row.period] = row.goalie_id;
+    });
+}
+
+
+/* =========================================
+   RENDERING
+   ========================================= */
+
+function renderLivePeriodTabs() {
+    const container = document.getElementById("live-period-tabs");
+    container.innerHTML = LIVE_PERIODS.map(period => `
+        <button type="button" class="live-period-tab ${period === currentLivePeriod ? "active" : ""}" data-period="${period}">${period}</button>
+    `).join("");
+
+    container.querySelectorAll(".live-period-tab").forEach(btn => {
+        btn.addEventListener("click", () => {
+            currentLivePeriod = btn.dataset.period;
+            renderLivePeriodTabs();
+            renderLiveGoalieSelects();
+        });
+    });
+}
+
+function renderLiveScoreboard() {
+    document.getElementById("live-away-name").textContent = liveTeamNameById(currentLiveGame.away_team_id);
+    document.getElementById("live-home-name").textContent = liveTeamNameById(currentLiveGame.home_team_id);
+
+    const awayGoals = currentLiveGoals.filter(g => String(g.team_id) === String(currentLiveGame.away_team_id)).length;
+    const homeGoals = currentLiveGoals.filter(g => String(g.team_id) === String(currentLiveGame.home_team_id)).length;
+
+    document.getElementById("live-away-score").textContent = awayGoals;
+    document.getElementById("live-home-score").textContent = homeGoals;
+
+    const badge = document.getElementById("live-status-badge");
+    badge.classList.remove("is-live", "is-final");
+
+    if (currentLiveGame.status === "live") {
+        badge.textContent = "Live";
+        badge.classList.add("is-live");
+    } else if (currentLiveGame.status === "final") {
+        badge.textContent = "Final";
+        badge.classList.add("is-final");
+    } else {
+        badge.textContent = "Scheduled";
+    }
+
+    document.getElementById("live-go-button").textContent =
+        currentLiveGame.status === "scheduled" ? "Start / Go Live" : "Already Live";
+    document.getElementById("live-go-button").disabled = currentLiveGame.status !== "scheduled";
+}
+
+// Finds the goalie assigned to a period, falling back to whatever the most
+// recent earlier period had (so a goalie "carries forward" across periods
+// until someone actually changes them, instead of resetting to blank).
+function goalieForPeriod(side, period) {
+    if (currentLiveGoaliePeriods[side][period]) return currentLiveGoaliePeriods[side][period];
+
+    const index = LIVE_PERIODS.indexOf(period);
+    for (let i = index - 1; i >= 0; i--) {
+        const earlier = LIVE_PERIODS[i];
+        if (currentLiveGoaliePeriods[side][earlier]) return currentLiveGoaliePeriods[side][earlier];
+    }
+    return "";
+}
+
+function renderLiveGoalieSelects() {
+    ["away", "home"].forEach(side => {
+        const teamId = liveTeamIdForSide(side);
+        const select = document.getElementById(`live-${side}-goalie`);
+        const goalies = goaliesForLiveTeam(teamId);
+        const selected = goalieForPeriod(side, currentLivePeriod);
+
+        select.innerHTML = `<option value="">— No goalie assigned —</option>` +
+            goalies.map(p => `<option value="${p.id}" ${String(p.id) === String(selected) ? "selected" : ""}>${playerLabel(p)}</option>`).join("");
+    });
+}
+
+function renderLiveGoalsLists() {
+    ["away", "home"].forEach(side => {
+        const teamId = liveTeamIdForSide(side);
+        const container = document.getElementById(`live-${side}-goals`);
+
+        const goals = currentLiveGoals
+            .filter(g => String(g.team_id) === String(teamId))
+            .slice()
+            .reverse();
+
+        if (goals.length === 0) {
+            container.innerHTML = `<p style="color:#97a3ac;">No goals yet.</p>`;
+            return;
+        }
+
+        container.innerHTML = goals.map(goal => {
+            const scorer = PLAYERS.find(p => String(p.id) === String(goal.scorer_id));
+            const label = scorer ? `${scorer.first} ${scorer.last}` : "Unknown";
+            return `
+                <div class="live-goal-item">
+                    <span>P${goal.period} — ${label}</span>
+                    <button type="button" class="link-button danger" onclick="deleteLiveGoal(${goal.id})">✕</button>
+                </div>
+            `;
+        }).join("");
+    });
+}
+
+
+/* =========================================
+   GOAL ENTRY
+   ========================================= */
+
+function openLiveGoalModal(side) {
+    pendingGoalSide = side;
+    const teamId = liveTeamIdForSide(side);
+    const players = playersForLiveTeam(teamId);
+
+    document.getElementById("live-goal-modal-title").textContent =
+        `${liveTeamNameById(teamId)} Goal — Period ${currentLivePeriod}`;
+
+    const optionsHtml = `<option value="">—</option>` +
+        players.map(p => `<option value="${p.id}">${playerLabel(p)}</option>`).join("");
+
+    document.getElementById("live-goal-scorer").innerHTML = optionsHtml;
+    document.getElementById("live-goal-assist1").innerHTML = optionsHtml;
+    document.getElementById("live-goal-assist2").innerHTML = optionsHtml;
+
+    document.getElementById("live-goal-modal").hidden = false;
+}
+
+function closeLiveGoalModal() {
+    document.getElementById("live-goal-modal").hidden = true;
+    pendingGoalSide = null;
+}
+
+async function saveLiveGoal() {
+    const scorerId = document.getElementById("live-goal-scorer").value;
+    if (!scorerId) {
+        alert("Pick who scored.");
+        return;
+    }
+
+    const teamId = liveTeamIdForSide(pendingGoalSide);
+    const assist1Id = document.getElementById("live-goal-assist1").value || null;
+    const assist2Id = document.getElementById("live-goal-assist2").value || null;
+
+    const { error } = await supabaseClient.from("game_goals").insert({
+        game_id: currentLiveGame.id,
+        team_id: teamId,
+        scorer_id: scorerId,
+        assist1_id: assist1Id,
+        assist2_id: assist2Id,
+        period: currentLivePeriod,
+        game_time: null
+    });
+
+    if (error) {
+        console.error(error);
+        alert("There was a problem saving that goal.");
+        return;
+    }
+
+    closeLiveGoalModal();
+    await refreshLiveScoreAndStatus();
+}
+
+async function deleteLiveGoal(goalId) {
+    if (!confirm("Remove this goal?")) return;
+
+    const { error } = await supabaseClient.from("game_goals").delete().eq("id", goalId);
+
+    if (error) {
+        console.error(error);
+        alert("There was a problem removing that goal.");
+        return;
+    }
+
+    await refreshLiveScoreAndStatus();
+}
+
+// After any goal is added/removed: reload goals, recompute the score from
+// them (so the score can never drift from the actual goal log), write the
+// new score back to the games row, and mark the game "live" the first time
+// this happens if it's still sitting as "scheduled".
+async function refreshLiveScoreAndStatus() {
+    await loadLiveGameDetails();
+
+    const awayScore = currentLiveGoals.filter(g => String(g.team_id) === String(currentLiveGame.away_team_id)).length;
+    const homeScore = currentLiveGoals.filter(g => String(g.team_id) === String(currentLiveGame.home_team_id)).length;
+
+    const updates = { away_score: awayScore, home_score: homeScore };
+    if (currentLiveGame.status === "scheduled") {
+        updates.status = "live";
+    }
+
+    const { error } = await supabaseClient.from("games").update(updates).eq("id", currentLiveGame.id);
+
+    if (error) {
+        console.error(error);
+    } else {
+        Object.assign(currentLiveGame, updates);
+    }
+
+    renderLiveScoreboard();
+    renderLiveGoalsLists();
+}
+
+
+/* =========================================
+   GOALIE ASSIGNMENT
+   ========================================= */
+
+async function onLiveGoalieChange(side) {
+    const select = document.getElementById(`live-${side}-goalie`);
+    const goalieId = select.value;
+    const teamId = liveTeamIdForSide(side);
+
+    if (goalieId) {
+        const { error } = await supabaseClient
+            .from("game_goalie_periods")
+            .upsert(
+                { game_id: currentLiveGame.id, team_id: teamId, period: currentLivePeriod, goalie_id: goalieId },
+                { onConflict: "game_id,team_id,period" }
+            );
+        if (error) console.error(error);
+        else currentLiveGoaliePeriods[side][currentLivePeriod] = goalieId;
+    } else {
+        const { error } = await supabaseClient
+            .from("game_goalie_periods")
+            .delete()
+            .eq("game_id", currentLiveGame.id)
+            .eq("team_id", teamId)
+            .eq("period", currentLivePeriod);
+        if (error) console.error(error);
+        else delete currentLiveGoaliePeriods[side][currentLivePeriod];
+    }
+}
+
+
+/* =========================================
+   GAME STATUS
+   ========================================= */
+
+async function startLiveGame() {
+    const { error } = await supabaseClient
+        .from("games")
+        .update({ status: "live" })
+        .eq("id", currentLiveGame.id);
+
+    if (error) {
+        console.error(error);
+        document.getElementById("live-status-message").textContent = "There was a problem going live.";
+        return;
+    }
+
+    currentLiveGame.status = "live";
+    renderLiveScoreboard();
+}
+
+async function finalizeLiveGame() {
+    const wentOT = document.getElementById("live-went-ot").checked;
+    const message = document.getElementById("live-finalize-message");
+
+    if (!confirm("Mark this game as Final? You can still fix goals afterward from here or the admin Game Results tab.")) return;
+
+    message.textContent = "Saving...";
+
+    const { error } = await supabaseClient
+        .from("games")
+        .update({ status: "final", went_ot: wentOT })
+        .eq("id", currentLiveGame.id);
+
+    if (error) {
+        console.error(error);
+        message.textContent = "There was a problem finalizing this game.";
+        return;
+    }
+
+    currentLiveGame.status = "final";
+    currentLiveGame.went_ot = wentOT;
+    message.textContent = "Game finalized.";
+    renderLiveScoreboard();
+    await loadLiveGames();
+    document.getElementById("live-game-select").value = currentLiveGame.id;
+}
+
+
+/* =========================================
+   INIT
+   ========================================= */
+
+async function initLivePage() {
+    const ok = await requireLiveAdmin();
+    if (!ok) return;
+
+    document.getElementById("live-page-content").style.display = "";
+
+    const loaded = await loadLeagueData();
+    if (!loaded) {
+        console.error("Could not load JOHL data from Supabase.");
+        return;
+    }
+
+    await loadLiveGames();
+
+    document.getElementById("live-game-select").addEventListener("change", onLiveGameChange);
+    document.getElementById("live-go-button").addEventListener("click", startLiveGame);
+    document.getElementById("live-finalize-button").addEventListener("click", finalizeLiveGame);
+
+    document.getElementById("live-away-goal-button").addEventListener("click", () => openLiveGoalModal("away"));
+    document.getElementById("live-home-goal-button").addEventListener("click", () => openLiveGoalModal("home"));
+    document.getElementById("live-goal-save").addEventListener("click", saveLiveGoal);
+    document.getElementById("live-goal-cancel").addEventListener("click", closeLiveGoalModal);
+    document.getElementById("live-goal-modal").addEventListener("click", (event) => {
+        if (event.target.id === "live-goal-modal") closeLiveGoalModal();
+    });
+
+    document.getElementById("live-away-goalie").addEventListener("change", () => onLiveGoalieChange("away"));
+    document.getElementById("live-home-goalie").addEventListener("change", () => onLiveGoalieChange("home"));
+}
+
+// Note: js/app.js's own DOMContentLoaded listener already runs
+// setupMobileNav()/loadLeagueData() for this page via js/header.js
+// (its other render calls are no-ops here since their elements don't exist).
+document.addEventListener("DOMContentLoaded", () => {
+    initLivePage();
+});
