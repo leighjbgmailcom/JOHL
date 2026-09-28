@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
     <link rel="icon" href="images/icons/icon-192.png">
     <title>Admin | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=8">
+    <link rel="stylesheet" href="css/style.css?v=9">
 
     <style>
         .admin-panel {
@@ -190,6 +190,28 @@
         .goalie-row {
             grid-template-columns: 1fr 70px 70px auto;
         }
+
+        .attendance-checklist {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        .attendance-row {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            font-size: 13px;
+        }
+
+        .attendance-row input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 
@@ -262,6 +284,26 @@
                         <h5 id="result-goalie-home-label"></h5>
                         <div id="result-home-goalies"></div>
                         <button type="button" class="link-button" onclick="addGoalieRow('home')">+ Add Goalie</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-panel" style="background:#f7f8f9; box-shadow:none; padding:16px 18px; margin-bottom:20px;">
+                <h4 style="margin-bottom:4px;">On Ice</h4>
+                <p style="font-size:13px; color:#687681; margin-bottom:14px;">
+                    Check off everyone who stepped on the ice for this game -- same as the checkmarks
+                    on the paper game sheet. Shown on the public schedule once the game's saved.
+                </p>
+
+                <div class="result-team-columns">
+                    <div class="result-team-column">
+                        <h5 id="result-attendance-away-label"></h5>
+                        <div id="result-away-attendance" class="attendance-checklist"></div>
+                    </div>
+
+                    <div class="result-team-column">
+                        <h5 id="result-attendance-home-label"></h5>
+                        <div id="result-home-attendance" class="attendance-checklist"></div>
                     </div>
                 </div>
             </div>
@@ -684,13 +726,13 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=8"></script>
-<script src="js/header.js?v=8"></script>
-<script src="js/install.js?v=8"></script>
-<script src="js/db.js?v=8"></script>
-<script src="js/app.js?v=8"></script>
-<script src="js/auth.js?v=8"></script>
-<script src="js/admin.js?v=8"></script>
+<script src="js/supabase.js?v=9"></script>
+<script src="js/header.js?v=9"></script>
+<script src="js/install.js?v=9"></script>
+<script src="js/db.js?v=9"></script>
+<script src="js/app.js?v=9"></script>
+<script src="js/auth.js?v=9"></script>
+<script src="js/admin.js?v=9"></script>
 
 </body>
 </html>

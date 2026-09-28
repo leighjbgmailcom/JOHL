@@ -410,38 +410,229 @@ function renderSchedule(filter = "ALL") {
                     }
 
                     return `
-                        <div class="schedule-game ${isTbd ? "is-tbd" : ""} ${isLive ? "is-live" : ""}">
+                        <div class="schedule-game-wrapper" id="schedule-wrapper-${game.id}">
+                            <div class="schedule-game ${isTbd ? "is-tbd" : ""} ${isLive ? "is-live" : ""} ${isFinal ? "is-clickable" : ""}"
+                                ${isFinal ? `onclick="toggleScheduleGameDetail(${game.id})"` : ""}>
 
-                            <div class="schedule-time">
-                                ${formatTime12h(game.time)}
-                            </div>
-
-                            <div>
-                                <div class="schedule-matchup">
-                                    <div class="schedule-team">
-                                        ${teamBadge(game.away)}
-                                        <span>${teamName(game.away)}</span>
-                                    </div>
-                                    <span class="at-symbol">vs.</span>
-                                    <div class="schedule-team">
-                                        ${teamBadge(game.home)}
-                                        <span>${teamName(game.home)}</span>
-                                    </div>
-                                    ${game.note ? `<span class="note-tag">${game.note}</span>` : ""}
+                                <div class="schedule-time">
+                                    ${formatTime12h(game.time)}
                                 </div>
-                                ${game.location && game.location !== "Jordan Arena" ? `<div class="schedule-location">${game.location}</div>` : ""}
-                            </div>
 
-                            <div class="schedule-score">
-                                ${scoreHtml}
-                            </div>
+                                <div>
+                                    <div class="schedule-matchup">
+                                        <div class="schedule-team">
+                                            ${teamBadge(game.away)}
+                                            <span>${teamName(game.away)}</span>
+                                        </div>
+                                        <span class="at-symbol">vs.</span>
+                                        <div class="schedule-team">
+                                            ${teamBadge(game.home)}
+                                            <span>${teamName(game.home)}</span>
+                                        </div>
+                                        ${game.note ? `<span class="note-tag">${game.note}</span>` : ""}
+                                    </div>
+                                    ${game.location && game.location !== "Jordan Arena" ? `<div class="schedule-location">${game.location}</div>` : ""}
+                                    ${isFinal ? `<div class="schedule-expand-chevron">Tap for game details ▾</div>` : ""}
+                                </div>
 
+                                <div class="schedule-score">
+                                    ${scoreHtml}
+                                </div>
+
+                            </div>
+                            ${isFinal ? `<div class="schedule-game-detail" id="schedule-detail-${game.id}"></div>` : ""}
                         </div>
                     `;
                 }).join("")}
             </div>
         `;
     }).join("");
+}
+
+/* =========================================
+   SCHEDULE — PAST GAME DETAIL (goals, goalie in net, attendance)
+   ========================================= */
+
+// Cache of per-game detail (goals + goalie stints + attendance), so
+// re-opening an already-expanded game doesn't re-fetch it.
+const SCHEDULE_DETAIL_CACHE = {};
+
+// Toggles a final game's inline detail panel open/closed. Fetches the
+// game's goals, goalie stints and attendance from Supabase the first time
+// it's opened, then reuses the cached result on subsequent clicks.
+async function toggleScheduleGameDetail(gameId) {
+    const wrapper = document.getElementById(`schedule-wrapper-${gameId}`);
+    const panel = document.getElementById(`schedule-detail-${gameId}`);
+    if (!wrapper || !panel) return;
+
+    const isOpen = wrapper.classList.contains("open");
+    if (isOpen) {
+        wrapper.classList.remove("open");
+        return;
+    }
+
+    wrapper.classList.add("open");
+
+    if (SCHEDULE_DETAIL_CACHE[gameId]) {
+        panel.innerHTML = SCHEDULE_DETAIL_CACHE[gameId];
+        return;
+    }
+
+    panel.innerHTML = `<p class="schedule-detail-loading">Loading game details…</p>`;
+
+    const game = SCHEDULE.find(g => String(g.id) === String(gameId));
+    if (!game) return;
+
+    const [{ data: goals, error: goalsError }, { data: periods, error: periodsError }, { data: attendance, error: attendanceError }] = await Promise.all([
+        supabaseClient.from("game_goals").select("*").eq("game_id", gameId),
+        supabaseClient.from("game_goalie_periods").select("*").eq("game_id", gameId),
+        supabaseClient.from("game_attendance").select("*").eq("game_id", gameId)
+    ]);
+
+    if (goalsError || periodsError || attendanceError) {
+        console.error("Error loading game detail:", goalsError || periodsError || attendanceError);
+        panel.innerHTML = `<p class="schedule-detail-empty">Couldn't load game details right now.</p>`;
+        return;
+    }
+
+    const html = renderScheduleGameDetail(game, goals || [], periods || [], attendance || []);
+    SCHEDULE_DETAIL_CACHE[gameId] = html;
+    panel.innerHTML = html;
+}
+
+// Builds per-team, per-period goalie "stint lists" for a single game
+// (same rule as computeGoalieStats' season-wide version), so each goal can
+// be matched up against whichever stint was in net when it was scored.
+function buildScheduleGoalieStints(periods) {
+    const byTeamPeriod = {};
+    periods.forEach(gp => {
+        if (!byTeamPeriod[gp.team_id]) byTeamPeriod[gp.team_id] = {};
+        if (!byTeamPeriod[gp.team_id][gp.period]) byTeamPeriod[gp.team_id][gp.period] = [];
+        byTeamPeriod[gp.team_id][gp.period].push({ goalieId: gp.goalie_id, seconds: parseClockToSeconds(gp.time_in) });
+    });
+
+    Object.values(byTeamPeriod).forEach(periodMap => {
+        Object.values(periodMap).forEach(stints => {
+            stints.sort((a, b) => {
+                if (a.seconds == null && b.seconds == null) return 0;
+                if (a.seconds == null) return -1;
+                if (b.seconds == null) return 1;
+                return b.seconds - a.seconds;
+            });
+        });
+    });
+
+    return byTeamPeriod;
+}
+
+// A period with no goalie entered explicitly carries forward whoever
+// finished the most recent earlier period for that team (same carry-
+// forward rule used everywhere else goalie stints are attributed).
+function scheduleStintsForTeamPeriod(byTeamPeriod, teamId, period) {
+    const periodMap = byTeamPeriod[teamId];
+    if (!periodMap) return [];
+    if (periodMap[period] && periodMap[period].length) return periodMap[period];
+
+    const index = GOALIE_STATS_PERIOD_ORDER.indexOf(period);
+    for (let i = index - 1; i >= 0; i--) {
+        const earlier = GOALIE_STATS_PERIOD_ORDER[i];
+        if (periodMap[earlier] && periodMap[earlier].length) {
+            const mostRecent = periodMap[earlier][periodMap[earlier].length - 1];
+            return [{ goalieId: mostRecent.goalieId, seconds: null }];
+        }
+    }
+    return [];
+}
+
+function schedulePlayerLabel(playerId) {
+    const player = PLAYERS.find(p => String(p.id) === String(playerId));
+    if (!player) return "Unknown";
+    return player.number != null ? `#${player.number} ${player.first} ${player.last}` : `${player.first} ${player.last}`;
+}
+
+function renderScheduleGameDetail(game, goals, periods, attendance) {
+    const awayTeam = getTeam(game.away);
+    const homeTeam = getTeam(game.home);
+    const awayTeamId = awayTeam ? awayTeam.id : null;
+    const homeTeamId = homeTeam ? homeTeam.id : null;
+
+    const byTeamPeriod = buildScheduleGoalieStints(periods);
+
+    const sortedGoals = goals.slice().sort((a, b) => {
+        const periodDiff = GOALIE_STATS_PERIOD_ORDER.indexOf(a.period) - GOALIE_STATS_PERIOD_ORDER.indexOf(b.period);
+        if (periodDiff !== 0) return periodDiff;
+        const aSeconds = parseClockToSeconds(a.game_time);
+        const bSeconds = parseClockToSeconds(b.game_time);
+        if (aSeconds == null && bSeconds == null) return 0;
+        if (aSeconds == null) return 1;
+        if (bSeconds == null) return -1;
+        return bSeconds - aSeconds;
+    });
+
+    const goalsHtml = sortedGoals.length === 0
+        ? `<p class="schedule-detail-empty">No goals recorded for this game.</p>`
+        : sortedGoals.map(goal => {
+            const scoringTeamId = goal.team_id;
+            const opponentTeamId = String(scoringTeamId) === String(awayTeamId) ? homeTeamId : awayTeamId;
+            const goalSeconds = parseClockToSeconds(goal.game_time);
+
+            const stints = scheduleStintsForTeamPeriod(byTeamPeriod, opponentTeamId, goal.period);
+            const stint = attributeGoalieStint(stints, goalSeconds);
+            const goalieLabel = stint ? schedulePlayerLabel(stint.goalieId) : "Unknown";
+
+            const scorerLabel = schedulePlayerLabel(goal.scorer_id);
+            const assistLabels = [goal.assist1_id, goal.assist2_id]
+                .filter(id => id != null)
+                .map(id => schedulePlayerLabel(id));
+
+            const scoringTeamCode = String(scoringTeamId) === String(awayTeamId) ? game.away : game.home;
+
+            return `
+                <div class="schedule-goal-row">
+                    <span class="schedule-goal-time">P${goal.period} ${goal.game_time || ""}</span>
+                    <span class="schedule-goal-team">${teamName(scoringTeamCode)}</span>
+                    <span>${scorerLabel}</span>
+                    ${assistLabels.length ? `<span class="schedule-goal-assist">(assist: ${assistLabels.join(", ")})</span>` : ""}
+                    <span class="schedule-goal-net">In net: ${goalieLabel}</span>
+                </div>
+            `;
+        }).join("");
+
+    const attendanceByTeam = { away: [], home: [] };
+    attendance.forEach(row => {
+        const side = String(row.team_id) === String(awayTeamId) ? "away" : "home";
+        attendanceByTeam[side].push(schedulePlayerLabel(row.player_id));
+    });
+
+    const attendanceHtml = attendance.length === 0
+        ? `<p class="schedule-detail-empty">Attendance wasn't recorded for this game.</p>`
+        : `
+            <div class="result-team-columns">
+                <div class="result-team-column">
+                    <h5>${teamName(game.away)}</h5>
+                    ${attendanceByTeam.away.length
+                        ? attendanceByTeam.away.sort().map(label => `<div class="attendance-row"><span>✓ ${label}</span></div>`).join("")
+                        : `<p class="schedule-detail-empty">None recorded.</p>`}
+                </div>
+                <div class="result-team-column">
+                    <h5>${teamName(game.home)}</h5>
+                    ${attendanceByTeam.home.length
+                        ? attendanceByTeam.home.sort().map(label => `<div class="attendance-row"><span>✓ ${label}</span></div>`).join("")
+                        : `<p class="schedule-detail-empty">None recorded.</p>`}
+                </div>
+            </div>
+        `;
+
+    return `
+        <div class="schedule-detail-section">
+            <h5>Goals</h5>
+            ${goalsHtml}
+        </div>
+        <div class="schedule-detail-section">
+            <h5>On Ice</h5>
+            ${attendanceHtml}
+        </div>
+    `;
 }
 
 // Tracks whichever team filter is currently selected on schedule.html so a

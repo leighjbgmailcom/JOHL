@@ -16,6 +16,7 @@ let resultGoalRows = { away: [], home: [] };
 let resultPenaltyRows = { away: [], home: [] };
 let resultRowSeq = 0;
 let resultGoalieRows = { away: [], home: [] }; // flat list of { key, id, goalie_id, period, game_time }
+let resultAttendance = { away: new Set(), home: new Set() }; // player ids who were on the ice
 
 
 /* =========================================
@@ -918,18 +919,27 @@ async function onResultGameChange() {
     document.getElementById("result-home-team-name").textContent = teamNameById(game.home_team_id);
     document.getElementById("result-goalie-away-label").textContent = teamNameById(game.away_team_id);
     document.getElementById("result-goalie-home-label").textContent = teamNameById(game.home_team_id);
+    document.getElementById("result-attendance-away-label").textContent = teamNameById(game.away_team_id);
+    document.getElementById("result-attendance-home-label").textContent = teamNameById(game.home_team_id);
     document.getElementById("result-is-final").checked = game.status === "final";
     document.getElementById("result-went-ot").checked = !!game.went_ot;
 
     resultGoalRows = { away: [], home: [] };
     resultPenaltyRows = { away: [], home: [] };
     resultGoalieRows = { away: [], home: [] };
+    resultAttendance = { away: new Set(), home: new Set() };
 
-    const [{ data: goals }, { data: penalties }, { data: goaliePeriods }] = await Promise.all([
+    const [{ data: goals }, { data: penalties }, { data: goaliePeriods }, { data: attendance }] = await Promise.all([
         supabaseClient.from("game_goals").select("*").eq("game_id", gameId),
         supabaseClient.from("game_penalties").select("*").eq("game_id", gameId),
-        supabaseClient.from("game_goalie_periods").select("*").eq("game_id", gameId)
+        supabaseClient.from("game_goalie_periods").select("*").eq("game_id", gameId),
+        supabaseClient.from("game_attendance").select("*").eq("game_id", gameId)
     ]);
+
+    (attendance || []).forEach(row => {
+        const side = String(row.team_id) === String(game.away_team_id) ? "away" : "home";
+        resultAttendance[side].add(String(row.player_id));
+    });
 
     (goaliePeriods || []).forEach(row => {
         const side = String(row.team_id) === String(game.away_team_id) ? "away" : "home";
@@ -970,6 +980,38 @@ async function onResultGameChange() {
 
     renderResultRows();
     renderResultGoalieRows();
+    renderResultAttendance();
+}
+
+// A checkbox per roster player (skaters and goalies both), same as the
+// checkmarks next to each name on the paper game sheet.
+function renderResultAttendance() {
+    ["away", "home"].forEach(side => {
+        const teamId = currentResultTeamId(side);
+        const container = document.getElementById(`result-${side}-attendance`);
+        if (!container) return;
+
+        const roster = [...playersForTeam(teamId)].sort((a, b) => {
+            if (a.number != null && b.number != null) return a.number - b.number;
+            if (a.number != null) return -1;
+            if (b.number != null) return 1;
+            return a.last.localeCompare(b.last);
+        });
+
+        container.innerHTML = roster.map(p => `
+            <label class="attendance-row">
+                <input type="checkbox"
+                    ${resultAttendance[side].has(String(p.id)) ? "checked" : ""}
+                    onchange="toggleResultAttendance('${side}', '${p.id}', this.checked)">
+                <span>${p.number != null ? "#" + p.number + " " : ""}${p.first} ${p.last}</span>
+            </label>
+        `).join("") || `<p style="color:#97a3ac; font-size:13px;">No players on this roster yet.</p>`;
+    });
+}
+
+function toggleResultAttendance(side, playerId, checked) {
+    if (checked) resultAttendance[side].add(String(playerId));
+    else resultAttendance[side].delete(String(playerId));
 }
 
 // A flat list of goalie stints per team, same pattern as the goals/
@@ -1088,11 +1130,12 @@ async function saveGameResults() {
     const isFinal = document.getElementById("result-is-final").checked;
     const wentOT = document.getElementById("result-went-ot").checked;
 
-    // Delete existing goals/penalties/goalie assignments for this game, then
-    // re-insert current rows.
+    // Delete existing goals/penalties/goalie assignments/attendance for
+    // this game, then re-insert current rows.
     await supabaseClient.from("game_goals").delete().eq("game_id", gameId);
     await supabaseClient.from("game_penalties").delete().eq("game_id", gameId);
     await supabaseClient.from("game_goalie_periods").delete().eq("game_id", gameId);
+    await supabaseClient.from("game_attendance").delete().eq("game_id", gameId);
 
     const goalRows = [];
     ["away", "home"].forEach(side => {
@@ -1137,6 +1180,14 @@ async function saveGameResults() {
         });
     });
 
+    const attendanceRows = [];
+    ["away", "home"].forEach(side => {
+        const teamId = currentResultTeamId(side);
+        resultAttendance[side].forEach(playerId => {
+            attendanceRows.push({ game_id: gameId, team_id: teamId, player_id: playerId });
+        });
+    });
+
     let error;
 
     if (goalRows.length > 0) {
@@ -1151,6 +1202,11 @@ async function saveGameResults() {
 
     if (!error && goaliePeriodRows.length > 0) {
         ({ error } = await supabaseClient.from("game_goalie_periods").insert(goaliePeriodRows));
+        if (error) console.error(error);
+    }
+
+    if (!error && attendanceRows.length > 0) {
+        ({ error } = await supabaseClient.from("game_attendance").insert(attendanceRows));
         if (error) console.error(error);
     }
 

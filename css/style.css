@@ -816,6 +816,103 @@ tbody tr:hover {
     margin-bottom: 6px;
 }
 
+.schedule-game.is-clickable {
+    cursor: pointer;
+    transition: box-shadow .15s ease;
+}
+
+.schedule-game.is-clickable:hover {
+    box-shadow: 0 2px 10px rgba(0,0,0,.12);
+}
+
+.schedule-expand-chevron {
+    text-align: right;
+    color: #97a3ac;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.schedule-game-detail {
+    display: none;
+    background: white;
+    margin: -8px 0 8px;
+    padding: 18px 22px 20px;
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    border-top: 1px solid #eceff1;
+}
+
+.schedule-game-wrapper.open .schedule-game-detail {
+    display: block;
+}
+
+.schedule-game-wrapper.open .schedule-game {
+    border-radius: 6px 6px 0 0;
+    margin-bottom: 0;
+    box-shadow: none;
+}
+
+.schedule-detail-section {
+    margin-bottom: 16px;
+}
+
+.schedule-detail-section:last-child {
+    margin-bottom: 0;
+}
+
+.schedule-detail-section h5 {
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #687681;
+    margin-bottom: 8px;
+}
+
+.schedule-goal-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f2f4f5;
+    font-size: 14px;
+}
+
+.schedule-goal-row:last-child {
+    border-bottom: none;
+}
+
+.schedule-goal-time {
+    color: #97a3ac;
+    font-size: 12px;
+    font-weight: bold;
+    white-space: nowrap;
+    width: 70px;
+    flex-shrink: 0;
+}
+
+.schedule-goal-team {
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.schedule-goal-assist {
+    color: #687681;
+}
+
+.schedule-goal-net {
+    color: #97a3ac;
+    font-size: 12px;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.schedule-detail-loading,
+.schedule-detail-empty {
+    color: #97a3ac;
+    font-size: 13px;
+}
+
 
 /* =========================================
    PLAYERS
@@ -1336,6 +1433,59 @@ a.sponsor-card:hover {
     color: #97a3ac;
     text-transform: uppercase;
     letter-spacing: .04em;
+}
+
+
+/* =========================================
+   RESULT/ATTENDANCE TEAM COLUMNS
+   (shared by admin.html's Enter Game Results tab and live.html)
+   ========================================= */
+
+.result-team-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 20px;
+}
+
+.result-team-column h4 {
+    margin-bottom: 12px;
+}
+
+.result-team-column h5 {
+    font-size: 12px;
+    letter-spacing: .5px;
+    color: #75818b;
+    margin: 14px 0 8px;
+    text-transform: uppercase;
+}
+
+@media (max-width: 800px) {
+    .result-team-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+.attendance-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.attendance-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 13px;
+}
+
+.attendance-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
 }
 
 

@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
     <link rel="icon" href="images/icons/icon-192.png">
     <title>Live Game | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=8">
+    <link rel="stylesheet" href="css/style.css?v=9">
 </head>
 
 <body>
@@ -75,6 +75,23 @@
                 <div class="live-recent-goals" id="live-home-penalties"></div>
             </div>
 
+        </div>
+
+        <div class="admin-panel" id="live-attendance-panel">
+            <h3>On Ice</h3>
+            <p style="font-size:13px; color:#687681; margin-bottom:14px;">
+                Check off everyone who stepped on the ice tonight -- same as the game sheet.
+            </p>
+            <div class="result-team-columns">
+                <div class="result-team-column">
+                    <h5 id="live-attendance-away-label"></h5>
+                    <div id="live-away-attendance" class="attendance-checklist"></div>
+                </div>
+                <div class="result-team-column">
+                    <h5 id="live-attendance-home-label"></h5>
+                    <div id="live-home-attendance" class="attendance-checklist"></div>
+                </div>
+            </div>
         </div>
 
         <div class="admin-panel" id="live-finalize-panel">
@@ -175,13 +192,13 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=8"></script>
-<script src="js/header.js?v=8"></script>
-<script src="js/install.js?v=8"></script>
-<script src="js/db.js?v=8"></script>
-<script src="js/app.js?v=8"></script>
-<script src="js/auth.js?v=8"></script>
-<script src="js/live.js?v=8"></script>
+<script src="js/supabase.js?v=9"></script>
+<script src="js/header.js?v=9"></script>
+<script src="js/install.js?v=9"></script>
+<script src="js/db.js?v=9"></script>
+<script src="js/app.js?v=9"></script>
+<script src="js/auth.js?v=9"></script>
+<script src="js/live.js?v=9"></script>
 
 </body>
 </html>

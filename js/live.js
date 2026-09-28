@@ -17,6 +17,7 @@ let currentLivePeriod = "1";
 let currentLiveGoals = [];
 let currentLivePenalties = [];
 let currentLiveGoalieStints = { away: {}, home: {} }; // period -> [{ id, goalieId, timeIn }, ...]
+let currentLiveAttendance = { away: new Set(), home: new Set() }; // player ids on the ice
 let pendingGoalSide = null; // "away" | "home", while the goal modal is open
 let pendingPenaltySide = null; // "away" | "home", while the penalty modal is open
 
@@ -154,15 +155,17 @@ async function onLiveGameChange() {
     renderLiveGoalieStints();
     renderLiveGoalsLists();
     renderLivePenaltiesLists();
+    renderLiveAttendance();
 }
 
 async function loadLiveGameDetails() {
     const gameId = currentLiveGame.id;
 
-    const [{ data: goals }, { data: penalties }, { data: goaliePeriods }] = await Promise.all([
+    const [{ data: goals }, { data: penalties }, { data: goaliePeriods }, { data: attendance }] = await Promise.all([
         supabaseClient.from("game_goals").select("*").eq("game_id", gameId),
         supabaseClient.from("game_penalties").select("*").eq("game_id", gameId),
-        supabaseClient.from("game_goalie_periods").select("*").eq("game_id", gameId)
+        supabaseClient.from("game_goalie_periods").select("*").eq("game_id", gameId),
+        supabaseClient.from("game_attendance").select("*").eq("game_id", gameId)
     ]);
 
     currentLiveGoals = goals || [];
@@ -173,6 +176,12 @@ async function loadLiveGameDetails() {
         const side = String(row.team_id) === String(currentLiveGame.away_team_id) ? "away" : "home";
         if (!currentLiveGoalieStints[side][row.period]) currentLiveGoalieStints[side][row.period] = [];
         currentLiveGoalieStints[side][row.period].push({ id: row.id, goalieId: row.goalie_id, timeIn: row.time_in });
+    });
+
+    currentLiveAttendance = { away: new Set(), home: new Set() };
+    (attendance || []).forEach(row => {
+        const side = String(row.team_id) === String(currentLiveGame.away_team_id) ? "away" : "home";
+        currentLiveAttendance[side].add(String(row.player_id));
     });
 }
 
@@ -431,6 +440,58 @@ function renderLivePenaltiesLists() {
             `;
         }).join("");
     });
+}
+
+
+/* =========================================
+   ATTENDANCE ("ON ICE")
+   ========================================= */
+
+function renderLiveAttendance() {
+    ["away", "home"].forEach(side => {
+        const teamId = liveTeamIdForSide(side);
+        document.getElementById(`live-attendance-${side}-label`).textContent = liveTeamNameById(teamId);
+
+        const container = document.getElementById(`live-${side}-attendance`);
+        if (!container) return;
+
+        const roster = playersForLiveTeam(teamId);
+
+        container.innerHTML = roster.map(p => `
+            <label class="attendance-row">
+                <input type="checkbox"
+                    ${currentLiveAttendance[side].has(String(p.id)) ? "checked" : ""}
+                    onchange="toggleLiveAttendance('${side}', '${p.id}', this.checked)">
+                <span>${playerLabel(p)}</span>
+            </label>
+        `).join("") || `<p style="color:#97a3ac;">No players on this roster yet.</p>`;
+    });
+}
+
+async function toggleLiveAttendance(side, playerId, checked) {
+    const teamId = liveTeamIdForSide(side);
+
+    if (checked) {
+        const { error } = await supabaseClient
+            .from("game_attendance")
+            .insert({ game_id: currentLiveGame.id, team_id: teamId, player_id: playerId });
+        if (error) {
+            console.error(error);
+        } else {
+            currentLiveAttendance[side].add(String(playerId));
+        }
+    } else {
+        const { error } = await supabaseClient
+            .from("game_attendance")
+            .delete()
+            .eq("game_id", currentLiveGame.id)
+            .eq("player_id", playerId);
+        if (error) {
+            console.error(error);
+        } else {
+            currentLiveAttendance[side].delete(String(playerId));
+        }
+    }
 }
 
 
