@@ -721,7 +721,7 @@ function buildPrintableScheduleHtml(teamCode) {
             `<p class="schedule-detail-empty">No players listed.</p>`;
 
         columnsHtml = `
-            <div class="print-column print-column-schedule">${gamesHtml}</div>
+            <div class="print-column">${gamesHtml}</div>
             <div class="print-column print-roster-column">
                 <h4>Roster</h4>
                 ${rosterHtml}
@@ -740,16 +740,12 @@ function buildPrintableScheduleHtml(teamCode) {
         `;
     }
 
-    // Always a full team-by-team sponsor directory at the bottom, listing
-    // every team in the league and its sponsor -- regardless of whether a
-    // team filter is active, since the ask here is specifically "list all
-    // the teams and their sponsors", not just the filtered team's own.
-    const allSponsors = typeof SPONSORS !== "undefined" ? SPONSORS : [];
-    const sponsorsHtml = TEAMS.map(t => {
-        const sponsor = allSponsors.find(s => s.team === t.code);
-        if (!sponsor) return "";
-        return `<span class="print-sponsor-item"><strong>${t.name}</strong> — ${sponsor.name}${sponsor.url ? ` (${sponsor.url.replace(/^https?:\/\//, "").replace(/\/$/, "")})` : ""}</span>`;
-    }).filter(Boolean).join("");
+    const sponsorsSource = (typeof SPONSORS !== "undefined" ? SPONSORS : [])
+        .filter(sponsor => !filterActive || sponsor.team === teamCode);
+    const sponsorsHtml = sponsorsSource.map(sponsor => {
+        const team = getTeam(sponsor.team);
+        return `<span class="print-sponsor-item"><strong>${team ? team.name : sponsor.team}</strong> — ${sponsor.name}${sponsor.url ? ` (${sponsor.url.replace(/^https?:\/\//, "").replace(/\/$/, "")})` : ""}</span>`;
+    }).join("");
 
     const team = filterActive ? getTeam(teamCode) : null;
     const subtitle = filterActive
@@ -766,7 +762,7 @@ function buildPrintableScheduleHtml(teamCode) {
         </div>
         ${sponsorsHtml ? `
             <div class="print-sponsors">
-                <h4>Teams &amp; Sponsors</h4>
+                <h4>Thank you to our sponsor${sponsorsSource.length > 1 ? "s" : ""}</h4>
                 <div class="print-sponsors-list">${sponsorsHtml}</div>
             </div>
         ` : ""}
