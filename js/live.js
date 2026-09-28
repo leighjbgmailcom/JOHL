@@ -587,7 +587,9 @@ function openLivePenaltyModal(side) {
         players.map(p => `<option value="${p.id}">${playerLabel(p)}</option>`).join("");
 
     document.getElementById("live-penalty-player").innerHTML = optionsHtml;
-    document.getElementById("live-penalty-infraction").value = "";
+    document.getElementById("live-penalty-infraction").innerHTML = infractionOptionsHtml("");
+    document.getElementById("live-penalty-infraction-other").style.display = "none";
+    document.getElementById("live-penalty-infraction-other").value = "";
     document.getElementById("live-penalty-minutes").value = 2;
     document.getElementById("live-penalty-time").value = "";
 
@@ -600,6 +602,20 @@ function closeLivePenaltyModal() {
     pendingPenaltySide = null;
 }
 
+// "Other…" reveals the free-text field for an infraction not on the
+// standard list; anything else hides and clears it.
+function onLivePenaltyInfractionChange(selectEl) {
+    const otherInput = document.getElementById("live-penalty-infraction-other");
+    if (selectEl.value === "__other__") {
+        otherInput.style.display = "block";
+        otherInput.value = "";
+        otherInput.focus();
+    } else {
+        otherInput.style.display = "none";
+        otherInput.value = "";
+    }
+}
+
 async function saveLivePenalty() {
     const playerId = document.getElementById("live-penalty-player").value;
     if (!playerId) {
@@ -608,7 +624,10 @@ async function saveLivePenalty() {
     }
 
     const teamId = liveTeamIdForSide(pendingPenaltySide);
-    const infraction = document.getElementById("live-penalty-infraction").value.trim() || null;
+    const infractionSelect = document.getElementById("live-penalty-infraction").value;
+    const infraction = infractionSelect === "__other__"
+        ? (document.getElementById("live-penalty-infraction-other").value.trim() || null)
+        : (infractionSelect.trim() || null);
     const minutes = Number(document.getElementById("live-penalty-minutes").value) || 2;
     const gameTime = document.getElementById("live-penalty-time").value.trim() || null;
 

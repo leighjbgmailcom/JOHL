@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
     <link rel="icon" href="images/icons/icon-192.png">
     <title>Live Game | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=20">
+    <link rel="stylesheet" href="css/style.css?v=21">
 </head>
 
 <body>
@@ -154,7 +154,8 @@
 
         <div style="margin-bottom:14px;">
             <label style="display:block; font-size:12px; font-weight:bold; color:#45525c; margin-bottom:6px;">Infraction</label>
-            <input type="text" id="live-penalty-infraction" placeholder="e.g. Tripping" style="width:100%; padding:10px; border:1px solid #ccd3d9; border-radius:4px;">
+            <select id="live-penalty-infraction" style="width:100%; padding:10px; border:1px solid #ccd3d9; border-radius:4px;" onchange="onLivePenaltyInfractionChange(this)"></select>
+            <input type="text" id="live-penalty-infraction-other" placeholder="Custom infraction" style="display:none; width:100%; padding:10px; border:1px solid #ccd3d9; border-radius:4px; margin-top:6px;">
         </div>
 
         <div style="margin-bottom:14px;">
@@ -192,13 +193,13 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=20"></script>
-<script src="js/header.js?v=20"></script>
-<script src="js/install.js?v=20"></script>
-<script src="js/db.js?v=20"></script>
-<script src="js/app.js?v=20"></script>
-<script src="js/auth.js?v=20"></script>
-<script src="js/live.js?v=20"></script>
+<script src="js/supabase.js?v=21"></script>
+<script src="js/header.js?v=21"></script>
+<script src="js/install.js?v=21"></script>
+<script src="js/db.js?v=21"></script>
+<script src="js/app.js?v=21"></script>
+<script src="js/auth.js?v=21"></script>
+<script src="js/live.js?v=21"></script>
 
 </body>
 </html>

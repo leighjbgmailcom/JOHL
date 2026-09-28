@@ -33,6 +33,60 @@ function parseClockToSeconds(value) {
     return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
 }
 
+
+/* =========================================
+   PENALTY INFRACTION TYPES
+   Shared standard infraction list for the penalty-entry dropdowns in
+   Admin's Enter Game Results and the Live Game screen, so every game
+   sheet records infractions consistently for tracking/reporting instead
+   of free-typed text that varies game to game. The stored value in
+   game_penalties.infraction is always the full name (e.g. "Tripping"),
+   never the short code, so existing records and reports keep reading
+   normally; "Other" falls back to a free-text field for anything not on
+   the list.
+   ========================================= */
+
+const INFRACTION_TYPES = [
+    { code: "RO", name: "Roughing" },
+    { code: "TR", name: "Tripping" },
+    { code: "SL", name: "Slashing" },
+    { code: "HKG/HO", name: "Hooking / Holding" },
+    { code: "INT", name: "Interference" },
+    { code: "HS/HISTK", name: "High-Sticking" },
+    { code: "CC/CROSS", name: "Cross-Checking" },
+    { code: "BDG/BOARD", name: "Boarding" },
+    { code: "CHG", name: "Charging" },
+    { code: "ELB", name: "Elbowing" },
+    { code: "FI/FGT", name: "Fighting" },
+    { code: "DG/DELAY", name: "Delay of Game" },
+    { code: "KNE", name: "Kneeing" },
+    { code: "BM", name: "Bench Minor (e.g., Too Many Men)" },
+    { code: "CFB", name: "Checking from Behind" },
+    { code: "HC", name: "Head Contact" },
+    { code: "USC/ABS", name: "Unsportsmanlike Conduct / Abuse of Officials" },
+    { code: "BUTT", name: "Butt-Ending" },
+    { code: "SP", name: "Spearing" }
+];
+
+function isKnownInfraction(name) {
+    if (!name) return false;
+    return INFRACTION_TYPES.some(t => t.name === name);
+}
+
+// Builds the <option> list for an infraction <select>, with an "Other"
+// entry at the end for anything not on the standard list. selectedValue
+// pre-selects a matching option, or "__other__" if it's a non-empty value
+// that isn't one of the standard names (e.g. an older free-typed record).
+function infractionOptionsHtml(selectedValue) {
+    const known = isKnownInfraction(selectedValue);
+    const options = [`<option value="">—</option>`]
+        .concat(INFRACTION_TYPES.map(t =>
+            `<option value="${t.name}" ${selectedValue === t.name ? "selected" : ""}>${t.code} — ${t.name}</option>`
+        ))
+        .concat([`<option value="__other__" ${selectedValue && !known ? "selected" : ""}>Other…</option>`]);
+    return options.join("");
+}
+
 function teamName(code) {
     if (code === "TBD") return "TBD";
     const team = getTeam(code);

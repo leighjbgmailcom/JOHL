@@ -1068,6 +1068,31 @@ function removePenaltyRow(side, key) {
     renderResultRows();
 }
 
+// Handles the infraction <select> for a penalty row: a standard infraction
+// sets it directly, while "Other…" reveals the free-text field next to it
+// (and clears it) for anything not on the list. Updates the row's data in
+// place rather than re-rendering, matching this screen's other row fields.
+function onResultInfractionChange(side, key, selectEl) {
+    const row = resultPenaltyRows[side].find(r => r.key === key);
+    if (!row) return;
+    const otherInput = selectEl.parentElement.querySelector(".infraction-other");
+
+    if (selectEl.value === "__other__") {
+        row.infraction = "";
+        if (otherInput) {
+            otherInput.style.display = "block";
+            otherInput.value = "";
+            otherInput.focus();
+        }
+    } else {
+        row.infraction = selectEl.value;
+        if (otherInput) {
+            otherInput.style.display = "none";
+            otherInput.value = "";
+        }
+    }
+}
+
 function currentResultTeamId(side) {
     const gameId = document.getElementById("result-game-select").value;
     const game = ADMIN_GAMES.find(g => String(g.id) === String(gameId));
@@ -1098,19 +1123,30 @@ function renderResultRows() {
             </div>
         `).join("") || `<p style="color:#97a3ac; font-size:13px;">No goals yet.</p>`;
 
-        document.getElementById(`result-${side}-penalties`).innerHTML = resultPenaltyRows[side].map(row => `
+        document.getElementById(`result-${side}-penalties`).innerHTML = resultPenaltyRows[side].map(row => {
+            const knownInfraction = isKnownInfraction(row.infraction);
+            return `
             <div class="result-row penalty-row" data-key="${row.key}">
                 <select onchange="resultPenaltyRows.${side}.find(r => r.key === ${row.key}).player_id = this.value">
                     ${playerOptionsHtml(teamId, row.player_id)}
                 </select>
-                <input type="text" placeholder="Infraction" value="${row.infraction || ""}" onchange="resultPenaltyRows.${side}.find(r => r.key === ${row.key}).infraction = this.value">
+                <div class="infraction-field">
+                    <select onchange="onResultInfractionChange('${side}', ${row.key}, this)">
+                        ${infractionOptionsHtml(row.infraction)}
+                    </select>
+                    <input type="text" class="infraction-other" placeholder="Custom infraction"
+                        style="display:${row.infraction && !knownInfraction ? "block" : "none"};"
+                        value="${row.infraction && !knownInfraction ? row.infraction : ""}"
+                        onchange="resultPenaltyRows.${side}.find(r => r.key === ${row.key}).infraction = this.value">
+                </div>
                 <input type="number" placeholder="Min" min="2" value="${row.minutes ?? 2}" onchange="resultPenaltyRows.${side}.find(r => r.key === ${row.key}).minutes = this.value">
                 <select onchange="resultPenaltyRows.${side}.find(r => r.key === ${row.key}).period = this.value">
                     ${periodOptionsHtml(row.period)}
                 </select>
                 <button type="button" class="link-button danger" onclick="removePenaltyRow('${side}', ${row.key})">✕</button>
             </div>
-        `).join("") || `<p style="color:#97a3ac; font-size:13px;">No penalties yet.</p>`;
+        `;
+        }).join("") || `<p style="color:#97a3ac; font-size:13px;">No penalties yet.</p>`;
     });
 
     const awayGoals = resultGoalRows.away.filter(r => r.scorer_id).length;
