@@ -1071,6 +1071,26 @@ body.printing-schedule #schedule-print-sheet {
     flex: 1;
 }
 
+.print-roster-column h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #c8102e;
+}
+
+.print-roster-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 10px;
+    line-height: 1.5;
+    padding: 1px 0;
+    border-bottom: 1px solid #e4e7ea;
+    break-inside: avoid;
+}
+
 .print-sponsors {
     width: 100%;
     margin-top: 12px;

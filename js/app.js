@@ -674,38 +674,95 @@ function printableScheduleRowHtml(game) {
     `;
 }
 
-function buildPrintableScheduleHtml() {
-    const games = SCHEDULE
-        .filter(g => !g.noGames)
-        .slice()
-        .sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")));
+function printableRosterRowHtml(player) {
+    return `
+        <div class="print-roster-row">
+            <span>${player.first} ${player.last}${isGoaliePosition(player.position) ? " (G)" : ""}</span>
+            <span>${player.number != null ? "#" + player.number : ""}</span>
+        </div>
+    `;
+}
 
-    // Split into two columns ourselves (rather than relying on CSS
-    // multi-column, which several mobile browsers' print/PDF engines
-    // render unreliably -- collapsing to one column and spilling onto a
-    // second page). Two plain side-by-side blocks print consistently
-    // everywhere.
-    const midpoint = Math.ceil(games.length / 2);
-    const columnAHtml = games.slice(0, midpoint).map(printableScheduleRowHtml).join("");
-    const columnBHtml = games.slice(midpoint).map(printableScheduleRowHtml).join("");
+// Builds the hidden print sheet's markup. When "All Teams" is selected on
+// screen it's the whole season plus every sponsor; when a specific team's
+// filter is active, the print/export only includes that team's own games
+// (who they play and when) plus that team's roster (name + number) and
+// sponsor, since that's what a player from that team actually wants on a
+// one-page printout. Called fresh every time the print button is used so
+// it always reflects the latest schedule data and whichever filter is
+// currently selected.
+function buildPrintableScheduleHtml(teamCode) {
+    const filterActive = !!teamCode && teamCode !== "ALL";
 
-    const sponsorsHtml = (typeof SPONSORS !== "undefined" ? SPONSORS : []).map(sponsor => {
+    let games = SCHEDULE.filter(g => !g.noGames);
+    if (filterActive) {
+        games = games.filter(g => g.home === teamCode || g.away === teamCode);
+    }
+    games = games.slice().sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")));
+
+    let columnsHtml;
+
+    if (filterActive) {
+        // One column of that team's games, plus a roster column alongside
+        // it -- no need to split the (much shorter) game list in two.
+        const gamesHtml = games.map(printableScheduleRowHtml).join("") ||
+            `<p class="schedule-detail-empty">No games scheduled yet.</p>`;
+
+        const roster = PLAYERS
+            .filter(p => p.team === teamCode)
+            .slice()
+            .sort((a, b) => {
+                if (a.number != null && b.number != null) return a.number - b.number;
+                if (a.number != null) return -1;
+                if (b.number != null) return 1;
+                return a.last.localeCompare(b.last);
+            });
+        const rosterHtml = roster.map(printableRosterRowHtml).join("") ||
+            `<p class="schedule-detail-empty">No players listed.</p>`;
+
+        columnsHtml = `
+            <div class="print-column">${gamesHtml}</div>
+            <div class="print-column print-roster-column">
+                <h4>Roster</h4>
+                ${rosterHtml}
+            </div>
+        `;
+    } else {
+        // Split the full season into two columns ourselves (rather than
+        // relying on CSS multi-column, which several mobile browsers'
+        // print/PDF engines render unreliably -- collapsing to one column
+        // and spilling onto a second page). Two plain side-by-side blocks
+        // print consistently everywhere.
+        const midpoint = Math.ceil(games.length / 2);
+        columnsHtml = `
+            <div class="print-column">${games.slice(0, midpoint).map(printableScheduleRowHtml).join("")}</div>
+            <div class="print-column">${games.slice(midpoint).map(printableScheduleRowHtml).join("")}</div>
+        `;
+    }
+
+    const sponsorsSource = (typeof SPONSORS !== "undefined" ? SPONSORS : [])
+        .filter(sponsor => !filterActive || sponsor.team === teamCode);
+    const sponsorsHtml = sponsorsSource.map(sponsor => {
         const team = getTeam(sponsor.team);
         return `<span class="print-sponsor-item"><strong>${team ? team.name : sponsor.team}</strong> — ${sponsor.name}${sponsor.url ? ` (${sponsor.url.replace(/^https?:\/\//, "").replace(/\/$/, "")})` : ""}</span>`;
     }).join("");
 
+    const team = filterActive ? getTeam(teamCode) : null;
+    const subtitle = filterActive
+        ? `${team ? team.name : teamCode} — 2026–27 Season Schedule`
+        : "2026–27 Season Schedule — Jordan Arena unless noted";
+
     return `
         <div class="print-sheet-header">
             <h1>Jordan Oldtimers Hockey League</h1>
-            <p>2026–27 Season Schedule — Jordan Arena unless noted</p>
+            <p>${subtitle}</p>
         </div>
         <div class="print-sheet-columns">
-            <div class="print-column">${columnAHtml}</div>
-            <div class="print-column">${columnBHtml}</div>
+            ${columnsHtml}
         </div>
         ${sponsorsHtml ? `
             <div class="print-sponsors">
-                <h4>Thank you to our sponsors</h4>
+                <h4>Thank you to our sponsor${sponsorsSource.length > 1 ? "s" : ""}</h4>
                 <div class="print-sponsors-list">${sponsorsHtml}</div>
             </div>
         ` : ""}
@@ -714,13 +771,15 @@ function buildPrintableScheduleHtml() {
 
 // Populates the hidden print sheet and opens the browser's print dialog,
 // where the person can print to a physical printer or choose "Save as
-// PDF" to export it. Restores the normal page view once printing is
-// done (or cancelled) via the "afterprint" event.
+// PDF" to export it. Uses whichever team filter is currently selected on
+// screen, so a player who's filtered to their own team gets just their
+// games and roster. Restores the normal page view once printing is done
+// (or cancelled) via the "afterprint" event.
 function printFullSchedule() {
     const sheet = document.getElementById("schedule-print-sheet");
     if (!sheet) return;
 
-    sheet.innerHTML = buildPrintableScheduleHtml();
+    sheet.innerHTML = buildPrintableScheduleHtml(currentScheduleFilter);
     document.body.classList.add("printing-schedule");
 
     const restore = () => {
@@ -757,12 +816,29 @@ function setupScheduleFilters() {
             currentScheduleFilter = button.dataset.team;
             renderSchedule(currentScheduleFilter);
             renderScheduleRosterPanel(currentScheduleFilter);
+            updateSchedulePrintButtonLabel(currentScheduleFilter);
         });
     });
 
     currentScheduleFilter = initialTeam || "ALL";
     renderSchedule(currentScheduleFilter);
     renderScheduleRosterPanel(currentScheduleFilter);
+    updateSchedulePrintButtonLabel(currentScheduleFilter);
+}
+
+// Keeps the print button's own label honest about what it's about to
+// export, since pressing it now only exports the selected team's games
+// (plus their roster) once a team filter is active.
+function updateSchedulePrintButtonLabel(teamCode) {
+    const button = document.getElementById("schedule-print-button");
+    if (!button) return;
+
+    if (!teamCode || teamCode === "ALL") {
+        button.textContent = "🖨️ Print / Export Full Schedule";
+    } else {
+        const team = getTeam(teamCode);
+        button.textContent = `🖨️ Print / Export ${team ? team.name : teamCode} Schedule`;
+    }
 }
 
 // Shows a roster sidebar (name + jersey number) next to the schedule list
