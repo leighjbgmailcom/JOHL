@@ -15,8 +15,10 @@ let LIVE_GAMES = [];
 let currentLiveGame = null;
 let currentLivePeriod = "1";
 let currentLiveGoals = [];
-let currentLiveGoaliePeriods = { away: {}, home: {} }; // period -> goalie_id
+let currentLivePenalties = [];
+let currentLiveGoaliePeriods = { away: {}, home: {} }; // period -> { goalieId, timeIn }
 let pendingGoalSide = null; // "away" | "home", while the goal modal is open
+let pendingPenaltySide = null; // "away" | "home", while the penalty modal is open
 
 
 /* =========================================
@@ -141,22 +143,25 @@ async function onLiveGameChange() {
     renderLiveScoreboard();
     renderLiveGoalieSelects();
     renderLiveGoalsLists();
+    renderLivePenaltiesLists();
 }
 
 async function loadLiveGameDetails() {
     const gameId = currentLiveGame.id;
 
-    const [{ data: goals }, { data: goaliePeriods }] = await Promise.all([
+    const [{ data: goals }, { data: penalties }, { data: goaliePeriods }] = await Promise.all([
         supabaseClient.from("game_goals").select("*").eq("game_id", gameId),
+        supabaseClient.from("game_penalties").select("*").eq("game_id", gameId),
         supabaseClient.from("game_goalie_periods").select("*").eq("game_id", gameId)
     ]);
 
     currentLiveGoals = goals || [];
+    currentLivePenalties = penalties || [];
 
     currentLiveGoaliePeriods = { away: {}, home: {} };
     (goaliePeriods || []).forEach(row => {
         const side = String(row.team_id) === String(currentLiveGame.away_team_id) ? "away" : "home";
-        currentLiveGoaliePeriods[side][row.period] = row.goalie_id;
+        currentLiveGoaliePeriods[side][row.period] = { goalieId: row.goalie_id, timeIn: row.time_in };
     });
 }
 
@@ -211,15 +216,22 @@ function renderLiveScoreboard() {
 // Finds the goalie assigned to a period, falling back to whatever the most
 // recent earlier period had (so a goalie "carries forward" across periods
 // until someone actually changes them, instead of resetting to blank).
+// The time-in is NOT carried forward -- it's specific to when that goalie
+// actually took over, so a carried-forward period starts with a blank time.
 function goalieForPeriod(side, period) {
-    if (currentLiveGoaliePeriods[side][period]) return currentLiveGoaliePeriods[side][period];
+    if (currentLiveGoaliePeriods[side][period]) return currentLiveGoaliePeriods[side][period].goalieId;
 
     const index = LIVE_PERIODS.indexOf(period);
     for (let i = index - 1; i >= 0; i--) {
         const earlier = LIVE_PERIODS[i];
-        if (currentLiveGoaliePeriods[side][earlier]) return currentLiveGoaliePeriods[side][earlier];
+        if (currentLiveGoaliePeriods[side][earlier]) return currentLiveGoaliePeriods[side][earlier].goalieId;
     }
     return "";
+}
+
+function timeInForPeriod(side, period) {
+    const entry = currentLiveGoaliePeriods[side][period];
+    return (entry && entry.timeIn) || "";
 }
 
 function renderLiveGoalieSelects() {
@@ -231,6 +243,8 @@ function renderLiveGoalieSelects() {
 
         select.innerHTML = `<option value="">— No goalie assigned —</option>` +
             goalies.map(p => `<option value="${p.id}" ${String(p.id) === String(selected) ? "selected" : ""}>${playerLabel(p)}</option>`).join("");
+
+        document.getElementById(`live-${side}-goalie-time`).value = timeInForPeriod(side, currentLivePeriod);
     });
 }
 
@@ -252,10 +266,41 @@ function renderLiveGoalsLists() {
         container.innerHTML = goals.map(goal => {
             const scorer = PLAYERS.find(p => String(p.id) === String(goal.scorer_id));
             const label = scorer ? `${scorer.first} ${scorer.last}` : "Unknown";
+            const timeLabel = goal.game_time ? ` @ ${goal.game_time}` : "";
             return `
                 <div class="live-goal-item">
-                    <span>P${goal.period} — ${label}</span>
+                    <span>P${goal.period}${timeLabel} — ${label}</span>
                     <button type="button" class="link-button danger" onclick="deleteLiveGoal(${goal.id})">✕</button>
+                </div>
+            `;
+        }).join("");
+    });
+}
+
+function renderLivePenaltiesLists() {
+    ["away", "home"].forEach(side => {
+        const teamId = liveTeamIdForSide(side);
+        const container = document.getElementById(`live-${side}-penalties`);
+
+        const penalties = currentLivePenalties
+            .filter(p => String(p.team_id) === String(teamId))
+            .slice()
+            .reverse();
+
+        if (penalties.length === 0) {
+            container.innerHTML = `<p style="color:#97a3ac;">No penalties yet.</p>`;
+            return;
+        }
+
+        container.innerHTML = penalties.map(penalty => {
+            const player = PLAYERS.find(p => String(p.id) === String(penalty.player_id));
+            const label = player ? `${player.first} ${player.last}` : "Unknown";
+            const timeLabel = penalty.game_time ? ` @ ${penalty.game_time}` : "";
+            const infractionLabel = penalty.infraction ? ` (${penalty.infraction})` : "";
+            return `
+                <div class="live-goal-item">
+                    <span>P${penalty.period}${timeLabel} — ${label}, ${penalty.minutes}min${infractionLabel}</span>
+                    <button type="button" class="link-button danger" onclick="deleteLivePenalty(${penalty.id})">✕</button>
                 </div>
             `;
         }).join("");
@@ -281,8 +326,10 @@ function openLiveGoalModal(side) {
     document.getElementById("live-goal-scorer").innerHTML = optionsHtml;
     document.getElementById("live-goal-assist1").innerHTML = optionsHtml;
     document.getElementById("live-goal-assist2").innerHTML = optionsHtml;
+    document.getElementById("live-goal-time").value = "";
 
     document.getElementById("live-goal-modal").hidden = false;
+    document.getElementById("live-goal-scorer").focus();
 }
 
 function closeLiveGoalModal() {
@@ -300,6 +347,7 @@ async function saveLiveGoal() {
     const teamId = liveTeamIdForSide(pendingGoalSide);
     const assist1Id = document.getElementById("live-goal-assist1").value || null;
     const assist2Id = document.getElementById("live-goal-assist2").value || null;
+    const gameTime = document.getElementById("live-goal-time").value.trim() || null;
 
     const { error } = await supabaseClient.from("game_goals").insert({
         game_id: currentLiveGame.id,
@@ -308,7 +356,7 @@ async function saveLiveGoal() {
         assist1_id: assist1Id,
         assist2_id: assist2Id,
         period: currentLivePeriod,
-        game_time: null
+        game_time: gameTime
     });
 
     if (error) {
@@ -333,6 +381,84 @@ async function deleteLiveGoal(goalId) {
     }
 
     await refreshLiveScoreAndStatus();
+}
+
+
+/* =========================================
+   PENALTY ENTRY
+   ========================================= */
+
+function openLivePenaltyModal(side) {
+    pendingPenaltySide = side;
+    const teamId = liveTeamIdForSide(side);
+    const players = playersForLiveTeam(teamId);
+
+    document.getElementById("live-penalty-modal-title").textContent =
+        `${liveTeamNameById(teamId)} Penalty — Period ${currentLivePeriod}`;
+
+    const optionsHtml = `<option value="">—</option>` +
+        players.map(p => `<option value="${p.id}">${playerLabel(p)}</option>`).join("");
+
+    document.getElementById("live-penalty-player").innerHTML = optionsHtml;
+    document.getElementById("live-penalty-infraction").value = "";
+    document.getElementById("live-penalty-minutes").value = 2;
+    document.getElementById("live-penalty-time").value = "";
+
+    document.getElementById("live-penalty-modal").hidden = false;
+    document.getElementById("live-penalty-player").focus();
+}
+
+function closeLivePenaltyModal() {
+    document.getElementById("live-penalty-modal").hidden = true;
+    pendingPenaltySide = null;
+}
+
+async function saveLivePenalty() {
+    const playerId = document.getElementById("live-penalty-player").value;
+    if (!playerId) {
+        alert("Pick who took the penalty.");
+        return;
+    }
+
+    const teamId = liveTeamIdForSide(pendingPenaltySide);
+    const infraction = document.getElementById("live-penalty-infraction").value.trim() || null;
+    const minutes = Number(document.getElementById("live-penalty-minutes").value) || 2;
+    const gameTime = document.getElementById("live-penalty-time").value.trim() || null;
+
+    const { error } = await supabaseClient.from("game_penalties").insert({
+        game_id: currentLiveGame.id,
+        team_id: teamId,
+        player_id: playerId,
+        infraction,
+        minutes,
+        period: currentLivePeriod,
+        game_time: gameTime
+    });
+
+    if (error) {
+        console.error(error);
+        alert("There was a problem saving that penalty.");
+        return;
+    }
+
+    closeLivePenaltyModal();
+    await loadLiveGameDetails();
+    renderLivePenaltiesLists();
+}
+
+async function deleteLivePenalty(penaltyId) {
+    if (!confirm("Remove this penalty?")) return;
+
+    const { error } = await supabaseClient.from("game_penalties").delete().eq("id", penaltyId);
+
+    if (error) {
+        console.error(error);
+        alert("There was a problem removing that penalty.");
+        return;
+    }
+
+    await loadLiveGameDetails();
+    renderLivePenaltiesLists();
 }
 
 // After any goal is added/removed: reload goals, recompute the score from
@@ -367,20 +493,22 @@ async function refreshLiveScoreAndStatus() {
    GOALIE ASSIGNMENT
    ========================================= */
 
+// Called when either the goalie <select> or its time-in field changes --
+// always reads both together so editing one doesn't clobber the other.
 async function onLiveGoalieChange(side) {
-    const select = document.getElementById(`live-${side}-goalie`);
-    const goalieId = select.value;
+    const goalieId = document.getElementById(`live-${side}-goalie`).value;
+    const timeIn = document.getElementById(`live-${side}-goalie-time`).value.trim() || null;
     const teamId = liveTeamIdForSide(side);
 
     if (goalieId) {
         const { error } = await supabaseClient
             .from("game_goalie_periods")
             .upsert(
-                { game_id: currentLiveGame.id, team_id: teamId, period: currentLivePeriod, goalie_id: goalieId },
+                { game_id: currentLiveGame.id, team_id: teamId, period: currentLivePeriod, goalie_id: goalieId, time_in: timeIn },
                 { onConflict: "game_id,team_id,period" }
             );
         if (error) console.error(error);
-        else currentLiveGoaliePeriods[side][currentLivePeriod] = goalieId;
+        else currentLiveGoaliePeriods[side][currentLivePeriod] = { goalieId, timeIn };
     } else {
         const { error } = await supabaseClient
             .from("game_goalie_periods")
@@ -472,8 +600,18 @@ async function initLivePage() {
         if (event.target.id === "live-goal-modal") closeLiveGoalModal();
     });
 
+    document.getElementById("live-away-penalty-button").addEventListener("click", () => openLivePenaltyModal("away"));
+    document.getElementById("live-home-penalty-button").addEventListener("click", () => openLivePenaltyModal("home"));
+    document.getElementById("live-penalty-save").addEventListener("click", saveLivePenalty);
+    document.getElementById("live-penalty-cancel").addEventListener("click", closeLivePenaltyModal);
+    document.getElementById("live-penalty-modal").addEventListener("click", (event) => {
+        if (event.target.id === "live-penalty-modal") closeLivePenaltyModal();
+    });
+
     document.getElementById("live-away-goalie").addEventListener("change", () => onLiveGoalieChange("away"));
     document.getElementById("live-home-goalie").addEventListener("change", () => onLiveGoalieChange("home"));
+    document.getElementById("live-away-goalie-time").addEventListener("change", () => onLiveGoalieChange("away"));
+    document.getElementById("live-home-goalie-time").addEventListener("change", () => onLiveGoalieChange("home"));
 }
 
 // Note: js/app.js's own DOMContentLoaded listener already runs

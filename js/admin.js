@@ -935,7 +935,7 @@ async function onResultGameChange() {
 
     (goaliePeriods || []).forEach(row => {
         const side = String(row.team_id) === String(game.away_team_id) ? "away" : "home";
-        resultGoaliePeriods[side][row.period] = row.goalie_id;
+        resultGoaliePeriods[side][row.period] = { goalieId: row.goalie_id, timeIn: row.time_in };
     });
 
     (goals || []).forEach(goal => {
@@ -974,14 +974,19 @@ function renderResultGoalieRows() {
         const container = document.getElementById(`result-${side}-goalies`);
         if (!container) return;
 
-        container.innerHTML = GOALIE_PERIODS.map(period => `
+        container.innerHTML = GOALIE_PERIODS.map(period => {
+            const entry = resultGoaliePeriods[side][period] || {};
+            return `
             <div class="goalie-period-row">
                 <label>${period === "1" || period === "2" || period === "3" ? "Period " + period : period}</label>
-                <select onchange="resultGoaliePeriods.${side}['${period}'] = this.value">
-                    ${goalieOptionsHtml(teamId, resultGoaliePeriods[side][period])}
+                <select onchange="resultGoaliePeriods.${side}['${period}'] = Object.assign({}, resultGoaliePeriods.${side}['${period}'], { goalieId: this.value })">
+                    ${goalieOptionsHtml(teamId, entry.goalieId)}
                 </select>
+                <input type="text" placeholder="M:SS" value="${entry.timeIn || ""}"
+                    onchange="resultGoaliePeriods.${side}['${period}'] = Object.assign({}, resultGoaliePeriods.${side}['${period}'], { timeIn: this.value })">
             </div>
-        `).join("");
+        `;
+        }).join("");
     });
 }
 
@@ -1111,9 +1116,9 @@ async function saveGameResults() {
     ["away", "home"].forEach(side => {
         const teamId = currentResultTeamId(side);
         GOALIE_PERIODS.forEach(period => {
-            const goalieId = resultGoaliePeriods[side][period];
-            if (!goalieId) return;
-            goaliePeriodRows.push({ game_id: gameId, team_id: teamId, period, goalie_id: goalieId });
+            const entry = resultGoaliePeriods[side][period];
+            if (!entry || !entry.goalieId) return;
+            goaliePeriodRows.push({ game_id: gameId, team_id: teamId, period, goalie_id: entry.goalieId, time_in: entry.timeIn || null });
         });
     });
 

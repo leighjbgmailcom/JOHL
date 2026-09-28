@@ -1405,7 +1405,8 @@ a.sponsor-card:hover {
 .live-goalie-row {
     display: flex;
     align-items: center;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
     margin-bottom: 14px;
     font-size: 13px;
     font-weight: bold;
@@ -1413,28 +1414,60 @@ a.sponsor-card:hover {
 }
 
 .live-goalie-row select {
-    flex: 1;
+    flex: 2 1 auto;
+    min-width: 0;
     padding: 8px;
     border: 1px solid #ccd3d9;
     border-radius: 4px;
     font-size: 13px;
 }
 
-.live-goal-button {
-    width: 100%;
-    font-size: 18px;
-    padding: 16px;
+.live-time-input {
+    flex: 1 1 64px;
+    min-width: 0;
+    width: 64px;
+    padding: 8px;
+    border: 1px solid #ccd3d9;
+    border-radius: 4px;
+    font-size: 13px;
+    text-align: center;
+}
+
+.live-action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     margin-bottom: 14px;
+}
+
+.live-goal-button,
+.live-penalty-button {
+    width: 100%;
+    font-size: 16px;
+    padding: 14px;
+}
+
+.live-penalty-button {
+    background: white;
+    color: #c8102e;
+    border: 2px solid #c8102e;
 }
 
 .live-recent-goals {
     font-size: 13px;
 }
 
+.live-recent-goals + .live-recent-goals {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 2px solid #e5e9ec;
+}
+
 .live-goal-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
     padding: 8px 0;
     border-top: 1px solid #e5e9ec;
 }
@@ -1443,13 +1476,41 @@ a.sponsor-card:hover {
     border-top: none;
 }
 
+.live-goal-item span {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+/* Team panels stay side by side even on a phone -- the whole point of
+   this screen is a timekeeper working rink-side on their phone, and an
+   "Away" / "Home" pair stacked on top of each other reads as one column
+   of buttons rather than two teams, per league feedback. Panels just get
+   more compact below, instead of collapsing to one column. */
 @media (max-width: 700px) {
     .live-team-panels {
-        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .live-team-panel {
+        padding: 12px;
+    }
+
+    .live-goal-button,
+    .live-penalty-button {
+        font-size: 14px;
+        padding: 12px 6px;
     }
 
     .live-team-score {
         font-size: 36px;
+    }
+}
+
+@media (max-width: 400px) {
+    .live-goal-button,
+    .live-penalty-button {
+        font-size: 13px;
+        padding: 10px 4px;
     }
 }
 
