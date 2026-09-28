@@ -635,6 +635,93 @@ function renderScheduleGameDetail(game, goals, periods, attendance) {
     `;
 }
 
+
+/* =========================================
+   SCHEDULE — PRINT / EXPORT ONE-PAGE SCHEDULE
+   ========================================= */
+
+// Compact "Sun, Sep 27" style date for the printable sheet -- the full
+// formatDateISO() output (weekday + month name + year) is too wide to fit
+// a whole season on one printed page.
+function formatDateCompact(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
+    return date.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" });
+}
+
+// Builds the hidden print sheet's markup: every game in the season (not
+// just whichever team filter is active on screen -- the printable copy is
+// always the full schedule), plus a sponsors line-up at the bottom. Called
+// fresh every time the print button is used so it always reflects the
+// latest schedule data.
+function buildPrintableScheduleHtml() {
+    const games = SCHEDULE
+        .filter(g => !g.noGames)
+        .slice()
+        .sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")));
+
+    const rowsHtml = games.map(game => {
+        const isTbd = game.home === "TBD" || game.away === "TBD";
+        const matchup = isTbd
+            ? `${teamName(game.away)} vs. ${teamName(game.home)}`
+            : `${teamName(game.away)} @ ${teamName(game.home)}`;
+        const locationLabel = game.location && game.location !== "Jordan Arena" ? ` — ${game.location}` : "";
+        let resultLabel = "";
+        if (game.status === "final") {
+            resultLabel = ` &nbsp;<strong>${game.awayScore ?? 0}–${game.homeScore ?? 0}</strong>${game.wentOT ? " (OT)" : ""}`;
+        }
+
+        return `
+            <div class="print-game-row">
+                <span class="print-game-date">${formatDateCompact(game.date)}</span>
+                <span class="print-game-time">${formatTime12h(game.time)}</span>
+                <span class="print-game-matchup">${matchup}${locationLabel}${resultLabel}</span>
+            </div>
+        `;
+    }).join("");
+
+    const sponsorsHtml = (typeof SPONSORS !== "undefined" ? SPONSORS : []).map(sponsor => {
+        const team = getTeam(sponsor.team);
+        return `<span class="print-sponsor-item"><strong>${team ? team.name : sponsor.team}</strong> — ${sponsor.name}${sponsor.url ? ` (${sponsor.url.replace(/^https?:\/\//, "").replace(/\/$/, "")})` : ""}</span>`;
+    }).join("");
+
+    return `
+        <div class="print-sheet-header">
+            <h1>Jordan Oldtimers Hockey League</h1>
+            <p>2026–27 Season Schedule — Jordan Arena unless noted</p>
+        </div>
+        <div class="print-sheet-columns">
+            ${rowsHtml}
+        </div>
+        ${sponsorsHtml ? `
+            <div class="print-sponsors">
+                <h4>Thank you to our sponsors</h4>
+                <div class="print-sponsors-list">${sponsorsHtml}</div>
+            </div>
+        ` : ""}
+    `;
+}
+
+// Populates the hidden print sheet and opens the browser's print dialog,
+// where the person can print to a physical printer or choose "Save as
+// PDF" to export it. Restores the normal page view once printing is
+// done (or cancelled) via the "afterprint" event.
+function printFullSchedule() {
+    const sheet = document.getElementById("schedule-print-sheet");
+    if (!sheet) return;
+
+    sheet.innerHTML = buildPrintableScheduleHtml();
+    document.body.classList.add("printing-schedule");
+
+    const restore = () => {
+        document.body.classList.remove("printing-schedule");
+        window.removeEventListener("afterprint", restore);
+    };
+    window.addEventListener("afterprint", restore);
+
+    window.print();
+}
+
 // Tracks whichever team filter is currently selected on schedule.html so a
 // live update (from subscribeToGameUpdates) can re-render with the same
 // filter still applied instead of resetting it to "ALL".
