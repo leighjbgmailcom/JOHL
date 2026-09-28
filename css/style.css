@@ -891,41 +891,52 @@ tbody tr:hover {
     margin-bottom: 8px;
 }
 
-.schedule-goal-row {
+/* Player-anonymous game event feed: team logo + event type + when it
+   happened -- no names (scorer, assist, goalie, penalized player). */
+.schedule-event-row {
     display: flex;
-    align-items: baseline;
-    gap: 10px;
-    padding: 6px 0;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 0;
     border-bottom: 1px solid #f2f4f5;
     font-size: 14px;
 }
 
-.schedule-goal-row:last-child {
+.schedule-event-row:last-child {
     border-bottom: none;
 }
 
-.schedule-goal-time {
-    color: #97a3ac;
-    font-size: 12px;
-    font-weight: bold;
-    white-space: nowrap;
-    width: 70px;
+.schedule-event-team .team-badge,
+.schedule-event-team .team-badge-logo {
+    width: 26px;
+    height: 26px;
+    margin: 0;
+    border-width: 2px;
+    font-size: 9px;
     flex-shrink: 0;
 }
 
-.schedule-goal-team {
+.schedule-event-label {
     font-weight: bold;
-    white-space: nowrap;
 }
 
-.schedule-goal-assist {
+.schedule-event-row.is-goal .schedule-event-label {
+    color: #c8102e;
+}
+
+.schedule-event-row.is-penalty .schedule-event-label {
+    color: #45525c;
+}
+
+.schedule-event-row.is-goalie-shift .schedule-event-label {
     color: #687681;
 }
 
-.schedule-goal-net {
+.schedule-event-time {
+    margin-left: auto;
     color: #97a3ac;
     font-size: 12px;
-    margin-left: auto;
+    font-weight: bold;
     white-space: nowrap;
 }
 

@@ -458,8 +458,10 @@ function renderSchedule(filter = "ALL") {
 const SCHEDULE_DETAIL_CACHE = {};
 
 // Toggles a final game's inline detail panel open/closed. Fetches the
-// game's goals, goalie stints and attendance from Supabase the first time
-// it's opened, then reuses the cached result on subsequent clicks.
+// game's goals, penalties and goalie stints from Supabase the first time
+// it's opened, then reuses the cached result on subsequent clicks. This
+// public view is deliberately player-anonymous -- team logo and event type
+// only, no scorer/assist/goalie/attendance names (those live in Admin).
 async function toggleScheduleGameDetail(gameId) {
     const wrapper = document.getElementById(`schedule-wrapper-${gameId}`);
     const panel = document.getElementById(`schedule-detail-${gameId}`);
@@ -483,154 +485,106 @@ async function toggleScheduleGameDetail(gameId) {
     const game = SCHEDULE.find(g => String(g.id) === String(gameId));
     if (!game) return;
 
-    const [{ data: goals, error: goalsError }, { data: periods, error: periodsError }, { data: attendance, error: attendanceError }] = await Promise.all([
+    const [{ data: goals, error: goalsError }, { data: periods, error: periodsError }, { data: penalties, error: penaltiesError }] = await Promise.all([
         supabaseClient.from("game_goals").select("*").eq("game_id", gameId),
         supabaseClient.from("game_goalie_periods").select("*").eq("game_id", gameId),
-        supabaseClient.from("game_attendance").select("*").eq("game_id", gameId)
+        supabaseClient.from("game_penalties").select("*").eq("game_id", gameId)
     ]);
 
-    if (goalsError || periodsError || attendanceError) {
-        console.error("Error loading game detail:", goalsError || periodsError || attendanceError);
+    if (goalsError || periodsError || penaltiesError) {
+        console.error("Error loading game detail:", goalsError || periodsError || penaltiesError);
         panel.innerHTML = `<p class="schedule-detail-empty">Couldn't load game details right now.</p>`;
         return;
     }
 
-    const html = renderScheduleGameDetail(game, goals || [], periods || [], attendance || []);
+    const html = renderScheduleGameDetail(game, goals || [], periods || [], penalties || []);
     SCHEDULE_DETAIL_CACHE[gameId] = html;
     panel.innerHTML = html;
 }
 
-// Builds per-team, per-period goalie "stint lists" for a single game
-// (same rule as computeGoalieStats' season-wide version), so each goal can
-// be matched up against whichever stint was in net when it was scored.
-function buildScheduleGoalieStints(periods) {
-    const byTeamPeriod = {};
-    periods.forEach(gp => {
-        if (!byTeamPeriod[gp.team_id]) byTeamPeriod[gp.team_id] = {};
-        if (!byTeamPeriod[gp.team_id][gp.period]) byTeamPeriod[gp.team_id][gp.period] = [];
-        byTeamPeriod[gp.team_id][gp.period].push({ goalieId: gp.goalie_id, seconds: parseClockToSeconds(gp.time_in) });
-    });
-
-    Object.values(byTeamPeriod).forEach(periodMap => {
-        Object.values(periodMap).forEach(stints => {
-            stints.sort((a, b) => {
-                if (a.seconds == null && b.seconds == null) return 0;
-                if (a.seconds == null) return -1;
-                if (b.seconds == null) return 1;
-                return b.seconds - a.seconds;
-            });
-        });
-    });
-
-    return byTeamPeriod;
-}
-
-// A period with no goalie entered explicitly carries forward whoever
-// finished the most recent earlier period for that team (same carry-
-// forward rule used everywhere else goalie stints are attributed).
-function scheduleStintsForTeamPeriod(byTeamPeriod, teamId, period) {
-    const periodMap = byTeamPeriod[teamId];
-    if (!periodMap) return [];
-    if (periodMap[period] && periodMap[period].length) return periodMap[period];
-
-    const index = GOALIE_STATS_PERIOD_ORDER.indexOf(period);
-    for (let i = index - 1; i >= 0; i--) {
-        const earlier = GOALIE_STATS_PERIOD_ORDER[i];
-        if (periodMap[earlier] && periodMap[earlier].length) {
-            const mostRecent = periodMap[earlier][periodMap[earlier].length - 1];
-            return [{ goalieId: mostRecent.goalieId, seconds: null }];
-        }
-    }
-    return [];
-}
-
-function schedulePlayerLabel(playerId) {
-    const player = PLAYERS.find(p => String(p.id) === String(playerId));
-    if (!player) return "Unknown";
-    return player.number != null ? `#${player.number} ${player.first} ${player.last}` : `${player.first} ${player.last}`;
-}
-
-function renderScheduleGameDetail(game, goals, periods, attendance) {
+// Builds a single chronological event feed for the game -- goals,
+// penalties and goalie shifts, each tagged with the team's logo and event
+// type only. Deliberately no player names anywhere here (scorer, assist,
+// goalie, penalized player) -- this is the public schedule view; the
+// player-level detail lives in Admin's Enter Game Results screen.
+function renderScheduleGameDetail(game, goals, periods, penalties) {
     const awayTeam = getTeam(game.away);
     const homeTeam = getTeam(game.home);
     const awayTeamId = awayTeam ? awayTeam.id : null;
-    const homeTeamId = homeTeam ? homeTeam.id : null;
 
-    const byTeamPeriod = buildScheduleGoalieStints(periods);
+    function sideCodeForTeamId(teamId) {
+        return String(teamId) === String(awayTeamId) ? game.away : game.home;
+    }
 
-    const sortedGoals = goals.slice().sort((a, b) => {
-        const periodDiff = GOALIE_STATS_PERIOD_ORDER.indexOf(a.period) - GOALIE_STATS_PERIOD_ORDER.indexOf(b.period);
-        if (periodDiff !== 0) return periodDiff;
-        const aSeconds = parseClockToSeconds(a.game_time);
-        const bSeconds = parseClockToSeconds(b.game_time);
-        if (aSeconds == null && bSeconds == null) return 0;
-        if (aSeconds == null) return 1;
-        if (bSeconds == null) return -1;
-        return bSeconds - aSeconds;
+    function periodTimeLabel(period, time) {
+        return `P${period}${time ? ` ${time}` : ""}`;
+    }
+
+    // Sort key: period order first, then descending clock time within the
+    // period (the game clock counts down, so a higher reading happened
+    // earlier) -- entries with no recorded time sort as "top of period".
+    function sortKey(period, time) {
+        const periodIndex = GOALIE_STATS_PERIOD_ORDER.indexOf(period);
+        const seconds = parseClockToSeconds(time);
+        return [periodIndex, seconds == null ? Infinity : -seconds];
+    }
+
+    const events = [];
+
+    goals.forEach(goal => {
+        events.push({
+            teamCode: sideCodeForTeamId(goal.team_id),
+            label: "Goal",
+            cssClass: "is-goal",
+            timeLabel: periodTimeLabel(goal.period, goal.game_time),
+            key: sortKey(goal.period, goal.game_time)
+        });
     });
 
-    const goalsHtml = sortedGoals.length === 0
-        ? `<p class="schedule-detail-empty">No goals recorded for this game.</p>`
-        : sortedGoals.map(goal => {
-            const scoringTeamId = goal.team_id;
-            const opponentTeamId = String(scoringTeamId) === String(awayTeamId) ? homeTeamId : awayTeamId;
-            const goalSeconds = parseClockToSeconds(goal.game_time);
-
-            const stints = scheduleStintsForTeamPeriod(byTeamPeriod, opponentTeamId, goal.period);
-            const stint = attributeGoalieStint(stints, goalSeconds);
-            const goalieLabel = stint ? schedulePlayerLabel(stint.goalieId) : "Unknown";
-
-            const scorerLabel = schedulePlayerLabel(goal.scorer_id);
-            const assistLabels = [goal.assist1_id, goal.assist2_id]
-                .filter(id => id != null)
-                .map(id => schedulePlayerLabel(id));
-
-            const scoringTeamCode = String(scoringTeamId) === String(awayTeamId) ? game.away : game.home;
-
-            return `
-                <div class="schedule-goal-row">
-                    <span class="schedule-goal-time">P${goal.period} ${goal.game_time || ""}</span>
-                    <span class="schedule-goal-team">${teamName(scoringTeamCode)}</span>
-                    <span>${scorerLabel}</span>
-                    ${assistLabels.length ? `<span class="schedule-goal-assist">(assist: ${assistLabels.join(", ")})</span>` : ""}
-                    <span class="schedule-goal-net">In net: ${goalieLabel}</span>
-                </div>
-            `;
-        }).join("");
-
-    const attendanceByTeam = { away: [], home: [] };
-    attendance.forEach(row => {
-        const side = String(row.team_id) === String(awayTeamId) ? "away" : "home";
-        attendanceByTeam[side].push(schedulePlayerLabel(row.player_id));
+    penalties.forEach(penalty => {
+        events.push({
+            teamCode: sideCodeForTeamId(penalty.team_id),
+            label: penalty.minutes ? `Penalty (${penalty.minutes} min)` : "Penalty",
+            cssClass: "is-penalty",
+            timeLabel: periodTimeLabel(penalty.period, penalty.game_time),
+            key: sortKey(penalty.period, penalty.game_time)
+        });
     });
 
-    const attendanceHtml = attendance.length === 0
-        ? `<p class="schedule-detail-empty">Attendance wasn't recorded for this game.</p>`
-        : `
-            <div class="result-team-columns">
-                <div class="result-team-column">
-                    <h5>${teamName(game.away)}</h5>
-                    ${attendanceByTeam.away.length
-                        ? attendanceByTeam.away.sort().map(label => `<div class="attendance-row"><span>✓ ${label}</span></div>`).join("")
-                        : `<p class="schedule-detail-empty">None recorded.</p>`}
-                </div>
-                <div class="result-team-column">
-                    <h5>${teamName(game.home)}</h5>
-                    ${attendanceByTeam.home.length
-                        ? attendanceByTeam.home.sort().map(label => `<div class="attendance-row"><span>✓ ${label}</span></div>`).join("")
-                        : `<p class="schedule-detail-empty">None recorded.</p>`}
-                </div>
-            </div>
-        `;
+    // Goalie shifts: one event per recorded stint start (not the inferred
+    // "carried forward" periods used for stats -- just the actual entries
+    // an admin made), since only those are real, timestamped events.
+    periods.forEach(gp => {
+        events.push({
+            teamCode: sideCodeForTeamId(gp.team_id),
+            label: "Goalie Shift",
+            cssClass: "is-goalie-shift",
+            timeLabel: periodTimeLabel(gp.period, gp.time_in),
+            key: sortKey(gp.period, gp.time_in)
+        });
+    });
+
+    events.sort((a, b) => {
+        if (a.key[0] !== b.key[0]) return a.key[0] - b.key[0];
+        return a.key[1] - b.key[1];
+    });
+
+    if (events.length === 0) {
+        return `<p class="schedule-detail-empty">No game events recorded for this game.</p>`;
+    }
+
+    const eventsHtml = events.map(event => `
+        <div class="schedule-event-row ${event.cssClass}">
+            <span class="schedule-event-team">${teamBadge(event.teamCode)}</span>
+            <span class="schedule-event-label">${event.label}</span>
+            <span class="schedule-event-time">${event.timeLabel}</span>
+        </div>
+    `).join("");
 
     return `
         <div class="schedule-detail-section">
-            <h5>Goals</h5>
-            ${goalsHtml}
-        </div>
-        <div class="schedule-detail-section">
-            <h5>On Ice</h5>
-            ${attendanceHtml}
+            <h5>Game Events</h5>
+            ${eventsHtml}
         </div>
     `;
 }
