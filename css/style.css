@@ -948,6 +948,10 @@ tbody tr:hover {
     color: #687681;
 }
 
+.schedule-event-row.is-starting-goalie .schedule-event-label {
+    color: #0a5c36;
+}
+
 .schedule-event-detail {
     font-weight: bold;
     color: #071a2b;

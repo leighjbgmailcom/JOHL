@@ -502,20 +502,23 @@ async function toggleScheduleGameDetail(gameId) {
     panel.innerHTML = html;
 }
 
-// "#<number> Lastname" tag for an event row -- last name only (no first
-// name) to keep each row compact, per request.
+// "#<number> First Last" tag for an event row.
 function scheduleEventPlayerTag(playerId) {
     if (playerId == null) return "";
     const player = PLAYERS.find(p => String(p.id) === String(playerId));
     if (!player) return "";
-    return player.number != null ? `#${player.number} ${player.last}` : player.last;
+    const name = `${player.first} ${player.last}`;
+    return player.number != null ? `#${player.number} ${name}` : name;
 }
 
-// Builds a single chronological event feed for the game -- goals,
-// penalties and goalie shifts, each tagged with the team's logo, event
-// type, and the player(s) involved (jersey number + last name only, to
-// keep rows compact) -- this is the public schedule view, so it stays
-// short on detail compared to Admin's full Enter Game Results screen.
+// Builds the game detail markup: a "Starting Goalies" section up front for
+// any goalie entry with no recorded time (an admin enters those without a
+// clock time specifically because that goalie started the period rather
+// than swapping in mid-play), followed by the chronological feed of goals,
+// penalties and any timed (mid-period) goalie changes. Each row shows the
+// team's logo, the event type, and the player(s) involved by full name --
+// this is the public schedule view, so it stays lighter on detail than
+// Admin's full Enter Game Results screen.
 function renderScheduleGameDetail(game, goals, periods, penalties) {
     const awayTeam = getTeam(game.away);
     const homeTeam = getTeam(game.home);
@@ -537,6 +540,26 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
         const seconds = parseClockToSeconds(time);
         return [periodIndex, seconds == null ? Infinity : -seconds];
     }
+
+    // A goalie entry with no time is the goalie who started that period,
+    // not a mid-period swap -- pull those out into their own "Starting
+    // Goalies" list instead of mixing them into the timeline.
+    const startingGoalieEntries = periods.filter(gp => parseClockToSeconds(gp.time_in) == null);
+    const midPeriodGoalieEntries = periods.filter(gp => parseClockToSeconds(gp.time_in) != null);
+
+    const startingGoaliesHtml = startingGoalieEntries
+        .slice()
+        .sort((a, b) => GOALIE_STATS_PERIOD_ORDER.indexOf(a.period) - GOALIE_STATS_PERIOD_ORDER.indexOf(b.period))
+        .map(gp => `
+            <div class="schedule-event-row is-starting-goalie">
+                <span class="schedule-event-team">${teamBadge(sideCodeForTeamId(gp.team_id))}</span>
+                <span class="schedule-event-main">
+                    <span class="schedule-event-label">Starting Goalie</span>
+                    <span class="schedule-event-detail">${scheduleEventPlayerTag(gp.goalie_id)}</span>
+                </span>
+                <span class="schedule-event-time">P${gp.period}</span>
+            </div>
+        `).join("");
 
     const events = [];
 
@@ -569,10 +592,9 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
         });
     });
 
-    // Goalie shifts: one event per recorded stint start (not the inferred
-    // "carried forward" periods used for stats -- just the actual entries
-    // an admin made), since only those are real, timestamped events.
-    periods.forEach(gp => {
+    // Mid-period goalie changes only -- the starting goalies are already
+    // shown up top, so they don't also appear in this timeline.
+    midPeriodGoalieEntries.forEach(gp => {
         events.push({
             teamCode: sideCodeForTeamId(gp.team_id),
             label: "Goalie Shift",
@@ -589,10 +611,6 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
         return a.key[1] - b.key[1];
     });
 
-    if (events.length === 0) {
-        return `<p class="schedule-detail-empty">No game events recorded for this game.</p>`;
-    }
-
     const eventsHtml = events.map(event => `
         <div class="schedule-event-row ${event.cssClass}">
             <span class="schedule-event-team">${teamBadge(event.teamCode)}</span>
@@ -605,11 +623,23 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
         </div>
     `).join("");
 
+    if (!startingGoaliesHtml && !eventsHtml) {
+        return `<p class="schedule-detail-empty">No game events recorded for this game.</p>`;
+    }
+
     return `
-        <div class="schedule-detail-section">
-            <h5>Game Events</h5>
-            ${eventsHtml}
-        </div>
+        ${startingGoaliesHtml ? `
+            <div class="schedule-detail-section">
+                <h5>Starting Goalies</h5>
+                ${startingGoaliesHtml}
+            </div>
+        ` : ""}
+        ${eventsHtml ? `
+            <div class="schedule-detail-section">
+                <h5>Game Events</h5>
+                ${eventsHtml}
+            </div>
+        ` : ""}
     `;
 }
 
