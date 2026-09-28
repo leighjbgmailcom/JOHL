@@ -585,7 +585,7 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
             teamCode: sideCodeForTeamId(penalty.team_id),
             label: penalty.minutes ? `Penalty (${penalty.minutes} min)` : "Penalty",
             detail: scheduleEventPlayerTag(penalty.player_id),
-            subDetail: "",
+            subDetail: penalty.infraction || "",
             cssClass: "is-penalty",
             timeLabel: periodTimeLabel(penalty.period, penalty.game_time),
             key: sortKey(penalty.period, penalty.game_time)
