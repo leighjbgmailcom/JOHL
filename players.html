@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
     <link rel="icon" href="images/icons/icon-192.png">
     <title>Rosters | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=7">
+    <link rel="stylesheet" href="css/style.css?v=8">
 </head>
 
 <body>
@@ -18,11 +18,13 @@
 
 <main class="container page-content">
 
-    <div class="page-title">
+    <div class="page-title" id="players-page-title">
         <p class="eyebrow">2026-27 SEASON</p>
         <h2>Rosters</h2>
         <p>Every player registered across the league. <span id="player-count"></span></p>
     </div>
+
+    <div id="player-detail" style="display:none;"></div>
 
     <div class="player-controls">
 
@@ -44,7 +46,7 @@
 
     </div>
 
-    <div class="table-wrapper">
+    <div class="table-wrapper" id="players-roster-wrapper">
         <table>
             <thead>
                 <tr>
@@ -78,12 +80,12 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=7"></script>
-<script src="js/header.js?v=7"></script>
-<script src="js/install.js?v=7"></script>
-<script src="js/db.js?v=7"></script>
-<script src="js/app.js?v=7"></script>
-<script src="js/auth.js?v=7"></script>
+<script src="js/supabase.js?v=8"></script>
+<script src="js/header.js?v=8"></script>
+<script src="js/install.js?v=8"></script>
+<script src="js/db.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
+<script src="js/auth.js?v=8"></script>
 <script>
     checkLogin();
 </script>

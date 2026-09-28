@@ -1,0 +1,1965 @@
+/* =========================================
+   JORDAN OLDTIMERS HOCKEY LEAGUE
+   ========================================= */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f3f5f7;
+    color: #17212b;
+    line-height: 1.5;
+}
+
+
+.container {
+    width: min(1200px, 92%);
+    margin: auto;
+}
+
+
+/* =========================================
+   HEADER
+   ========================================= */
+
+.site-header {
+    background: #071a2b;
+    color: white;
+    border-bottom: 4px solid #c8102e;
+}
+
+
+.header-inner {
+    min-height: 82px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+}
+
+
+.league-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+
+.league-logo {
+    height: 55px;
+    width: auto;
+
+    border-radius: 8px;
+
+    flex-shrink: 0;
+}
+
+
+.league-brand h1 {
+    font-size: 20px;
+    line-height: 1;
+}
+
+
+.league-brand span {
+    font-size: 13px;
+    color: #b9c5cf;
+}
+
+
+nav {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+
+.nav-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+
+    width: 42px;
+    height: 42px;
+
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+
+.nav-toggle span {
+    display: block;
+    width: 26px;
+    height: 3px;
+    background: white;
+    border-radius: 2px;
+    transition: transform .2s, opacity .2s;
+}
+
+
+.nav-toggle.open span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+
+
+.nav-toggle.open span:nth-child(2) {
+    opacity: 0;
+}
+
+
+.nav-toggle.open span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
+
+
+nav a {
+    color: white;
+    text-decoration: none;
+
+    padding: 10px 14px;
+
+    font-size: 14px;
+    font-weight: bold;
+
+    border-radius: 4px;
+}
+
+
+nav a:hover,
+nav a.active {
+    background: #c8102e;
+}
+
+
+/* =========================================
+   HERO
+   ========================================= */
+
+.hero {
+    background:
+        linear-gradient(
+            rgba(7, 26, 43, .92),
+            rgba(7, 26, 43, .92)
+        );
+
+    color: white;
+
+    padding: 85px 0;
+}
+
+
+.hero-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 50px;
+}
+
+
+.hero-content {
+    max-width: 700px;
+}
+
+
+.hero-logo {
+    flex-shrink: 0;
+}
+
+
+.hero-logo img {
+    width: 260px;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.35);
+}
+
+
+.eyebrow {
+    color: #c8102e;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+}
+
+
+.hero .eyebrow {
+    color: #d7e2ea;
+}
+
+
+.hero h2 {
+    font-size: clamp(40px, 6vw, 70px);
+    line-height: 1.02;
+    margin-bottom: 20px;
+}
+
+
+.hero p:not(.eyebrow) {
+    font-size: 20px;
+    color: #d5dde3;
+    margin-bottom: 30px;
+}
+
+
+.button {
+    display: inline-block;
+
+    background: #c8102e;
+    color: white;
+
+    padding: 13px 22px;
+
+    border-radius: 4px;
+
+    text-decoration: none;
+    font-weight: bold;
+}
+
+
+.button:hover {
+    background: #a70d26;
+}
+
+
+/* =========================================
+   CONTENT
+   ========================================= */
+
+.main-content,
+.page-content {
+    padding: 55px 0;
+}
+
+
+section {
+    margin-bottom: 55px;
+}
+
+
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    margin-bottom: 20px;
+}
+
+
+.section-heading h2,
+.page-title h2 {
+    font-size: 32px;
+}
+
+
+.section-heading a {
+    color: #c8102e;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+
+.page-title {
+    margin-bottom: 35px;
+}
+
+
+.page-title p:last-child {
+    color: #64727e;
+}
+
+
+/* =========================================
+   NEXT GAME
+   ========================================= */
+
+.next-game-day {
+    background: white;
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0 3px 15px rgba(0,0,0,.08);
+}
+
+.next-game-date {
+    margin-bottom: 22px;
+}
+
+.next-game-date h3 {
+    font-size: 24px;
+    margin-top: 4px;
+}
+
+.homepage-games {
+    display: grid;
+    gap: 6px;
+}
+
+.homepage-game {
+    display: grid;
+    grid-template-columns: 90px 1fr 40px 1fr;
+    align-items: center;
+    gap: 16px;
+
+    padding: 14px 0;
+    border-top: 1px solid #e5e9ec;
+}
+
+.homepage-game:first-child {
+    border-top: none;
+}
+
+.homepage-game-time {
+    font-weight: 900;
+    color: #45525c;
+    font-size: 14px;
+}
+
+.homepage-team {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-weight: bold;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 6px;
+}
+
+.homepage-team:hover {
+    color: #c8102e;
+}
+
+.homepage-team .team-badge,
+.homepage-team .team-badge-logo {
+    width: 50px;
+    height: 50px;
+    font-size: 13px;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.homepage-vs {
+    text-align: center;
+    color: #97a3ac;
+    font-weight: bold;
+}
+
+.homepage-vs.is-final {
+    color: #45525c;
+    font-size: 12px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+.homepage-score {
+    margin-left: auto;
+    font-size: 22px;
+    font-weight: 900;
+    color: #071a2b;
+}
+
+.homepage-game.is-live {
+    background: #fff7f7;
+    border-radius: 6px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/* Small pulsing "Live" pill used on the homepage next-game box and on
+   the schedule page for any game whose status is set to "live" in admin. */
+.live-badge {
+    display: inline-block;
+    background: #c8102e;
+    color: white;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .55; }
+}
+
+
+.team-badge,
+.team-badge-logo {
+    width: 70px;
+    height: 70px;
+
+    border-radius: 50%;
+
+    margin: 0 auto 12px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    color: white;
+
+    font-weight: 900;
+
+    border: 4px solid white;
+
+    box-shadow: 0 2px 7px rgba(0,0,0,.25);
+
+    overflow: hidden;
+    background: white;
+}
+
+.team-badge-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 5px;
+    box-sizing: border-box;
+    display: block;
+}
+
+
+.team-badge.Leafs {
+    background: #003e7e;
+}
+
+
+.team-badge.Canadiens {
+    background: #af1e2d;
+}
+
+
+.team-badge.Canucks {
+    background: #00843d;
+}
+
+
+.team-badge.Nordiques {
+    background: #00539b;
+}
+
+
+.team-badge.Oilers {
+    background: #ff4c00;
+}
+
+
+.team-badge.Senators {
+    background: #c8102e;
+}
+
+
+.game-team h3 {
+    font-size: 17px;
+}
+
+
+.game-date {
+    font-size: 14px;
+    color: #66727d;
+}
+
+
+.game-time {
+    font-size: 32px;
+    font-weight: 900;
+    margin: 5px 0;
+}
+
+
+.game-location {
+    color: #66727d;
+    font-size: 14px;
+}
+
+
+/* =========================================
+   TABLES
+   ========================================= */
+
+.table-wrapper {
+    background: white;
+
+    border-radius: 8px;
+
+    overflow-x: auto;
+
+    box-shadow: 0 3px 15px rgba(0,0,0,.07);
+}
+
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+
+th {
+    background: #071a2b;
+    color: white;
+
+    text-align: left;
+
+    padding: 14px 12px;
+
+    font-size: 12px;
+
+    letter-spacing: .5px;
+}
+
+
+td {
+    padding: 14px 12px;
+
+    border-bottom: 1px solid #e5e9ec;
+
+    font-size: 14px;
+}
+
+
+tbody tr:hover {
+    background: #f6f8fa;
+}
+
+
+.team-name-cell {
+    font-weight: bold;
+}
+
+
+.rank {
+    font-weight: 900;
+    color: #c8102e;
+}
+
+
+/* =========================================
+   TEAMS
+   ========================================= */
+
+.team-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 20px;
+}
+
+
+.team-grid.large {
+    grid-template-columns:
+        repeat(2, 1fr);
+}
+
+
+.team-card {
+    background: white;
+
+    border-radius: 8px;
+
+    padding: 25px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 18px;
+
+    box-shadow: 0 3px 15px rgba(0,0,0,.07);
+
+    transition: transform .15s;
+
+    text-decoration: none;
+    color: inherit;
+}
+
+
+.team-card:hover {
+    transform: translateY(-3px);
+}
+
+
+.team-card .team-badge,
+.team-card .team-badge-logo {
+    flex-shrink: 0;
+
+    margin: 0;
+}
+
+
+.team-card h3 {
+    margin-bottom: 4px;
+}
+
+
+.team-card p {
+    color: #75818b;
+    font-size: 13px;
+}
+
+
+/* =========================================
+   SCHEDULE
+   ========================================= */
+
+/* Reusable tab strip -- used by Leaders (Skaters/Goalies) and anywhere
+   else a page needs to switch between a couple of views in place. */
+.page-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.page-tab {
+    border: 1px solid #ccd3d9;
+    background: white;
+    padding: 10px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.page-tab:hover,
+.page-tab.active {
+    background: #071a2b;
+    color: white;
+    border-color: #071a2b;
+}
+
+.page-tab-panel {
+    display: none;
+}
+
+.page-tab-panel.active {
+    display: block;
+}
+
+.filter-buttons {
+    display: flex;
+
+    gap: 8px;
+
+    flex-wrap: wrap;
+
+    margin-bottom: 25px;
+}
+
+
+.filter-button {
+    border: 1px solid #ccd3d9;
+
+    background: white;
+
+    padding: 9px 14px;
+
+    border-radius: 4px;
+
+    cursor: pointer;
+
+    font-weight: bold;
+}
+
+
+.filter-button:hover,
+.filter-button.active {
+    background: #c8102e;
+    color: white;
+    border-color: #c8102e;
+}
+
+
+.schedule-day {
+    margin-bottom: 30px;
+}
+
+
+.schedule-date {
+    font-size: 18px;
+    font-weight: 900;
+
+    margin-bottom: 10px;
+
+    padding-bottom: 8px;
+
+    border-bottom: 2px solid #c8102e;
+}
+
+
+.schedule-game {
+    background: white;
+
+    margin-bottom: 8px;
+
+    padding: 18px 20px;
+
+    border-radius: 6px;
+
+    display: grid;
+
+    grid-template-columns: 120px 1fr 100px;
+
+    align-items: center;
+
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+
+.schedule-time {
+    color: #687681;
+    font-size: 14px;
+}
+
+
+.schedule-matchup {
+    font-weight: bold;
+
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+
+.schedule-team {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+
+.schedule-team .team-badge,
+.schedule-team .team-badge-logo {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    border-width: 2px;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+
+.roster-team {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+
+.roster-team .team-badge,
+.roster-team .team-badge-logo {
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    border-width: 2px;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+
+.standings-team {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+
+.standings-team .team-badge,
+.standings-team .team-badge-logo {
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    border-width: 2px;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+
+.schedule-score {
+    text-align: right;
+
+    font-size: 18px;
+
+    font-weight: 900;
+}
+
+.schedule-score-final {
+    font-size: 20px;
+}
+
+.schedule-final-tag {
+    font-size: 11px;
+    font-weight: bold;
+    color: #97a3ac;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+
+.schedule-game.is-live {
+    box-shadow: 0 2px 8px rgba(200,16,46,.18);
+}
+
+.schedule-score .live-badge {
+    margin-bottom: 6px;
+}
+
+
+/* =========================================
+   PLAYERS
+   ========================================= */
+
+.player-controls {
+    display: flex;
+
+    gap: 12px;
+
+    margin-bottom: 20px;
+}
+
+
+.player-controls input,
+.player-controls select {
+    padding: 12px;
+
+    border: 1px solid #ccd3d9;
+
+    border-radius: 4px;
+
+    font-size: 14px;
+
+    background: white;
+}
+
+
+.player-controls input {
+    flex: 1;
+}
+
+
+/* =========================================
+   RESULTS
+   ========================================= */
+
+.results-list {
+    display: grid;
+
+    gap: 8px;
+}
+
+
+.result-card {
+    background: white;
+
+    padding: 16px 20px;
+
+    border-radius: 6px;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+
+.result-team {
+    font-weight: bold;
+}
+
+
+.result-score {
+    font-weight: 900;
+}
+
+
+/* =========================================
+   SCHEDULE — BYE WEEKS & NOTES
+   ========================================= */
+
+.schedule-bye {
+    background: #eef1f4;
+    border: 1px dashed #ccd3d9;
+    border-radius: 6px;
+    padding: 16px 20px;
+    color: #64727e;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.note-tag {
+    display: inline-block;
+    background: #c8102e;
+    color: white;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .5px;
+    padding: 4px 9px;
+    border-radius: 20px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.schedule-game.is-tbd {
+    opacity: .8;
+}
+
+.schedule-location {
+    color: #97a3ac;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+/* =========================================
+   PLAYERS — POSITION TAG
+   ========================================= */
+
+.position-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 900;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #eef1f4;
+    color: #45525c;
+}
+
+.position-tag.goalie {
+    background: #071a2b;
+    color: white;
+}
+
+/* =========================================
+   INFO BANNER
+   ========================================= */
+
+.info-banner {
+    background: white;
+    border-left: 4px solid #c8102e;
+    border-radius: 6px;
+    padding: 18px 22px;
+    box-shadow: 0 3px 15px rgba(0,0,0,.07);
+    color: #45525c;
+}
+
+.info-banner strong {
+    color: #17212b;
+}
+
+
+.info-banner a {
+    color: #c8102e;
+    font-weight: bold;
+    text-decoration: none;
+    margin-left: 6px;
+}
+
+
+.info-banner a:hover {
+    text-decoration: underline;
+}
+
+
+/* =========================================
+   DOCUMENT CONTENT (constitution.html and
+   any other long-form reference document)
+   ========================================= */
+
+.doc-content {
+    background: white;
+    border-radius: 8px;
+    padding: 40px;
+    box-shadow: 0 3px 15px rgba(0,0,0,.07);
+
+    max-width: 820px;
+    margin: 0 auto;
+
+    color: #2a343d;
+    line-height: 1.7;
+}
+
+
+.doc-content h3 {
+    font-size: 20px;
+    color: #071a2b;
+
+    margin-top: 34px;
+    margin-bottom: 12px;
+
+    padding-bottom: 8px;
+    border-bottom: 2px solid #f0f2f4;
+}
+
+
+.doc-content h3:first-child {
+    margin-top: 0;
+}
+
+
+.doc-content h4 {
+    font-size: 16px;
+    color: #c8102e;
+
+    margin-top: 22px;
+    margin-bottom: 8px;
+}
+
+
+.doc-content p {
+    margin-bottom: 14px;
+}
+
+
+.doc-content p.doc-role {
+    margin-bottom: 4px;
+    margin-top: 18px;
+    color: #071a2b;
+}
+
+
+.doc-content ul {
+    margin: 0 0 16px 22px;
+}
+
+
+.doc-content li {
+    margin-bottom: 6px;
+}
+
+
+@media (max-width: 800px) {
+
+    .doc-content {
+        padding: 24px;
+    }
+
+}
+
+
+/* =========================================
+   SPONSORS
+   ========================================= */
+
+.sponsor-intro {
+    color: #687681;
+    max-width: 640px;
+    margin-bottom: 22px;
+}
+
+.sponsor-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.sponsor-card {
+    background: white;
+    border-radius: 8px;
+    padding: 28px 20px;
+    text-align: center;
+
+    box-shadow: 0 3px 15px rgba(0,0,0,.07);
+    transition: transform .15s;
+
+    text-decoration: none;
+    color: inherit;
+}
+
+a.sponsor-card:hover {
+    transform: translateY(-3px);
+}
+
+.sponsor-name {
+    font-size: 22px;
+    font-weight: 900;
+    color: #c8102e;
+    letter-spacing: .5px;
+}
+
+.sponsor-team {
+    color: #687681;
+    font-size: 13px;
+    margin-top: 6px;
+}
+
+.sponsor-blurb {
+    color: #45525c;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+/* =========================================
+   ROSTER COUNT PILL
+   ========================================= */
+
+.roster-count {
+    color: #75818b;
+    font-size: 13px;
+}
+
+
+/* =========================================
+   TEAMS ACCORDION (teams.html)
+   ========================================= */
+
+.teams-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.team-accordion-item {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 3px 15px rgba(0,0,0,.07);
+    overflow: hidden;
+    scroll-margin-top: 90px;
+}
+
+.team-accordion-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 22px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+}
+
+.team-accordion-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.team-accordion-info .team-badge,
+.team-accordion-info .team-badge-logo {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.team-accordion-info h3 {
+    margin-bottom: 3px;
+}
+
+.team-accordion-record {
+    color: #687681;
+    font-size: 13px;
+}
+
+.team-accordion-chevron {
+    color: #97a3ac;
+    font-size: 18px;
+    transition: transform .15s;
+    flex-shrink: 0;
+}
+
+.team-accordion-item.open .team-accordion-chevron {
+    transform: rotate(180deg);
+}
+
+.team-accordion-body {
+    display: none;
+    padding: 0 22px 24px;
+}
+
+.team-accordion-item.open .team-accordion-body {
+    display: block;
+}
+
+.team-accordion-body h4 {
+    margin: 18px 0 10px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #45525c;
+}
+
+.team-accordion-body h4:first-child {
+    margin-top: 0;
+}
+
+.roster-mini-table th,
+.roster-mini-table td {
+    padding: 8px 10px;
+}
+
+.roster-empty {
+    color: #97a3ac;
+    font-size: 13px;
+}
+
+.clickable-row {
+    cursor: pointer;
+}
+
+.clickable-row:hover {
+    background: #f7f8f9;
+}
+
+.team-accordion-sponsors {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 2px solid #e5e9ec;
+}
+
+.team-accordion-sponsors-label {
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #97a3ac;
+    margin-bottom: 8px;
+}
+
+.sponsor-blurb-mini {
+    margin-bottom: 10px;
+}
+
+.sponsor-blurb-mini:last-child {
+    margin-bottom: 0;
+}
+
+.sponsor-blurb-mini strong {
+    color: #c8102e;
+}
+
+.sponsor-blurb-mini a {
+    text-decoration: none;
+}
+
+.sponsor-blurb-mini a:hover strong {
+    text-decoration: underline;
+}
+
+.sponsor-blurb-mini p {
+    color: #45525c;
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+
+/* =========================================
+   PLAYER DETAIL (players.html?player=ID)
+   ========================================= */
+
+.link-button {
+    background: none;
+    border: none;
+    color: #c8102e;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    font-size: 13px;
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 20px;
+}
+
+.link-button:hover {
+    text-decoration: underline;
+}
+
+.player-detail-card {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 20px;
+}
+
+.player-detail-card .team-badge,
+.player-detail-card .team-badge-logo {
+    width: 60px;
+    height: 60px;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.player-detail-card h2 {
+    margin-bottom: 4px;
+}
+
+.player-detail-number {
+    color: #97a3ac;
+    font-weight: normal;
+    font-size: 16px;
+}
+
+.player-detail-card p {
+    color: #687681;
+    font-size: 14px;
+}
+
+.player-detail-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.player-detail-stats > div {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    padding: 16px;
+    text-align: center;
+}
+
+.player-detail-stats span {
+    display: block;
+    font-size: 26px;
+    font-weight: 900;
+    color: #071a2b;
+}
+
+.player-detail-stats label {
+    font-size: 12px;
+    color: #97a3ac;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+
+/* =========================================
+   LOGIN / INVITE / RESET CARDS
+   (accept-invite.html, reset-password.html)
+   ========================================= */
+
+.login-card {
+    background: white;
+
+    max-width: 460px;
+    margin: 0 auto;
+
+    padding: 35px;
+
+    border-radius: 8px;
+
+    box-shadow: 0 3px 15px rgba(0,0,0,.07);
+}
+
+
+.login-card h3 {
+    font-size: 22px;
+
+    margin-bottom: 8px;
+}
+
+
+.login-card > p {
+    color: #64727e;
+
+    margin-bottom: 24px;
+}
+
+
+.login-card label {
+    display: block;
+
+    font-size: 13px;
+    font-weight: bold;
+
+    color: #45525c;
+
+    margin-bottom: 6px;
+}
+
+
+.login-card input {
+    width: 100%;
+
+    padding: 12px 14px;
+
+    margin-bottom: 20px;
+
+    border: 1px solid #ccd3d9;
+    border-radius: 4px;
+
+    font-size: 15px;
+    font-family: inherit;
+}
+
+
+.login-card input:focus {
+    outline: none;
+    border-color: #c8102e;
+}
+
+
+.btn {
+    display: inline-block;
+    width: 100%;
+
+    padding: 13px 22px;
+
+    border: none;
+    border-radius: 4px;
+
+    font-size: 15px;
+    font-weight: bold;
+    font-family: inherit;
+
+    cursor: pointer;
+    text-align: center;
+}
+
+
+.btn-primary {
+    background: #c8102e;
+    color: white;
+}
+
+
+.btn-primary:hover {
+    background: #a70d26;
+}
+
+
+.btn-primary:disabled {
+    background: #97a3ac;
+    cursor: not-allowed;
+}
+
+
+.login-card #invite-message,
+.login-card #reset-message {
+    margin-top: 14px;
+
+    font-size: 14px;
+
+    color: #45525c;
+}
+
+
+/* =========================================
+   LOGIN DROPDOWN (nav pop-out login)
+   ========================================= */
+
+/*
+    Position (position/top/left/width) is computed and set inline by
+    js/app.js (setupLoginDropdown -> positionDropdown()), anchored to
+    the Login link's own on-screen position and recalculated on open
+    and on resize. That keeps it correct on any screen size without
+    depending on this stylesheet, so only the look lives here.
+*/
+.login-dropdown {
+    z-index: 500;
+}
+
+
+.login-dropdown .login-card {
+    text-align: left;
+    color: #17212b;
+}
+
+
+.login-card.login-card-compact {
+    max-width: none;
+    padding: 24px;
+}
+
+
+.login-card-compact h3 {
+    font-size: 18px;
+    margin-bottom: 6px;
+}
+
+
+.login-card-compact > div > p {
+    color: #64727e;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+
+.login-card-compact label {
+    font-size: 12px;
+}
+
+
+.login-card-compact input {
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    font-size: 14px;
+}
+
+
+.login-card-compact #nav-login-message,
+.login-card-compact #nav-forgot-message {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #45525c;
+}
+
+
+.login-dropdown-link {
+    display: inline-block;
+    margin-top: 14px;
+
+    font-size: 13px;
+    color: #c8102e;
+    text-decoration: none;
+}
+
+
+.login-dropdown-link:hover {
+    text-decoration: underline;
+}
+
+
+/* =========================================
+   "ADD TO HOME SCREEN" INSTRUCTIONS MODAL
+   (shown on click for browsers -- mainly iOS Safari -- that have no
+   native install prompt to trigger instead)
+   ========================================= */
+
+.install-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(7, 26, 43, .55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 900;
+}
+
+/* [hidden] and a class selector have equal specificity, so without this
+   the class's own "display: flex" above can win the cascade and the
+   backdrop stays visible (and clickable) even while "hidden" is set. */
+.install-modal-backdrop[hidden] {
+    display: none;
+}
+
+.install-modal {
+    background: white;
+    border-radius: 8px;
+    padding: 28px;
+    max-width: 380px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0,0,0,.25);
+}
+
+.install-modal h3 {
+    margin-bottom: 14px;
+}
+
+.install-modal p {
+    margin-bottom: 10px;
+}
+
+.install-modal ol {
+    margin: 0 0 20px 20px;
+    padding: 0;
+    line-height: 1.6;
+}
+
+.install-modal .btn {
+    width: 100%;
+}
+
+
+/* =========================================
+   LIVE GAME (live.html — timekeeper's live-entry screen)
+   ========================================= */
+
+.live-scoreboard {
+    background: #071a2b;
+    color: white;
+    border-radius: 8px;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 14px;
+}
+
+.live-scoreboard-team {
+    text-align: center;
+}
+
+.live-team-name {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 6px;
+    opacity: .85;
+}
+
+.live-team-score {
+    font-size: 48px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.live-scoreboard-mid {
+    text-align: center;
+}
+
+.live-status-badge {
+    display: inline-block;
+    background: rgba(255,255,255,.15);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.live-status-badge.is-live {
+    background: #c8102e;
+    animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+.live-status-badge.is-final {
+    background: #2c7a3d;
+}
+
+.live-period-tabs {
+    display: flex;
+    gap: 6px;
+}
+
+.live-period-tab {
+    border: 1px solid rgba(255,255,255,.3);
+    background: transparent;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.live-period-tab.active {
+    background: white;
+    color: #071a2b;
+}
+
+.live-team-panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.live-team-panel {
+    background: white;
+    border-radius: 8px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+
+.live-goalie-label {
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #687681;
+    margin-bottom: 8px;
+}
+
+.live-goalie-stints {
+    margin-bottom: 14px;
+}
+
+.live-goalie-stint-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #45525c;
+}
+
+.live-goalie-stint-row select {
+    flex: 2 1 auto;
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid #ccd3d9;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.live-time-input {
+    flex: 1 1 64px;
+    min-width: 0;
+    width: 64px;
+    padding: 8px;
+    border: 1px solid #ccd3d9;
+    border-radius: 4px;
+    font-size: 13px;
+    text-align: center;
+}
+
+.live-stint-remove,
+.live-stint-add {
+    flex: 0 0 auto;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 8px 10px;
+}
+
+.live-stint-remove {
+    background: #f7f8f9;
+    color: #c8102e;
+}
+
+.live-stint-add {
+    background: #eef4ff;
+    color: #1f4fa3;
+    white-space: nowrap;
+}
+
+.live-goalie-add-row {
+    opacity: .85;
+}
+
+.live-goalie-carried {
+    font-size: 12px;
+    font-style: italic;
+    color: #97a3ac;
+    margin-bottom: 8px;
+}
+
+.live-action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.live-goal-button,
+.live-penalty-button {
+    width: 100%;
+    font-size: 16px;
+    padding: 14px;
+}
+
+.live-penalty-button {
+    background: white;
+    color: #c8102e;
+    border: 2px solid #c8102e;
+}
+
+.live-recent-goals {
+    font-size: 13px;
+}
+
+.live-recent-goals + .live-recent-goals {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 2px solid #e5e9ec;
+}
+
+.live-goal-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-top: 1px solid #e5e9ec;
+}
+
+.live-goal-item:first-child {
+    border-top: none;
+}
+
+.live-goal-item span {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+/* Team panels stay side by side even on a phone -- the whole point of
+   this screen is a timekeeper working rink-side on their phone, and an
+   "Away" / "Home" pair stacked on top of each other reads as one column
+   of buttons rather than two teams, per league feedback. Panels just get
+   more compact below, instead of collapsing to one column. */
+@media (max-width: 700px) {
+    .live-team-panels {
+        gap: 8px;
+    }
+
+    .live-team-panel {
+        padding: 12px;
+    }
+
+    .live-goal-button,
+    .live-penalty-button {
+        font-size: 14px;
+        padding: 12px 6px;
+    }
+
+    .live-team-score {
+        font-size: 36px;
+    }
+}
+
+@media (max-width: 400px) {
+    .live-goal-button,
+    .live-penalty-button {
+        font-size: 13px;
+        padding: 10px 4px;
+    }
+}
+
+
+/* =========================================
+   FOOTER
+   ========================================= */
+
+footer {
+    background: #071a2b;
+
+    color: white;
+
+    padding: 35px 0;
+
+    margin-top: 30px;
+}
+
+
+.footer-inner {
+    display: flex;
+
+    justify-content: space-between;
+
+    gap: 20px;
+}
+
+
+.footer-inner p {
+    color: #9eabb5;
+
+    font-size: 13px;
+
+    margin-top: 5px;
+}
+
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
+@media (max-width: 800px) {
+
+    .header-inner {
+        flex-wrap: wrap;
+
+        padding: 16px 0;
+    }
+
+
+    .nav-toggle {
+        display: flex;
+    }
+
+
+    nav {
+        display: none;
+
+        width: 100%;
+        flex-direction: column;
+        order: 3;
+
+        margin-top: 14px;
+    }
+
+
+    nav.open {
+        display: flex;
+    }
+
+
+    nav a {
+        width: 100%;
+        padding: 13px 14px;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+
+    .hero {
+        padding: 55px 0;
+    }
+
+
+    .hero-inner {
+        flex-direction: column;
+        text-align: center;
+        gap: 30px;
+    }
+
+
+    .hero-logo img {
+        width: 160px;
+    }
+
+
+    .homepage-game {
+        grid-template-columns: 1fr;
+        row-gap: 6px;
+        text-align: left;
+    }
+
+    .homepage-vs {
+        text-align: left;
+        padding-left: 2px;
+    }
+
+
+    .team-grid,
+    .team-grid.large {
+        grid-template-columns: 1fr;
+    }
+
+
+    .sponsor-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+
+    .schedule-game {
+        grid-template-columns: 80px 1fr 70px;
+    }
+
+
+    .player-controls {
+        flex-direction: column;
+    }
+
+
+    .footer-inner {
+        flex-direction: column;
+    }
+
+
+    .login-card {
+        padding: 24px;
+    }
+
+}
