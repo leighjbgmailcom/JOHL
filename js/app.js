@@ -172,19 +172,19 @@ function renderNextGame() {
                             ${isLive ? `<span class="live-badge">Live</span>` : formatTime12h(game.time)}
                         </div>
 
-                        <div class="homepage-team">
+                        <a class="homepage-team" href="teams.html?team=${game.away}" title="View ${teamName(game.away)}">
                             ${teamBadge(game.away)}
                             <span>${teamName(game.away)}</span>
                             ${hasScore ? `<span class="homepage-score">${game.awayScore ?? 0}</span>` : ""}
-                        </div>
+                        </a>
 
                         <div class="homepage-vs ${isFinal ? "is-final" : ""}">${isFinal ? "Final" : "vs."}</div>
 
-                        <div class="homepage-team">
+                        <a class="homepage-team" href="teams.html?team=${game.home}" title="View ${teamName(game.home)}">
                             ${teamBadge(game.home)}
                             <span>${teamName(game.home)}</span>
                             ${hasScore ? `<span class="homepage-score">${game.homeScore ?? 0}</span>` : ""}
-                        </div>
+                        </a>
                     </div>
                 `;
                 }).join("")}
@@ -196,32 +196,158 @@ function renderNextGame() {
 
 
 /* =========================================
-   TEAM CARDS (home + teams page)
+   TEAMS PAGE (teams.html) -- an accordion per team: record up top,
+   click to expand the full roster (with stats) and the team's sponsor
+   blurb. Supports ?team=CODE (from the homepage's "Up Next" box) to
+   land pre-expanded and scrolled to that team.
    ========================================= */
 
-function renderTeams() {
-    const elements = [
-        document.getElementById("team-grid"),
-        document.getElementById("all-teams")
-    ];
+function skaterStatsForPlayer(stats, playerId) {
+    const s = stats && stats[playerId];
+    if (!s) return { gp: 0, goals: 0, assists: 0, points: 0 };
+    return { gp: s.games.size, goals: s.goals, assists: s.assists, points: s.goals + s.assists };
+}
 
-    elements.forEach(container => {
-        if (!container) return;
+function goalieStatsForPlayer(stats, playerId) {
+    const s = stats && stats[playerId];
+    if (!s) return { gp: 0, periodsPlayed: 0, ga: 0, gaPerGame: 0 };
+    const gp = s.games.size;
+    return { gp, periodsPlayed: s.periodsPlayed.size, ga: s.ga, gaPerGame: gp ? s.ga / gp : 0 };
+}
 
-        container.innerHTML = TEAMS.map(team => {
-            const rosterCount = PLAYERS.filter(p => p.team === team.code).length;
+function rosterRowHtml(player, cells) {
+    return `
+        <tr class="clickable-row" onclick="window.location.href='players.html?player=${player.id}'">
+            <td>${player.number != null ? "#" + player.number : "—"}</td>
+            <td><strong>${player.last}, ${player.first}</strong></td>
+            ${cells}
+        </tr>
+    `;
+}
 
-            return `
-                <a class="team-card" href="players.html?team=${team.code}">
-                    ${teamBadge(team.code)}
-                    <div>
-                        <h3>${team.name}</h3>
-                        <p class="roster-count">${rosterCount} players on roster</p>
+async function renderTeamsPage() {
+    const container = document.getElementById("teams-accordion");
+    if (!container) return;
+
+    const [skaterStats, goalieStats] = await Promise.all([
+        computeSkaterStats(),
+        computeGoalieStats()
+    ]);
+
+    const standingsByCode = {};
+    computeStandings().forEach(s => { standingsByCode[s.code] = s; });
+
+    container.innerHTML = TEAMS.map(team => {
+        const record = standingsByCode[team.code];
+        const recordLabel = record && record.gp > 0
+            ? `${record.w}-${record.l}-${record.otl}${record.t ? "-" + record.t : ""} &nbsp;·&nbsp; <strong>${record.pts} PTS</strong>`
+            : "No games played yet";
+
+        const roster = PLAYERS.filter(p => p.team === team.code);
+        const skaters = roster
+            .filter(p => !isGoaliePosition(p.position))
+            .map(p => ({ player: p, stats: skaterStatsForPlayer(skaterStats, p.id) }))
+            .sort((a, b) => {
+                if (b.stats.points !== a.stats.points) return b.stats.points - a.stats.points;
+                if (a.player.number != null && b.player.number != null) return a.player.number - b.player.number;
+                return a.player.last.localeCompare(b.player.last);
+            });
+        const goalies = roster
+            .filter(p => isGoaliePosition(p.position))
+            .map(p => ({ player: p, stats: goalieStatsForPlayer(goalieStats, p.id) }))
+            .sort((a, b) => a.player.last.localeCompare(b.player.last));
+
+        const sponsors = SPONSORS.filter(s => s.team === team.code);
+
+        return `
+            <div class="team-accordion-item" data-team="${team.code}">
+                <button type="button" class="team-accordion-header">
+                    <div class="team-accordion-info">
+                        ${teamBadge(team.code)}
+                        <div>
+                            <h3>${team.name}</h3>
+                            <p class="team-accordion-record">${recordLabel}</p>
+                        </div>
                     </div>
-                </a>
-            `;
-        }).join("");
+                    <span class="team-accordion-chevron">▾</span>
+                </button>
+
+                <div class="team-accordion-body">
+
+                    <h4>Skaters</h4>
+                    ${skaters.length ? `
+                        <div class="table-wrapper">
+                            <table class="standings-table roster-mini-table">
+                                <thead>
+                                    <tr><th>#</th><th>Player</th><th>GP</th><th>G</th><th>A</th><th>PTS</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${skaters.map(row => rosterRowHtml(row.player, `
+                                        <td>${row.stats.gp}</td>
+                                        <td>${row.stats.goals}</td>
+                                        <td>${row.stats.assists}</td>
+                                        <td><strong>${row.stats.points}</strong></td>
+                                    `)).join("")}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : `<p class="roster-empty">No skaters on this roster yet.</p>`}
+
+                    ${goalies.length ? `
+                        <h4>Goalies</h4>
+                        <div class="table-wrapper">
+                            <table class="standings-table roster-mini-table">
+                                <thead>
+                                    <tr><th>#</th><th>Player</th><th>GP</th><th>GA</th><th>GA/Game</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${goalies.map(row => rosterRowHtml(row.player, `
+                                        <td>${row.stats.gp}</td>
+                                        <td>${row.stats.ga}</td>
+                                        <td><strong>${row.stats.gaPerGame.toFixed(2)}</strong></td>
+                                    `)).join("")}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : ""}
+
+                    ${sponsors.length ? `
+                        <div class="team-accordion-sponsors">
+                            <p class="team-accordion-sponsors-label">Proud sponsor${sponsors.length > 1 ? "s" : ""}</p>
+                            ${sponsors.map(sponsor => `
+                                <div class="sponsor-blurb-mini">
+                                    ${sponsor.url
+                                        ? `<a href="${sponsor.url}" target="_blank" rel="noopener"><strong>${sponsor.name}</strong></a>`
+                                        : `<strong>${sponsor.name}</strong>`}
+                                    ${sponsor.blurb ? `<p>${sponsor.blurb}</p>` : ""}
+                                </div>
+                            `).join("")}
+                        </div>
+                    ` : ""}
+
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    setupTeamsAccordion();
+}
+
+function setupTeamsAccordion() {
+    document.querySelectorAll(".team-accordion-header").forEach(header => {
+        header.addEventListener("click", () => {
+            header.closest(".team-accordion-item").classList.toggle("open");
+        });
     });
+
+    const focusTeam = new URLSearchParams(window.location.search).get("team");
+    if (!focusTeam) return;
+
+    const item = document.querySelector(`.team-accordion-item[data-team="${focusTeam}"]`);
+    if (!item) return;
+
+    item.classList.add("open");
+    item.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 
@@ -384,7 +510,7 @@ function renderPlayers() {
     }
 
     element.innerHTML = filtered.map(player => `
-        <tr>
+        <tr class="clickable-row" onclick="window.location.href='players.html?player=${player.id}'">
             <td>${player.number != null ? `#${player.number}` : "—"}</td>
             <td><strong>${player.last}, ${player.first}</strong></td>
             <td>
@@ -407,12 +533,148 @@ function renderPlayers() {
     }
 }
 
+// A player, clicked from this table, the Teams roster, or the Leaders
+// board (players.html?player=ID) gets a focused view instead of the
+// full roster: their season line plus a per-game log. Games only show
+// up here if the player has a recorded goal, assist, penalty, or (for a
+// goalie) a goalie-period stint in them -- there's no separate "who
+// dressed" record to fall back on for a scoreless, penalty-free game.
+async function renderPlayerDetail(playerId) {
+    const detail = document.getElementById("player-detail");
+    if (!detail) return false;
+
+    const player = PLAYERS.find(p => String(p.id) === String(playerId));
+    if (!player) {
+        detail.style.display = "none";
+        return false;
+    }
+
+    document.getElementById("players-page-title")?.style.setProperty("display", "none");
+    document.querySelector(".player-controls")?.style.setProperty("display", "none");
+    document.getElementById("players-roster-wrapper")?.style.setProperty("display", "none");
+    detail.style.display = "";
+
+    const isGoalie = isGoaliePosition(player.position);
+    const gameLookup = {};
+    SCHEDULE.forEach(g => { gameLookup[g.id] = g; });
+
+    function opponentLabel(game) {
+        const opponent = game.home === player.team ? game.away : game.home;
+        const atOrVs = game.home === player.team ? "vs" : "@";
+        return `${atOrVs} ${teamName(opponent)}`;
+    }
+
+    function gameSortKey(game) {
+        return `${game.date} ${game.time || ""}`;
+    }
+
+    let summaryHtml, columnsHtml, rowsHtml;
+
+    if (isGoalie) {
+        const stats = await computeGoalieStats();
+        const s = stats && stats[player.id];
+        const gp = s ? s.games.size : 0;
+        const ga = s ? s.ga : 0;
+        const gaPerGame = gp ? ga / gp : 0;
+
+        summaryHtml = `
+            <div class="player-detail-stats">
+                <div><span>${gp}</span><label>GP</label></div>
+                <div><span>${ga}</span><label>GA</label></div>
+                <div><span>${gaPerGame.toFixed(2)}</span><label>GA/Game</label></div>
+            </div>
+        `;
+
+        columnsHtml = `<th>Date</th><th>Opponent</th><th>GA</th>`;
+
+        const games = s
+            ? Object.keys(s.perGame).map(id => ({ game: gameLookup[id], ga: s.perGame[id] })).filter(r => r.game)
+            : [];
+        games.sort((a, b) => gameSortKey(a.game).localeCompare(gameSortKey(b.game)));
+
+        rowsHtml = games.map(row => `
+            <tr>
+                <td>${formatDateISO(row.game.date)}</td>
+                <td>${opponentLabel(row.game)}</td>
+                <td>${row.ga}</td>
+            </tr>
+        `).join("");
+    } else {
+        const stats = await computeSkaterStats();
+        const s = stats && stats[player.id];
+        const gp = s ? s.games.size : 0;
+        const goals = s ? s.goals : 0;
+        const assists = s ? s.assists : 0;
+
+        summaryHtml = `
+            <div class="player-detail-stats">
+                <div><span>${gp}</span><label>GP</label></div>
+                <div><span>${goals}</span><label>G</label></div>
+                <div><span>${assists}</span><label>A</label></div>
+                <div><span>${goals + assists}</span><label>PTS</label></div>
+            </div>
+        `;
+
+        columnsHtml = `<th>Date</th><th>Opponent</th><th>G</th><th>A</th><th>PTS</th>`;
+
+        const games = s
+            ? Object.keys(s.perGame).map(id => ({ game: gameLookup[id], line: s.perGame[id] })).filter(r => r.game)
+            : [];
+        games.sort((a, b) => gameSortKey(a.game).localeCompare(gameSortKey(b.game)));
+
+        rowsHtml = games.map(row => `
+            <tr>
+                <td>${formatDateISO(row.game.date)}</td>
+                <td>${opponentLabel(row.game)}</td>
+                <td>${row.line.goals}</td>
+                <td>${row.line.assists}</td>
+                <td><strong>${row.line.goals + row.line.assists}</strong></td>
+            </tr>
+        `).join("");
+    }
+
+    detail.innerHTML = `
+        <a href="players.html" class="link-button">← All players</a>
+
+        <div class="player-detail-card">
+            ${teamBadge(player.team)}
+            <div>
+                <h2>${player.first} ${player.last} ${player.number != null ? `<span class="player-detail-number">#${player.number}</span>` : ""}</h2>
+                <p>${teamName(player.team)} &middot; ${isGoalie ? "Goalie" : "Skater"}</p>
+            </div>
+        </div>
+
+        ${summaryHtml}
+
+        <h4>Game Log</h4>
+        ${rowsHtml ? `
+            <div class="table-wrapper">
+                <table class="standings-table">
+                    <thead><tr>${columnsHtml}</tr></thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
+        ` : `<p class="roster-empty">No recorded games yet this season.</p>`}
+    `;
+
+    return true;
+}
+
 function setupPlayerFilters() {
     const search = document.getElementById("player-search");
     const team = document.getElementById("player-team");
 
-    // Honour ?team= query param on load (from a team card link)
     const params = new URLSearchParams(window.location.search);
+
+    // A specific player (from the Teams roster, this table, or Leaders)
+    // gets the focused game-log view instead of the roster table.
+    const playerId = params.get("player");
+    if (playerId && document.getElementById("player-detail")) {
+        renderPlayerDetail(playerId);
+        return;
+    }
+
+    // Honour ?team= query param on load (from a team card link)
     const initialTeam = params.get("team");
     if (initialTeam && team) {
         team.value = initialTeam;
@@ -534,63 +796,92 @@ function renderStandings() {
    LEADERS (leaders.html)
    ========================================= */
 
+// Skater stats (goals, assists, games played), keyed by player id --
+// shared by the Leaders page, the Teams page roster, and a player's own
+// game log. GP counts any game the player recorded a goal, an assist, or
+// a penalty in; a game with none of those for a given skater won't show
+// up, since the site has no separate "who dressed" record to fall back
+// on. Cached for the life of the page since these pages don't need it
+// to update live.
+let SKATER_STATS_CACHE = null;
+
+async function computeSkaterStats() {
+    if (SKATER_STATS_CACHE) return SKATER_STATS_CACHE;
+
+    const [{ data: goals, error: goalsError }, { data: penalties, error: penaltiesError }] = await Promise.all([
+        supabaseClient.from("game_goals").select("game_id, scorer_id, assist1_id, assist2_id"),
+        supabaseClient.from("game_penalties").select("game_id, player_id")
+    ]);
+
+    if (goalsError || penaltiesError) {
+        console.error("Error loading skater stats:", goalsError || penaltiesError);
+        return null;
+    }
+
+    const stats = {};
+    function statsFor(playerId) {
+        if (!stats[playerId]) {
+            stats[playerId] = { playerId, games: new Set(), goals: 0, assists: 0, perGame: {} };
+        }
+        return stats[playerId];
+    }
+    function bump(gameId, playerId, field) {
+        if (!playerId) return;
+        const s = statsFor(playerId);
+        s.games.add(gameId);
+        if (!s.perGame[gameId]) s.perGame[gameId] = { goals: 0, assists: 0 };
+        if (field) {
+            s[field]++;
+            s.perGame[gameId][field]++;
+        }
+    }
+
+    (goals || []).forEach(g => {
+        bump(g.game_id, g.scorer_id, "goals");
+        bump(g.game_id, g.assist1_id, "assists");
+        bump(g.game_id, g.assist2_id, "assists");
+    });
+    // A penalty with no points still counts as a game appearance.
+    (penalties || []).forEach(p => bump(p.game_id, p.player_id, null));
+
+    SKATER_STATS_CACHE = stats;
+    return stats;
+}
+
+// Turns the raw computeSkaterStats() map into display-ready rows, sorted
+// points-then-goals-then-name -- shared by the Leaders page and the
+// Teams page roster.
+function skaterStatsRows(stats) {
+    return Object.values(stats)
+        .map(s => {
+            const player = PLAYERS.find(p => String(p.id) === String(s.playerId));
+            if (!player) return null;
+            const team = TEAMS.find(t => t.code === player.team);
+            const points = s.goals + s.assists;
+            return { player, team, gp: s.games.size, goals: s.goals, assists: s.assists, points };
+        })
+        .filter(row => row !== null)
+        .sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points;
+            if (b.goals !== a.goals) return b.goals - a.goals;
+            return (a.player.last || "").localeCompare(b.player.last || "");
+        });
+}
+
 async function renderLeaders() {
     const table = document.getElementById("leaders-table");
     if (!table) return;
 
-    const { data, error } = await supabaseClient
-        .from("game_goals")
-        .select("scorer_id, assist1_id, assist2_id");
-
-    if (error) {
-        console.error("Error loading leaders:", error);
-        table.innerHTML = `<tr><td colspan="7">Unable to load the leaderboard right now.</td></tr>`;
+    const stats = await computeSkaterStats();
+    if (!stats) {
+        table.innerHTML = `<tr><td colspan="8">Unable to load the leaderboard right now.</td></tr>`;
         return;
     }
 
-    const stats = {};
-
-    function bump(playerId, field) {
-        if (!playerId) return;
-        if (!stats[playerId]) {
-            stats[playerId] = { goals: 0, assists: 0 };
-        }
-        stats[playerId][field]++;
-    }
-
-    (data || []).forEach(goal => {
-        bump(goal.scorer_id, "goals");
-        bump(goal.assist1_id, "assists");
-        bump(goal.assist2_id, "assists");
-    });
-
-    const rows = Object.keys(stats)
-        .map(id => {
-            const player = PLAYERS.find(p => String(p.id) === String(id));
-            if (!player) return null;
-
-            const team = TEAMS.find(t => t.code === player.team);
-            const goals = stats[id].goals;
-            const assists = stats[id].assists;
-
-            return {
-                player,
-                team,
-                goals,
-                assists,
-                points: goals + assists
-            };
-        })
-        .filter(row => row !== null);
-
-    rows.sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        if (b.goals !== a.goals) return b.goals - a.goals;
-        return (a.player.last || "").localeCompare(b.player.last || "");
-    });
+    const rows = skaterStatsRows(stats).filter(row => !isGoaliePosition(row.player.position));
 
     if (!rows.length) {
-        table.innerHTML = `<tr><td colspan="7">No goals have been recorded yet this season.</td></tr>`;
+        table.innerHTML = `<tr><td colspan="8">No goals have been recorded yet this season.</td></tr>`;
         return;
     }
 
@@ -600,6 +891,7 @@ async function renderLeaders() {
             <td>${row.player.number != null ? "#" + row.player.number : "—"}</td>
             <td>${row.player.last}, ${row.player.first}</td>
             <td>${row.team ? row.team.name : ""}</td>
+            <td>${row.gp}</td>
             <td>${row.goals}</td>
             <td>${row.assists}</td>
             <td><strong>${row.points}</strong></td>
@@ -649,9 +941,14 @@ function attributeGoalieStint(sortedStints, goalSeconds) {
 
 const GOALIE_STATS_PERIOD_ORDER = ["1", "2", "3", "OT", "SO"];
 
-async function renderGoalieStats() {
-    const table = document.getElementById("goalies-table");
-    if (!table) return;
+// Computes goals-against for every goalie who has appeared in a game,
+// keyed by player id -- shared by the Leaders page, the Teams page
+// roster, and a player's own game log. Cached for the life of the page
+// since none of these pages need it to update live.
+let GOALIE_STATS_CACHE = null;
+
+async function computeGoalieStats() {
+    if (GOALIE_STATS_CACHE) return GOALIE_STATS_CACHE;
 
     const [{ data: periods, error: periodsError }, { data: goals, error: goalsError }] = await Promise.all([
         supabaseClient.from("game_goalie_periods").select("game_id, team_id, period, goalie_id, time_in"),
@@ -660,8 +957,7 @@ async function renderGoalieStats() {
 
     if (periodsError || goalsError) {
         console.error("Error loading goalie stats:", periodsError || goalsError);
-        table.innerHTML = `<tr><td colspan="7">Unable to load goalie stats right now.</td></tr>`;
-        return;
+        return null;
     }
 
     // Group goalie-period rows into per game+team, per-period "stint
@@ -720,7 +1016,7 @@ async function renderGoalieStats() {
     const stats = {};
     function statsFor(goalieId) {
         if (!stats[goalieId]) {
-            stats[goalieId] = { goalieId, games: new Set(), periodsPlayed: new Set(), ga: 0 };
+            stats[goalieId] = { goalieId, games: new Set(), periodsPlayed: new Set(), ga: 0, perGame: {} };
         }
         return stats[goalieId];
     }
@@ -737,6 +1033,7 @@ async function renderGoalieStats() {
                 const s = statsFor(stint.goalieId);
                 s.games.add(gameId);
                 s.periodsPlayed.add(`${gameId}|${period}`);
+                if (s.perGame[gameId] == null) s.perGame[gameId] = 0;
             });
 
             // Every goal scored in this same game+period by the OTHER
@@ -750,12 +1047,23 @@ async function renderGoalieStats() {
                 )
                 .forEach(goal => {
                     const stint = attributeGoalieStint(stints, parseClockToSeconds(goal.game_time));
-                    if (stint) statsFor(stint.goalieId).ga++;
+                    if (!stint) return;
+                    const s = statsFor(stint.goalieId);
+                    s.ga++;
+                    s.perGame[gameId] = (s.perGame[gameId] || 0) + 1;
                 });
         });
     });
 
-    const rows = Object.values(stats)
+    GOALIE_STATS_CACHE = stats;
+    return stats;
+}
+
+// Turns the raw computeGoalieStats() map into display-ready rows (one
+// per goalie, sorted best GA/Game first) for the Leaders page and the
+// Teams page roster.
+function goalieStatsRows(stats) {
+    return Object.values(stats)
         .map(s => {
             const player = PLAYERS.find(p => String(p.id) === String(s.goalieId));
             if (!player) return null;
@@ -770,12 +1078,24 @@ async function renderGoalieStats() {
                 gaPerGame: gp ? s.ga / gp : 0
             };
         })
-        .filter(row => row !== null);
+        .filter(row => row !== null)
+        .sort((a, b) => {
+            if (a.gaPerGame !== b.gaPerGame) return a.gaPerGame - b.gaPerGame;
+            return (a.player.last || "").localeCompare(b.player.last || "");
+        });
+}
 
-    rows.sort((a, b) => {
-        if (a.gaPerGame !== b.gaPerGame) return a.gaPerGame - b.gaPerGame;
-        return (a.player.last || "").localeCompare(b.player.last || "");
-    });
+async function renderGoalieStats() {
+    const table = document.getElementById("goalies-table");
+    if (!table) return;
+
+    const stats = await computeGoalieStats();
+    if (!stats) {
+        table.innerHTML = `<tr><td colspan="7">Unable to load goalie stats right now.</td></tr>`;
+        return;
+    }
+
+    const rows = goalieStatsRows(stats);
 
     if (!rows.length) {
         table.innerHTML = `<tr><td colspan="7">No goalie appearances have been recorded yet this season.</td></tr>`;
@@ -1061,6 +1381,27 @@ function setupLoginDropdown() {
 
 
 /* =========================================
+   PAGE TABS (reusable tab strip, e.g. Leaders' Skaters/Goalies)
+   ========================================= */
+
+function setupPageTabs(tabsSelector, panelIdPrefix) {
+    const container = document.querySelector(tabsSelector);
+    if (!container) return;
+
+    container.querySelectorAll(".page-tab").forEach(btn => {
+        btn.addEventListener("click", () => {
+            container.querySelectorAll(".page-tab").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+
+            document.querySelectorAll(`[id^="${panelIdPrefix}-"]`).forEach(panel => panel.classList.remove("active"));
+            const panel = document.getElementById(`${panelIdPrefix}-${btn.dataset.tab}`);
+            if (panel) panel.classList.add("active");
+        });
+    });
+}
+
+
+/* =========================================
    MOBILE NAV TOGGLE
    ========================================= */
 
@@ -1105,7 +1446,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     renderNextGame();
-    renderTeams();
+    renderTeamsPage();
     setupScheduleFilters();
     renderPlayers();
     setupPlayerFilters();
