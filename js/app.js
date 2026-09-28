@@ -502,11 +502,20 @@ async function toggleScheduleGameDetail(gameId) {
     panel.innerHTML = html;
 }
 
+// "#<number> Lastname" tag for an event row -- last name only (no first
+// name) to keep each row compact, per request.
+function scheduleEventPlayerTag(playerId) {
+    if (playerId == null) return "";
+    const player = PLAYERS.find(p => String(p.id) === String(playerId));
+    if (!player) return "";
+    return player.number != null ? `#${player.number} ${player.last}` : player.last;
+}
+
 // Builds a single chronological event feed for the game -- goals,
-// penalties and goalie shifts, each tagged with the team's logo and event
-// type only. Deliberately no player names anywhere here (scorer, assist,
-// goalie, penalized player) -- this is the public schedule view; the
-// player-level detail lives in Admin's Enter Game Results screen.
+// penalties and goalie shifts, each tagged with the team's logo, event
+// type, and the player(s) involved (jersey number + last name only, to
+// keep rows compact) -- this is the public schedule view, so it stays
+// short on detail compared to Admin's full Enter Game Results screen.
 function renderScheduleGameDetail(game, goals, periods, penalties) {
     const awayTeam = getTeam(game.away);
     const homeTeam = getTeam(game.home);
@@ -532,9 +541,16 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
     const events = [];
 
     goals.forEach(goal => {
+        const scorerTag = scheduleEventPlayerTag(goal.scorer_id);
+        const assistTags = [goal.assist1_id, goal.assist2_id]
+            .map(scheduleEventPlayerTag)
+            .filter(Boolean);
+
         events.push({
             teamCode: sideCodeForTeamId(goal.team_id),
             label: "Goal",
+            detail: scorerTag,
+            subDetail: assistTags.length ? `assist: ${assistTags.join(", ")}` : "",
             cssClass: "is-goal",
             timeLabel: periodTimeLabel(goal.period, goal.game_time),
             key: sortKey(goal.period, goal.game_time)
@@ -545,6 +561,8 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
         events.push({
             teamCode: sideCodeForTeamId(penalty.team_id),
             label: penalty.minutes ? `Penalty (${penalty.minutes} min)` : "Penalty",
+            detail: scheduleEventPlayerTag(penalty.player_id),
+            subDetail: "",
             cssClass: "is-penalty",
             timeLabel: periodTimeLabel(penalty.period, penalty.game_time),
             key: sortKey(penalty.period, penalty.game_time)
@@ -558,6 +576,8 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
         events.push({
             teamCode: sideCodeForTeamId(gp.team_id),
             label: "Goalie Shift",
+            detail: scheduleEventPlayerTag(gp.goalie_id),
+            subDetail: "",
             cssClass: "is-goalie-shift",
             timeLabel: periodTimeLabel(gp.period, gp.time_in),
             key: sortKey(gp.period, gp.time_in)
@@ -576,7 +596,11 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
     const eventsHtml = events.map(event => `
         <div class="schedule-event-row ${event.cssClass}">
             <span class="schedule-event-team">${teamBadge(event.teamCode)}</span>
-            <span class="schedule-event-label">${event.label}</span>
+            <span class="schedule-event-main">
+                <span class="schedule-event-label">${event.label}</span>
+                ${event.detail ? `<span class="schedule-event-detail">${event.detail}</span>` : ""}
+                ${event.subDetail ? `<span class="schedule-event-subdetail">(${event.subDetail})</span>` : ""}
+            </span>
             <span class="schedule-event-time">${event.timeLabel}</span>
         </div>
     `).join("");
@@ -1098,10 +1122,10 @@ function renderStandings() {
     element.innerHTML = standings.map(s => `
         <tr>
             <td class="team-name-cell">
-                <div class="standings-team">
+                <a class="standings-team" href="teams.html?team=${s.code}">
                     ${teamBadge(s.code)}
                     <span>${teamName(s.code)}</span>
-                </div>
+                </a>
             </td>
             <td>${s.gp}</td>
             <td>${s.w}</td>

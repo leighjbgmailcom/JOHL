@@ -796,6 +796,14 @@ tbody tr:hover {
     display: flex;
     align-items: center;
     gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    font-weight: bold;
+    border-radius: 6px;
+}
+
+.standings-team:hover {
+    color: #c8102e;
 }
 
 
@@ -916,6 +924,14 @@ tbody tr:hover {
     flex-shrink: 0;
 }
 
+.schedule-event-main {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
 .schedule-event-label {
     font-weight: bold;
 }
@@ -930,6 +946,16 @@ tbody tr:hover {
 
 .schedule-event-row.is-goalie-shift .schedule-event-label {
     color: #687681;
+}
+
+.schedule-event-detail {
+    font-weight: bold;
+    color: #071a2b;
+}
+
+.schedule-event-subdetail {
+    color: #97a3ac;
+    font-size: 12px;
 }
 
 .schedule-event-time {
