@@ -33,6 +33,15 @@ function parseClockToSeconds(value) {
     return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
 }
 
+// Formats a duration in seconds (e.g. a goalie's ice time in a game) as
+// "M:SS" for display.
+function formatSecondsAsClock(totalSeconds) {
+    const secs = Math.round(totalSeconds || 0);
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 
 /* =========================================
    PENALTY INFRACTION TYPES
@@ -264,9 +273,14 @@ function skaterStatsForPlayer(stats, playerId) {
 
 function goalieStatsForPlayer(stats, playerId) {
     const s = stats && stats[playerId];
-    if (!s) return { gp: 0, periodsPlayed: 0, ga: 0, gaPerGame: 0 };
-    const gp = s.games.size;
-    return { gp, periodsPlayed: s.periodsPlayed.size, ga: s.ga, gaPerGame: gp ? s.ga / gp : 0 };
+    if (!s) return { gp: 0, periodsPlayed: 0, minutesPlayed: 0, ga: 0, gaa: 0 };
+    return {
+        gp: s.games.size,
+        periodsPlayed: s.periodsPlayed.size,
+        minutesPlayed: s.secondsPlayed / 60,
+        ga: s.ga,
+        gaa: computeGaa(s.gaTimed, s.secondsPlayed)
+    };
 }
 
 function rosterRowHtml(player, cells) {
@@ -352,13 +366,13 @@ async function renderTeamsPage() {
                         <div class="table-wrapper">
                             <table class="standings-table roster-mini-table">
                                 <thead>
-                                    <tr><th>#</th><th>Player</th><th>GP</th><th>GA</th><th>GA/Game</th></tr>
+                                    <tr><th>#</th><th>Player</th><th>GP</th><th>GA</th><th>GAA</th></tr>
                                 </thead>
                                 <tbody>
                                     ${goalies.map(row => rosterRowHtml(row.player, `
                                         <td>${row.stats.gp}</td>
                                         <td>${row.stats.ga}</td>
-                                        <td><strong>${row.stats.gaPerGame.toFixed(2)}</strong></td>
+                                        <td><strong>${row.stats.gaa.toFixed(2)}</strong></td>
                                     `)).join("")}
                                 </tbody>
                             </table>
@@ -1007,20 +1021,26 @@ async function renderPlayerDetail(playerId) {
         const s = stats && stats[player.id];
         const gp = s ? s.games.size : 0;
         const ga = s ? s.ga : 0;
-        const gaPerGame = gp ? ga / gp : 0;
+        const minutesPlayed = s ? s.secondsPlayed / 60 : 0;
+        const gaa = s ? computeGaa(s.gaTimed, s.secondsPlayed) : 0;
 
         summaryHtml = `
             <div class="player-detail-stats">
                 <div><span>${gp}</span><label>GP</label></div>
+                <div><span>${minutesPlayed.toFixed(1)}</span><label>Minutes</label></div>
                 <div><span>${ga}</span><label>GA</label></div>
-                <div><span>${gaPerGame.toFixed(2)}</span><label>GA/Game</label></div>
+                <div><span>${gaa.toFixed(2)}</span><label>GAA</label></div>
             </div>
         `;
 
-        columnsHtml = `<th>Date</th><th>Opponent</th><th>GA</th>`;
+        columnsHtml = `<th>Date</th><th>Opponent</th><th>Time</th><th>GA</th>`;
 
         const games = s
-            ? Object.keys(s.perGame).map(id => ({ game: gameLookup[id], ga: s.perGame[id] })).filter(r => r.game)
+            ? Object.keys(s.perGame).map(id => ({
+                  game: gameLookup[id],
+                  ga: s.perGame[id],
+                  seconds: s.perGameSeconds[id] || 0
+              })).filter(r => r.game)
             : [];
         games.sort((a, b) => gameSortKey(a.game).localeCompare(gameSortKey(b.game)));
 
@@ -1028,6 +1048,7 @@ async function renderPlayerDetail(playerId) {
             <tr>
                 <td>${formatDateISO(row.game.date)}</td>
                 <td>${opponentLabel(row.game)}</td>
+                <td>${formatSecondsAsClock(row.seconds)}</td>
                 <td>${row.ga}</td>
             </tr>
         `).join("");
@@ -1373,6 +1394,52 @@ function attributeGoalieStint(sortedStints, goalSeconds) {
 
 const GOALIE_STATS_PERIOD_ORDER = ["1", "2", "3", "OT", "SO"];
 
+// Nominal length of each period, in seconds, used only (a) as the "start"
+// point for a stint whose time_in is blank -- meaning that goalie was in
+// net from the very top of the period -- and (b) as the fallback "end" of
+// an OT period that expired with no goal (went straight to a shootout).
+// Regulation periods are always 20 minutes per the constitution. OT is
+// listed there as a 10-minute sudden-death period in the normal case; a
+// championship game's OT periods run a full 20 minutes instead, which
+// this can't distinguish, so championship-OT ice time is a rough estimate.
+const PERIOD_LENGTH_SECONDS = { "1": 1200, "2": 1200, "3": 1200, "OT": 600 };
+
+// Goalie ice time is computed from actual clock time, not whole periods:
+// a goalie who starts the game and gets pulled midway through the 2nd
+// period is credited with 1 full period plus however much of the 2nd
+// they actually played, not 2 whole periods. Regulation periods (1/2/3)
+// always run their full nominal length (running or stop time, the clock
+// still counts down to 0:00). OT is sudden death, so it ends the instant
+// somebody scores -- its "end" is that goal's own recorded time, not the
+// nominal OT length. Shootouts have no continuous ice time and, per
+// standard hockey convention, shootout goals don't count against a
+// goalie's GAA, so period "SO" is left out of ice time entirely.
+function periodEndSeconds(period, gameGoals) {
+    if (period === "OT") {
+        const otGoal = (gameGoals || []).find(g => g.period === "OT");
+        const secs = otGoal ? parseClockToSeconds(otGoal.game_time) : null;
+        return secs != null ? secs : 0;
+    }
+    return 0; // regulation periods always run down to 0:00
+}
+
+// Splits a period's sorted stints (earliest-starting first) into
+// {goalieId, seconds} chunks covering how long each goalie was actually
+// in net that period, using the clock-time convention above.
+function stintDurations(period, stints, gameGoals) {
+    const periodLength = PERIOD_LENGTH_SECONDS[period] || 1200;
+    const endOfPeriod = periodEndSeconds(period, gameGoals);
+
+    return stints.map((stint, i) => {
+        const startSeconds = stint.seconds != null ? stint.seconds : periodLength;
+        const next = stints[i + 1];
+        const endSeconds = next
+            ? (next.seconds != null ? next.seconds : periodLength)
+            : endOfPeriod;
+        return { goalieId: stint.goalieId, seconds: Math.max(0, startSeconds - endSeconds) };
+    });
+}
+
 // Computes goals-against for every goalie who has appeared in a game,
 // keyed by player id -- shared by the Leaders page, the Teams page
 // roster, and a player's own game log. Cached for the life of the page
@@ -1445,10 +1512,21 @@ async function computeGoalieStats() {
         periodsByGame[g.game_id].add(g.period);
     });
 
+    // All goals in a game (both teams), grouped by game -- used to find
+    // the goal that ended a sudden-death OT period (see periodEndSeconds).
+    const goalsByGame = {};
+    (goals || []).forEach(g => {
+        if (!goalsByGame[g.game_id]) goalsByGame[g.game_id] = [];
+        goalsByGame[g.game_id].push(g);
+    });
+
     const stats = {};
     function statsFor(goalieId) {
         if (!stats[goalieId]) {
-            stats[goalieId] = { goalieId, games: new Set(), periodsPlayed: new Set(), ga: 0, perGame: {} };
+            stats[goalieId] = {
+                goalieId, games: new Set(), periodsPlayed: new Set(),
+                ga: 0, gaTimed: 0, secondsPlayed: 0, perGame: {}, perGameSeconds: {}
+            };
         }
         return stats[goalieId];
     }
@@ -1466,7 +1544,20 @@ async function computeGoalieStats() {
                 s.games.add(gameId);
                 s.periodsPlayed.add(`${gameId}|${period}`);
                 if (s.perGame[gameId] == null) s.perGame[gameId] = 0;
+                if (s.perGameSeconds[gameId] == null) s.perGameSeconds[gameId] = 0;
             });
+
+            // Actual ice time for this period, split across however many
+            // stints shared it -- shootouts have no continuous ice time
+            // (see stintDurations), so they're left out of every goalie's
+            // secondsPlayed/perGameSeconds entirely.
+            if (period !== "SO") {
+                stintDurations(period, stints, goalsByGame[gameId]).forEach(chunk => {
+                    const s = statsFor(chunk.goalieId);
+                    s.secondsPlayed += chunk.seconds;
+                    s.perGameSeconds[gameId] = (s.perGameSeconds[gameId] || 0) + chunk.seconds;
+                });
+            }
 
             // Every goal scored in this same game+period by the OTHER
             // team (not this team) went in against whichever of this
@@ -1483,6 +1574,10 @@ async function computeGoalieStats() {
                     const s = statsFor(stint.goalieId);
                     s.ga++;
                     s.perGame[gameId] = (s.perGame[gameId] || 0) + 1;
+                    // GAA is a rate stat measured against ice time, and
+                    // shootout goals don't count against it (standard
+                    // hockey convention -- same reason SO has no ice time).
+                    if (period !== "SO") s.gaTimed++;
                 });
         });
     });
@@ -1491,8 +1586,14 @@ async function computeGoalieStats() {
     return stats;
 }
 
+// GAA (goals-against average) is the standard hockey rate stat: goals
+// against per 60 minutes of actual ice time, not per game or per period.
+function computeGaa(goalsAgainst, secondsPlayed) {
+    return secondsPlayed > 0 ? (goalsAgainst * 3600) / secondsPlayed : 0;
+}
+
 // Turns the raw computeGoalieStats() map into display-ready rows (one
-// per goalie, sorted best GA/Game first) for the Leaders page and the
+// per goalie, sorted best GAA first) for the Leaders page and the
 // Teams page roster.
 function goalieStatsRows(stats) {
     return Object.values(stats)
@@ -1500,19 +1601,19 @@ function goalieStatsRows(stats) {
             const player = PLAYERS.find(p => String(p.id) === String(s.goalieId));
             if (!player) return null;
             const team = TEAMS.find(t => t.code === player.team);
-            const gp = s.games.size;
             return {
                 player,
                 team,
-                gp,
+                gp: s.games.size,
                 periodsPlayed: s.periodsPlayed.size,
+                minutesPlayed: s.secondsPlayed / 60,
                 ga: s.ga,
-                gaPerGame: gp ? s.ga / gp : 0
+                gaa: computeGaa(s.gaTimed, s.secondsPlayed)
             };
         })
         .filter(row => row !== null)
         .sort((a, b) => {
-            if (a.gaPerGame !== b.gaPerGame) return a.gaPerGame - b.gaPerGame;
+            if (a.gaa !== b.gaa) return a.gaa - b.gaa;
             return (a.player.last || "").localeCompare(b.player.last || "");
         });
 }
@@ -1540,9 +1641,9 @@ async function renderGoalieStats() {
             <td>${row.player.last}, ${row.player.first}</td>
             <td>${row.team ? row.team.name : ""}</td>
             <td>${row.gp}</td>
-            <td>${row.periodsPlayed}</td>
+            <td>${row.minutesPlayed.toFixed(1)}</td>
             <td>${row.ga}</td>
-            <td><strong>${row.gaPerGame.toFixed(2)}</strong></td>
+            <td><strong>${row.gaa.toFixed(2)}</strong></td>
         </tr>
     `).join("");
 }
