@@ -2095,11 +2095,17 @@ a.sponsor-card:hover {
     opacity: .85;
 }
 
-.live-goalie-carried {
+.live-goalie-hint {
     font-size: 12px;
     font-style: italic;
     color: #97a3ac;
     margin-bottom: 8px;
+}
+
+/* Period a goalie came out in -- a narrow picker beside his time off. */
+.live-goalie-stint-row select.live-out-period {
+    flex: 0 0 auto;
+    width: 62px;
 }
 
 .live-action-buttons {
@@ -2172,6 +2178,21 @@ a.sponsor-card:hover {
 
     .live-team-score {
         font-size: 36px;
+    }
+
+    /* Goalie rows: the goalie picker gets a line to itself, with the
+       period, time off and remove button together on the line below. */
+    .live-goalie-stint-row select:not(.live-out-period) {
+        flex: 1 1 100%;
+    }
+
+    .live-goalie-stint-row select.live-out-period {
+        width: 54px;
+        padding: 8px 4px;
+    }
+
+    .live-goalie-stint-row .live-time-input {
+        flex: 1 1 40px;
     }
 }
 

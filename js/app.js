@@ -23,14 +23,35 @@ function isGoaliePosition(position) {
     return p === "goalie" || p === "g";
 }
 
-// Parses a "M:SS" game-clock string into total seconds. Returns null for
-// anything blank or unparseable. Used to figure out which goalie stint a
-// given goal falls under (see renderGoalieStats below).
+// Parses a game-clock reading into total seconds. Returns null for
+// anything blank or unreadable. Used to figure out which goalie was in
+// net for a given goal (see GOALIE STATS below).
+//
+// Deliberately forgiving about how the time was typed, because a phone's
+// number pad has no colon key: "9:48", "9.48", "9,48", "9 48", "948" and
+// ":36" are all read as a clock time. A bare one- or two-digit number
+// ("36") is NOT, since it could mean either 0:36 or 36:00.
 function parseClockToSeconds(value) {
-    if (!value) return null;
-    const match = String(value).trim().match(/^(\d+):([0-5]\d)$/);
+    if (value == null) return null;
+    const text = String(value).trim();
+    if (!text) return null;
+
+    let match = text.match(/^(\d{0,2})\s*[:.,; ]\s*([0-5]\d)$/);
+    if (!match) match = text.match(/^(\d{1,2})([0-5]\d)$/);
     if (!match) return null;
-    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+
+    return parseInt(match[1] || "0", 10) * 60 + parseInt(match[2], 10);
+}
+
+// Tidies a typed clock time into the standard "M:SS" form for saving
+// ("1647" / "16,47" -> "16:47"). Blank comes back as null; anything that
+// can't be read as a time is handed back as typed, so nothing is lost.
+function normalizeClockText(value) {
+    if (value == null) return null;
+    const text = String(value).trim();
+    if (!text) return null;
+    const seconds = parseClockToSeconds(text);
+    return seconds == null ? text : formatSecondsAsClock(seconds);
 }
 
 // Formats a duration in seconds (e.g. a goalie's ice time in a game) as
@@ -579,14 +600,14 @@ function scheduleEventPlayerTag(playerId) {
     return player.number != null ? `#${player.number} ${name}` : name;
 }
 
-// Builds the game detail markup: a "Starting Goalies" section up front for
-// any goalie entry with no recorded time (an admin enters those without a
-// clock time specifically because that goalie started the period rather
-// than swapping in mid-play), followed by the chronological feed of goals,
-// penalties and any timed (mid-period) goalie changes. Each row shows the
-// team's logo, the event type, and the player(s) involved by full name --
-// this is the public schedule view, so it stays lighter on detail than
-// Admin's full Enter Game Results screen.
+// Builds the game detail markup: a "Starting Goalies" section up front
+// (the first goalie each team listed), followed by the chronological feed
+// of goals, penalties and goalie changes. A goalie change is shown at the
+// time the previous goalie came out, which is how the score sheet (and
+// game_goalie_periods.time_out) records it. Each row shows the team's
+// logo, the event type, and the player(s) involved by full name -- this
+// is the public schedule view, so it stays lighter on detail than Admin's
+// full Enter Game Results screen.
 function renderScheduleGameDetail(game, goals, periods, penalties) {
     const awayTeam = getTeam(game.away);
     const homeTeam = getTeam(game.home);
@@ -603,29 +624,53 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
     // Sort key: period order first, then descending clock time within the
     // period (the game clock counts down, so a higher reading happened
     // earlier) -- entries with no recorded time sort as "top of period".
-    function sortKey(period, time) {
+    // The third value breaks ties: a goal scored at the exact moment a
+    // goalie came out is listed before the change, since it was scored on
+    // the goalie coming out.
+    function sortKey(period, time, order = 0) {
         const periodIndex = GOALIE_STATS_PERIOD_ORDER.indexOf(period);
         const seconds = parseClockToSeconds(time);
-        return [periodIndex, seconds == null ? Infinity : -seconds];
+        return [periodIndex === -1 ? GOALIE_STATS_PERIOD_ORDER.length : periodIndex, seconds == null ? Infinity : -seconds, order];
     }
 
-    // A goalie entry with no time is the goalie who started that period,
-    // not a mid-period swap -- pull those out into their own "Starting
-    // Goalies" list instead of mixing them into the timeline.
-    const startingGoalieEntries = periods.filter(gp => parseClockToSeconds(gp.time_in) == null);
-    const midPeriodGoalieEntries = periods.filter(gp => parseClockToSeconds(gp.time_in) != null);
+    // Each team's goalies in the order they played: the first one started
+    // the game, and every one after came in when the one before came out.
+    const otSeconds = overtimeLengthSeconds(goals, periods);
+    const startingGoalieEntries = [];
+    const goalieChangeEntries = [];
+
+    [...new Set(periods.map(gp => String(gp.team_id)))]
+        .sort((a, b) => (a === String(awayTeamId) ? 0 : 1) - (b === String(awayTeamId) ? 0 : 1))
+        .forEach(teamId => {
+            const teamRows = periods
+                .filter(gp => String(gp.team_id) === teamId)
+                .sort((a, b) => a.id - b.id);
+
+            buildGoalieTimeline(teamRows, otSeconds).forEach((stint, i, timeline) => {
+                if (i === 0) {
+                    startingGoalieEntries.push({ teamId, goalieId: stint.goalieId });
+                    return;
+                }
+                const cameOut = timeline[i - 1];
+                goalieChangeEntries.push({
+                    teamId,
+                    goalieId: stint.goalieId,
+                    outGoalieId: cameOut.goalieId,
+                    period: cameOut.row.period,
+                    time: normalizeClockText(cameOut.row.time_out)
+                });
+            });
+        });
 
     const startingGoaliesHtml = startingGoalieEntries
-        .slice()
-        .sort((a, b) => GOALIE_STATS_PERIOD_ORDER.indexOf(a.period) - GOALIE_STATS_PERIOD_ORDER.indexOf(b.period))
-        .map(gp => `
+        .map(entry => `
             <div class="schedule-event-row is-starting-goalie">
-                <span class="schedule-event-team">${teamBadge(sideCodeForTeamId(gp.team_id))}</span>
+                <span class="schedule-event-team">${teamBadge(sideCodeForTeamId(entry.teamId))}</span>
                 <span class="schedule-event-main">
                     <span class="schedule-event-label">Starting Goalie</span>
-                    <span class="schedule-event-detail">${scheduleEventPlayerTag(gp.goalie_id)}</span>
+                    <span class="schedule-event-detail">${scheduleEventPlayerTag(entry.goalieId)}</span>
                 </span>
-                <span class="schedule-event-time">P${gp.period}</span>
+                <span class="schedule-event-time">P1</span>
             </div>
         `).join("");
 
@@ -643,7 +688,7 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
             detail: scorerTag,
             subDetail: assistTags.length ? `assist: ${assistTags.join(", ")}` : "",
             cssClass: "is-goal",
-            timeLabel: periodTimeLabel(goal.period, goal.game_time),
+            timeLabel: periodTimeLabel(goal.period, normalizeClockText(goal.game_time)),
             key: sortKey(goal.period, goal.game_time)
         });
     });
@@ -655,28 +700,31 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
             detail: scheduleEventPlayerTag(penalty.player_id),
             subDetail: penalty.infraction || "",
             cssClass: "is-penalty",
-            timeLabel: periodTimeLabel(penalty.period, penalty.game_time),
+            timeLabel: periodTimeLabel(penalty.period, normalizeClockText(penalty.game_time)),
             key: sortKey(penalty.period, penalty.game_time)
         });
     });
 
-    // Mid-period goalie changes only -- the starting goalies are already
-    // shown up top, so they don't also appear in this timeline.
-    midPeriodGoalieEntries.forEach(gp => {
+    // Goalie changes -- the starting goalies are already shown up top, so
+    // they don't also appear in this timeline.
+    goalieChangeEntries.forEach(change => {
+        const outTag = scheduleEventPlayerTag(change.outGoalieId);
+        const hasTime = GOALIE_CLOCK_PERIODS.includes(change.period);
         events.push({
-            teamCode: sideCodeForTeamId(gp.team_id),
-            label: "Goalie Shift",
-            detail: scheduleEventPlayerTag(gp.goalie_id),
-            subDetail: "",
+            teamCode: sideCodeForTeamId(change.teamId),
+            label: "Goalie Change",
+            detail: scheduleEventPlayerTag(change.goalieId),
+            subDetail: outTag ? `in for ${outTag}` : "",
             cssClass: "is-goalie-shift",
-            timeLabel: periodTimeLabel(gp.period, gp.time_in),
-            key: sortKey(gp.period, gp.time_in)
+            timeLabel: hasTime ? periodTimeLabel(change.period, change.time) : "",
+            key: sortKey(change.period, change.time, 1)
         });
     });
 
     events.sort((a, b) => {
         if (a.key[0] !== b.key[0]) return a.key[0] - b.key[0];
-        return a.key[1] - b.key[1];
+        if (a.key[1] !== b.key[1]) return a.key[1] - b.key[1];
+        return a.key[2] - b.key[2];
     });
 
     const eventsHtml = events.map(event => `
@@ -1356,168 +1404,177 @@ async function renderLeaders() {
 /* =========================================
    GOALIE STATS (leaders.html)
 
-   Goals-against only (no shots-against are tracked, so no save %) --
-   each game's crease is split into goalie "stints" in admin ("Goalies"
-   section of Enter Game Results, or the Live Game screen). A team can
-   have more than one stint within the same period (e.g. a mid-period
-   injury swap), each with its own M:SS clock time showing when that
-   goalie took over. A goalie is charged with every goal scored, in a
-   period they're assigned to, while their stint was the one in net --
-   worked out by comparing the goal's own recorded time against the
-   stints' start times (see attributeGoalieStint below).
+   Goals-against only (no shots-against are tracked, so no save %).
+
+   Each team's goalies for a game are entered the way the paper score
+   sheet records them: one row per goalie, in the order they played,
+   with the period and clock time that goalie CAME OUT of the net
+   (game_goalie_periods.period / time_out). The goalie who finished the
+   game has no time, because he never came out.
+
+   From that, the game is laid out on one running clock from the opening
+   faceoff, and each goalie owns the stretch from the moment the previous
+   goalie came out to the moment he came out himself. A goal is charged
+   to whoever owned the stretch it was scored in. A goal scored at the
+   exact time a goalie came out is charged to the goalie coming OUT
+   (it's the last goal he let in), the same way the score sheet tallies it.
    ========================================= */
-
-// Given a period's stints (already sorted with the earliest-starting
-// stint first -- see below) and a goal's clock time in seconds, finds
-// which stint was in net when that goal went in. The clock counts down
-// within a period, so a stint that started at a HIGHER time reading
-// happened EARLIER; the right stint is the most recent one that had
-// already started by the time of the goal (the smallest start time
-// that's still >= the goal's time). Falls back to the period's starting
-// stint when the goal has no recorded time, or when nothing lines up.
-function attributeGoalieStint(sortedStints, goalSeconds) {
-    if (!sortedStints.length) return null;
-    if (goalSeconds == null) return sortedStints[0];
-
-    let best = null;
-    sortedStints.forEach(stint => {
-        if (stint.seconds != null && stint.seconds < goalSeconds) return;
-        if (best === null) { best = stint; return; }
-        // Prefer a stint with a known, closer start time over one with an
-        // unknown ("assume period start") start time.
-        if (stint.seconds == null) return;
-        if (best.seconds == null || stint.seconds < best.seconds) best = stint;
-    });
-
-    return best || sortedStints[0];
-}
 
 const GOALIE_STATS_PERIOD_ORDER = ["1", "2", "3", "OT", "SO"];
 
-// Nominal length of each period, in seconds, used only (a) as the "start"
-// point for a stint whose time_in is blank -- meaning that goalie was in
-// net from the very top of the period -- and (b) as the fallback "end" of
-// an OT period that expired with no goal (went straight to a shootout).
-// Regulation periods are always 20 minutes per the constitution. OT is
-// listed there as a 10-minute sudden-death period in the normal case; a
-// championship game's OT periods run a full 20 minutes instead, which
-// this can't distinguish, so championship-OT ice time is a rough estimate.
-const PERIOD_LENGTH_SECONDS = { "1": 1200, "2": 1200, "3": 1200, "OT": 600 };
+// Periods with a running clock -- the ones a goalie can come out in. A
+// shootout has no clock, so it's never a "came out" period.
+const GOALIE_CLOCK_PERIODS = ["1", "2", "3", "OT"];
 
-// Goalie ice time is computed from actual clock time, not whole periods:
-// a goalie who starts the game and gets pulled midway through the 2nd
-// period is credited with 1 full period plus however much of the 2nd
-// they actually played, not 2 whole periods. Regulation periods (1/2/3)
-// always run their full nominal length (running or stop time, the clock
-// still counts down to 0:00). OT is sudden death, so it ends the instant
-// somebody scores -- its "end" is that goal's own recorded time, not the
-// nominal OT length. Shootouts have no continuous ice time and, per
-// standard hockey convention, shootout goals don't count against a
-// goalie's GAA, so period "SO" is left out of ice time entirely.
-function periodEndSeconds(period, gameGoals) {
-    if (period === "OT") {
-        const otGoal = (gameGoals || []).find(g => g.period === "OT");
-        const secs = otGoal ? parseClockToSeconds(otGoal.game_time) : null;
-        return secs != null ? secs : 0;
-    }
-    return 0; // regulation periods always run down to 0:00
+// Regulation periods are always 20 minutes per the constitution. OT is a
+// 10-minute sudden-death period in the normal case; a championship
+// game's OT runs a full 20 minutes instead (see overtimeLengthSeconds).
+const REGULATION_PERIOD_SECONDS = 1200;
+const REGULATION_GAME_SECONDS = 3600;
+const DEFAULT_OT_SECONDS = 600;
+
+// How long a game's OT period was. Normally 10 minutes; if anything in
+// that OT (a goal, or a goalie coming out) was recorded with more than
+// 10:00 on the clock, it must have been a 20-minute championship OT.
+function overtimeLengthSeconds(gameGoals, gameGoalieRows) {
+    const readings = [];
+    (gameGoals || []).forEach(goal => {
+        if (goal.period === "OT") readings.push(parseClockToSeconds(goal.game_time));
+    });
+    (gameGoalieRows || []).forEach(row => {
+        if (row.period === "OT") readings.push(parseClockToSeconds(row.time_out));
+    });
+    return readings.some(secs => secs != null && secs > DEFAULT_OT_SECONDS)
+        ? REGULATION_PERIOD_SECONDS
+        : DEFAULT_OT_SECONDS;
 }
 
-// Splits a period's sorted stints (earliest-starting first) into
-// {goalieId, seconds} chunks covering how long each goalie was actually
-// in net that period, using the clock-time convention above.
-function stintDurations(period, stints, gameGoals) {
-    const periodLength = PERIOD_LENGTH_SECONDS[period] || 1200;
-    const endOfPeriod = periodEndSeconds(period, gameGoals);
+// Converts a period + clock reading into seconds elapsed since the
+// opening faceoff. The clock counts DOWN within a period, so 9:48 left in
+// the 2nd is 20:00 (all of the 1st) + 10:12 = 30:12 into the game.
+// Returns null if the period has no running clock or the time is unknown.
+function gameElapsedSeconds(period, clockSeconds, otSeconds) {
+    const index = GOALIE_CLOCK_PERIODS.indexOf(period);
+    if (index === -1 || clockSeconds == null) return null;
 
-    return stints.map((stint, i) => {
-        const startSeconds = stint.seconds != null ? stint.seconds : periodLength;
-        const next = stints[i + 1];
-        const endSeconds = next
-            ? (next.seconds != null ? next.seconds : periodLength)
-            : endOfPeriod;
-        return { goalieId: stint.goalieId, seconds: Math.max(0, startSeconds - endSeconds) };
-    });
+    const isOT = period === "OT";
+    const length = isOT ? otSeconds : REGULATION_PERIOD_SECONDS;
+    const start = isOT ? REGULATION_GAME_SECONDS : index * REGULATION_PERIOD_SECONDS;
+    return start + (length - Math.min(clockSeconds, length));
 }
 
-// Computes goals-against for every goalie who has appeared in a game,
-// keyed by player id -- shared by the Leaders page, the Teams page
-// roster, and a player's own game log. Cached for the life of the page
-// since none of these pages need it to update live.
-let GOALIE_STATS_CACHE = null;
+// Where the game ended on the running clock. Regulation always runs its
+// full 60 minutes. OT is sudden death, so it ends the instant somebody
+// scores (that goal's own recorded time); an OT with no timed goal --
+// one that expired and went to a shootout, say -- ran its full length.
+// Shootouts have no continuous ice time, so they add nothing.
+function gameEndElapsedSeconds(gameGoals, gameGoalieRows, otSeconds) {
+    const wentPastRegulation =
+        (gameGoals || []).some(goal => goal.period === "OT" || goal.period === "SO") ||
+        (gameGoalieRows || []).some(row => row.period === "OT");
+    if (!wentPastRegulation) return REGULATION_GAME_SECONDS;
 
-async function computeGoalieStats() {
-    if (GOALIE_STATS_CACHE) return GOALIE_STATS_CACHE;
+    const otGoal = (gameGoals || []).find(goal => goal.period === "OT");
+    const secs = otGoal ? parseClockToSeconds(otGoal.game_time) : null;
+    return secs != null
+        ? gameElapsedSeconds("OT", secs, otSeconds)
+        : REGULATION_GAME_SECONDS + otSeconds;
+}
 
-    const [{ data: periods, error: periodsError }, { data: goals, error: goalsError }] = await Promise.all([
-        supabaseClient.from("game_goalie_periods").select("game_id, team_id, period, goalie_id, time_in"),
-        supabaseClient.from("game_goals").select("game_id, team_id, period, game_time")
-    ]);
+// Turns ONE team's goalie rows for ONE game into the order they played,
+// as [{ goalieId, start, end, row }] with start/end in elapsed seconds.
+// Each row needs { goalie_id, period, time_out } -- the period and clock
+// time that goalie came out (both blank for the goalie who finished).
+//
+// The first goalie starts at the opening faceoff; each one after starts
+// when the one before came out. The last goalie in the list always runs
+// to the end of the game, whether or not a time was recorded for him.
+function buildGoalieTimeline(rows, otSeconds) {
+    const stints = (rows || []).map((row, index) => ({
+        row,
+        index,
+        goalieId: row.goalie_id,
+        end: gameElapsedSeconds(row.period, parseClockToSeconds(row.time_out), otSeconds)
+    }));
 
-    if (periodsError || goalsError) {
-        console.error("Error loading goalie stats:", periodsError || goalsError);
-        return null;
-    }
-
-    // Group goalie-period rows into per game+team, per-period "stint
-    // lists", each sorted so the stint that started the period comes
-    // first (unknown start times are treated as "started at the top of
-    // the period", so they sort ahead of any known, later start time).
-    const stintsByGameTeam = {}; // `${gameId}|${teamId}` -> { period: stints[] }
-    (periods || []).forEach(gp => {
-        const gtKey = `${gp.game_id}|${gp.team_id}`;
-        if (!stintsByGameTeam[gtKey]) stintsByGameTeam[gtKey] = {};
-        if (!stintsByGameTeam[gtKey][gp.period]) stintsByGameTeam[gtKey][gp.period] = [];
-        stintsByGameTeam[gtKey][gp.period].push({ goalieId: gp.goalie_id, seconds: parseClockToSeconds(gp.time_in) });
-    });
-    Object.values(stintsByGameTeam).forEach(periodMap => {
-        Object.values(periodMap).forEach(stints => {
-            stints.sort((a, b) => {
-                if (a.seconds == null && b.seconds == null) return 0;
-                if (a.seconds == null) return -1;
-                if (b.seconds == null) return 1;
-                return b.seconds - a.seconds;
-            });
-        });
-    });
-
-    // A period with no goalie entered explicitly carries forward whoever
-    // finished the most recent earlier period with one (same rule as the
-    // Live Game screen), as a single stint covering the whole period.
-    function stintsForPeriod(gtKey, period) {
-        const periodMap = stintsByGameTeam[gtKey];
-        if (!periodMap) return [];
-        if (periodMap[period] && periodMap[period].length) return periodMap[period];
-
-        const index = GOALIE_STATS_PERIOD_ORDER.indexOf(period);
-        for (let i = index - 1; i >= 0; i--) {
-            const earlier = GOALIE_STATS_PERIOD_ORDER[i];
-            if (periodMap[earlier] && periodMap[earlier].length) {
-                const mostRecent = periodMap[earlier][periodMap[earlier].length - 1];
-                return [{ goalieId: mostRecent.goalieId, seconds: null }];
-            }
-        }
-        return [];
-    }
-
-    // Which periods actually happened in each game (had a goal or a
-    // goalie entry), so carry-forward doesn't invent phantom OT/SO periods.
-    const periodsByGame = {};
-    (periods || []).forEach(gp => {
-        if (!periodsByGame[gp.game_id]) periodsByGame[gp.game_id] = new Set();
-        periodsByGame[gp.game_id].add(gp.period);
-    });
-    (goals || []).forEach(g => {
-        if (!periodsByGame[g.game_id]) periodsByGame[g.game_id] = new Set();
-        periodsByGame[g.game_id].add(g.period);
+    // Earliest "came out" first; a goalie with no time recorded never came
+    // out, so he goes last. Ties keep the order the rows were given in.
+    stints.sort((a, b) => {
+        const aEnd = a.end == null ? Infinity : a.end;
+        const bEnd = b.end == null ? Infinity : b.end;
+        if (aEnd !== bEnd) return aEnd - bEnd;
+        return a.index - b.index;
     });
 
-    // All goals in a game (both teams), grouped by game -- used to find
-    // the goal that ended a sudden-death OT period (see periodEndSeconds).
+    let start = 0;
+    stints.forEach((stint, i) => {
+        stint.start = start;
+        if (stint.end == null || i === stints.length - 1) stint.end = Infinity;
+        start = stint.end;
+    });
+
+    return stints;
+}
+
+// Where a goal falls on the game's running clock. A goal with no usable
+// time is placed just after the start of its period, so it's charged to
+// whoever was in net when that period began. Shootout goals come after
+// everything else, so they land on the goalie who finished the game.
+function goalElapsedSeconds(goal, otSeconds) {
+    if (goal.period === "SO") return Infinity;
+
+    const index = GOALIE_CLOCK_PERIODS.indexOf(goal.period);
+    if (index === -1) return 0.5;
+
+    const elapsed = gameElapsedSeconds(goal.period, parseClockToSeconds(goal.game_time), otSeconds);
+    if (elapsed != null) return elapsed;
+
+    const periodStart = goal.period === "OT" ? REGULATION_GAME_SECONDS : index * REGULATION_PERIOD_SECONDS;
+    return periodStart + 0.5;
+}
+
+// Which goalie was in net at a given point on the running clock. The
+// comparison is "at or before the time he came out", which is what
+// charges a goal at the exact change time to the goalie coming out.
+function goalieStintAt(timeline, elapsed) {
+    if (!timeline.length) return null;
+    return timeline.find(stint => elapsed <= stint.end) || timeline[timeline.length - 1];
+}
+
+// Goals against for each of one team's goalie rows in one game, as a
+// Map of row -> count. Shared by the stats below and by Admin's Enter
+// Game Results screen, which shows the tally beside each goalie so it
+// can be checked against the "Goals" box on the paper score sheet.
+function goalsAgainstByGoalieRow(rows, opponentGoals, otSeconds) {
+    const timeline = buildGoalieTimeline(rows, otSeconds);
+    const counts = new Map(timeline.map(stint => [stint.row, 0]));
+
+    (opponentGoals || []).forEach(goal => {
+        const stint = goalieStintAt(timeline, goalElapsedSeconds(goal, otSeconds));
+        if (stint) counts.set(stint.row, counts.get(stint.row) + 1);
+    });
+
+    return counts;
+}
+
+// Works out every goalie's season numbers from the raw goalie rows and
+// goals (all games). Kept separate from the Supabase fetch below so the
+// arithmetic can be checked on its own.
+//
+// Ice time is real clock time, not whole periods: a goalie who starts and
+// comes out at 9:48 of the 2nd is credited with 30:12, and the goalie who
+// replaces him with the other 29:48.
+function buildGoalieStats(goalieRows, goals) {
+    const rowsByGame = {};
+    (goalieRows || []).forEach(row => {
+        if (!rowsByGame[row.game_id]) rowsByGame[row.game_id] = [];
+        rowsByGame[row.game_id].push(row);
+    });
+
     const goalsByGame = {};
-    (goals || []).forEach(g => {
-        if (!goalsByGame[g.game_id]) goalsByGame[g.game_id] = [];
-        goalsByGame[g.game_id].push(g);
+    (goals || []).forEach(goal => {
+        if (!goalsByGame[goal.game_id]) goalsByGame[goal.game_id] = [];
+        goalsByGame[goal.game_id].push(goal);
     });
 
     const stats = {};
@@ -1531,59 +1588,83 @@ async function computeGoalieStats() {
         return stats[goalieId];
     }
 
-    Object.keys(stintsByGameTeam).forEach(gtKey => {
-        const [gameId, teamId] = gtKey.split("|");
-        const gamePeriods = periodsByGame[gameId] || new Set();
+    Object.keys(rowsByGame).forEach(gameId => {
+        const gameRows = rowsByGame[gameId];
+        const gameGoals = goalsByGame[gameId] || [];
+        const otSeconds = overtimeLengthSeconds(gameGoals, gameRows);
+        const gameEnd = gameEndElapsedSeconds(gameGoals, gameRows, otSeconds);
 
-        GOALIE_STATS_PERIOD_ORDER.filter(period => gamePeriods.has(period)).forEach(period => {
-            const stints = stintsForPeriod(gtKey, period);
-            if (!stints.length) return;
+        const teamIds = [...new Set(gameRows.map(row => String(row.team_id)))];
 
-            stints.forEach(stint => {
+        teamIds.forEach(teamId => {
+            const timeline = buildGoalieTimeline(
+                gameRows.filter(row => String(row.team_id) === teamId),
+                otSeconds
+            );
+
+            timeline.forEach(stint => {
                 const s = statsFor(stint.goalieId);
                 s.games.add(gameId);
-                s.periodsPlayed.add(`${gameId}|${period}`);
                 if (s.perGame[gameId] == null) s.perGame[gameId] = 0;
                 if (s.perGameSeconds[gameId] == null) s.perGameSeconds[gameId] = 0;
+
+                const from = Math.min(stint.start, gameEnd);
+                const to = Math.min(stint.end, gameEnd);
+                const seconds = Math.max(0, to - from);
+                s.secondsPlayed += seconds;
+                s.perGameSeconds[gameId] += seconds;
+
+                GOALIE_CLOCK_PERIODS.forEach((period, index) => {
+                    const periodStart = period === "OT" ? REGULATION_GAME_SECONDS : index * REGULATION_PERIOD_SECONDS;
+                    const periodEnd = period === "OT" ? gameEnd : periodStart + REGULATION_PERIOD_SECONDS;
+                    if (Math.min(to, periodEnd) - Math.max(from, periodStart) > 0) {
+                        s.periodsPlayed.add(`${gameId}|${period}`);
+                    }
+                });
             });
 
-            // Actual ice time for this period, split across however many
-            // stints shared it -- shootouts have no continuous ice time
-            // (see stintDurations), so they're left out of every goalie's
-            // secondsPlayed/perGameSeconds entirely.
-            if (period !== "SO") {
-                stintDurations(period, stints, goalsByGame[gameId]).forEach(chunk => {
-                    const s = statsFor(chunk.goalieId);
-                    s.secondsPlayed += chunk.seconds;
-                    s.perGameSeconds[gameId] = (s.perGameSeconds[gameId] || 0) + chunk.seconds;
-                });
-            }
-
-            // Every goal scored in this same game+period by the OTHER
-            // team (not this team) went in against whichever of this
-            // team's stints was in net at that moment.
-            (goals || [])
-                .filter(g =>
-                    String(g.game_id) === String(gameId) &&
-                    g.period === period &&
-                    String(g.team_id) !== String(teamId)
-                )
+            // Every goal the OTHER team scored in this game went in against
+            // whichever of this team's goalies was in net at that moment.
+            gameGoals
+                .filter(goal => String(goal.team_id) !== teamId)
                 .forEach(goal => {
-                    const stint = attributeGoalieStint(stints, parseClockToSeconds(goal.game_time));
+                    const stint = goalieStintAt(timeline, goalElapsedSeconds(goal, otSeconds));
                     if (!stint) return;
                     const s = statsFor(stint.goalieId);
                     s.ga++;
                     s.perGame[gameId] = (s.perGame[gameId] || 0) + 1;
                     // GAA is a rate stat measured against ice time, and
                     // shootout goals don't count against it (standard
-                    // hockey convention -- same reason SO has no ice time).
-                    if (period !== "SO") s.gaTimed++;
+                    // hockey convention -- a shootout has no ice time).
+                    if (goal.period !== "SO") s.gaTimed++;
                 });
         });
     });
 
-    GOALIE_STATS_CACHE = stats;
     return stats;
+}
+
+// Computes goals-against for every goalie who has appeared in a game,
+// keyed by player id -- shared by the Leaders page, the Teams page
+// roster, and a player's own game log. Cached for the life of the page
+// since none of these pages need it to update live.
+let GOALIE_STATS_CACHE = null;
+
+async function computeGoalieStats() {
+    if (GOALIE_STATS_CACHE) return GOALIE_STATS_CACHE;
+
+    const [{ data: goalieRows, error: goalieRowsError }, { data: goals, error: goalsError }] = await Promise.all([
+        supabaseClient.from("game_goalie_periods").select("id, game_id, team_id, goalie_id, period, time_out").order("id"),
+        supabaseClient.from("game_goals").select("game_id, team_id, period, game_time")
+    ]);
+
+    if (goalieRowsError || goalsError) {
+        console.error("Error loading goalie stats:", goalieRowsError || goalsError);
+        return null;
+    }
+
+    GOALIE_STATS_CACHE = buildGoalieStats(goalieRows || [], goals || []);
+    return GOALIE_STATS_CACHE;
 }
 
 // GAA (goals-against average) is the standard hockey rate stat: goals

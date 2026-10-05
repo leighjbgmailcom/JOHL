@@ -15,7 +15,11 @@ let editingPlayerId = null;
 let resultGoalRows = { away: [], home: [] };
 let resultPenaltyRows = { away: [], home: [] };
 let resultRowSeq = 0;
-let resultGoalieRows = { away: [], home: [] }; // flat list of { key, id, goalie_id, period, game_time }
+// One row per goalie, in the order they played, the same as the score
+// sheet: { key, id, goalie_id, period, game_time }, where period/game_time
+// are the period and clock time that goalie CAME OUT (game_time blank =
+// he finished the game).
+let resultGoalieRows = { away: [], home: [] };
 let resultAttendance = { away: new Set(), home: new Set() }; // player ids who were on the ice
 
 
@@ -941,14 +945,14 @@ async function onResultGameChange() {
         resultAttendance[side].add(String(row.player_id));
     });
 
-    (goaliePeriods || []).forEach(row => {
+    (goaliePeriods || []).slice().sort((a, b) => a.id - b.id).forEach(row => {
         const side = String(row.team_id) === String(game.away_team_id) ? "away" : "home";
         resultGoalieRows[side].push({
             key: ++resultRowSeq,
             id: row.id,
             goalie_id: row.goalie_id,
-            period: row.period,
-            game_time: row.time_in
+            period: GOALIE_CLOCK_PERIODS.includes(row.period) ? row.period : DEFAULT_GOALIE_OUT_PERIOD,
+            game_time: row.time_out || ""
         });
     });
 
@@ -978,6 +982,7 @@ async function onResultGameChange() {
         });
     });
 
+    sortResultGoalieRows();
     renderResultRows();
     renderResultGoalieRows();
     renderResultAttendance();
@@ -1014,32 +1019,157 @@ function toggleResultAttendance(side, playerId, checked) {
     else resultAttendance[side].delete(String(playerId));
 }
 
-// A flat list of goalie stints per team, same pattern as the goals/
-// penalties lists above -- one row per appearance, so a mid-period swap
-// is just another row with its own period and M:SS clock time.
+// Goalies are entered the way the score sheet records them: one row per
+// goalie in the order they played, with the period and clock time he CAME
+// OUT. The goalie who finished the game has no time. A goalie who goes
+// back in later just gets a second row.
+const DEFAULT_GOALIE_OUT_PERIOD = "2"; // goalies normally split the game, so the change is in the 2nd
+
+function goalieOutPeriodOptionsHtml(selected) {
+    return GOALIE_CLOCK_PERIODS.map(p =>
+        `<option value="${p}" ${p === selected ? "selected" : ""}>${p === "OT" ? "OT" : "Period " + p}</option>`
+    ).join("");
+}
+
+// The form's goalie rows for one team in the shape the shared goalie
+// maths in js/app.js expects ({ goalie_id, period, time_out }). Rows with
+// no goalie picked are left out; a blank time means "finished the game",
+// so its period is dropped.
+function resultGoalieStints(side) {
+    return resultGoalieRows[side]
+        .filter(row => row.goalie_id)
+        .map(row => {
+            const time = normalizeClockText(row.game_time);
+            return { goalie_id: row.goalie_id, period: time ? row.period : null, time_out: time, formRow: row };
+        });
+}
+
+// OT length for the game being edited (10 minutes, or 20 for a
+// championship OT) -- see overtimeLengthSeconds in js/app.js.
+function resultOvertimeSeconds() {
+    return overtimeLengthSeconds(
+        [...resultGoalRows.away, ...resultGoalRows.home],
+        [...resultGoalieStints("away"), ...resultGoalieStints("home")]
+    );
+}
+
+// Puts each team's goalie rows into the order they played.
+function sortResultGoalieRows() {
+    const otSeconds = resultOvertimeSeconds();
+    ["away", "home"].forEach(side => {
+        const ordered = buildGoalieTimeline(resultGoalieStints(side), otSeconds).map(stint => stint.row.formRow);
+        const unassigned = resultGoalieRows[side].filter(row => !row.goalie_id);
+        resultGoalieRows[side] = [...ordered, ...unassigned];
+    });
+}
+
 function renderResultGoalieRows() {
     ["away", "home"].forEach(side => {
         const teamId = currentResultTeamId(side);
         const container = document.getElementById(`result-${side}-goalies`);
         if (!container) return;
 
-        container.innerHTML = resultGoalieRows[side].map(row => `
+        if (!resultGoalieRows[side].length) {
+            container.innerHTML = `<p style="color:#97a3ac; font-size:13px;">No goalies entered yet.</p>`;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="result-row goalie-row goalie-row-head">
+                <span>Goalie</span>
+                <span>Came out in</span>
+                <span>Time off</span>
+                <span>GA</span>
+                <span></span>
+            </div>
+        ` + resultGoalieRows[side].map(row => `
             <div class="result-row goalie-row" data-key="${row.key}">
                 <select onchange="resultGoalieRows.${side}.find(r => r.key === ${row.key}).goalie_id = this.value">
                     ${goalieOptionsHtml(teamId, row.goalie_id)}
                 </select>
-                <select onchange="resultGoalieRows.${side}.find(r => r.key === ${row.key}).period = this.value">
-                    ${periodOptionsHtml(row.period)}
+                <select class="goalie-out-period ${row.game_time ? "" : "is-unused"}" title="The period he came out in" onchange="resultGoalieRows.${side}.find(r => r.key === ${row.key}).period = this.value">
+                    ${goalieOutPeriodOptionsHtml(row.period)}
                 </select>
-                <input type="text" placeholder="M:SS" value="${row.game_time || ""}" onchange="resultGoalieRows.${side}.find(r => r.key === ${row.key}).game_time = this.value">
+                <input type="text" placeholder="M:SS" title="The time he came out. Leave blank if he finished the game." value="${row.game_time || ""}" onchange="onResultGoalieTimeChange('${side}', ${row.key}, this)">
+                <span class="goalie-ga" id="result-goalie-ga-${row.key}" title="Goals against, worked out from the goal times"></span>
                 <button type="button" class="link-button danger" onclick="removeGoalieRow('${side}', ${row.key})">✕</button>
             </div>
-        `).join("") || `<p style="color:#97a3ac; font-size:13px;">No goalies entered yet.</p>`;
+        `).join("");
+    });
+
+    updateResultGoalieTallies();
+}
+
+// Tidies the typed time into M:SS ("948" -> "9:48") as soon as it's entered.
+function onResultGoalieTimeChange(side, key, input) {
+    const row = resultGoalieRows[side].find(r => r.key === key);
+    if (!row) return;
+    row.game_time = normalizeClockText(input.value) || "";
+    input.value = row.game_time;
+
+    // The period only matters once there's a time to go with it.
+    const periodSelect = input.parentElement.querySelector(".goalie-out-period");
+    if (periodSelect) periodSelect.classList.toggle("is-unused", !row.game_time);
+}
+
+// Shows each goalie's goals against beside his row, worked out from the
+// goal times currently in the form, so it can be checked against the
+// "Goals" box on the paper score sheet before saving. Re-run whenever
+// anything in the form changes.
+function updateResultGoalieTallies() {
+    const otSeconds = resultOvertimeSeconds();
+
+    ["away", "home"].forEach(side => {
+        const otherSide = side === "away" ? "home" : "away";
+        const stints = resultGoalieStints(side);
+        const opponentGoals = resultGoalRows[otherSide].filter(goal => goal.scorer_id);
+        const counts = goalsAgainstByGoalieRow(stints, opponentGoals, otSeconds);
+
+        resultGoalieRows[side].forEach(row => {
+            const cell = document.getElementById(`result-goalie-ga-${row.key}`);
+            if (!cell) return;
+            const stint = stints.find(st => st.formRow === row);
+            cell.textContent = stint ? counts.get(stint) : "";
+        });
     });
 }
 
+// Checks the goalie rows before anything is saved. Returns a message
+// describing the first problem found, or null if they're fine.
+function validateResultGoalies() {
+    for (const side of ["away", "home"]) {
+        const teamLabel = teamNameById(currentResultTeamId(side));
+        const rows = resultGoalieRows[side].filter(row => row.goalie_id);
+
+        for (const row of rows) {
+            const typed = String(row.game_time || "").trim();
+            if (!typed) continue;
+            const seconds = parseClockToSeconds(typed);
+            if (seconds == null || seconds > REGULATION_PERIOD_SECONDS) {
+                return `${teamLabel}: can't read the goalie time "${typed}". Enter minutes and seconds, like 9:48.`;
+            }
+        }
+
+        const blankTimes = rows.filter(row => !String(row.game_time || "").trim()).length;
+        if (blankTimes > 1) {
+            return `${teamLabel}: only the goalie who finished the game can have a blank time. Enter the time each of the others came out.`;
+        }
+    }
+    return null;
+}
+
+// A new row's period defaults to the 2nd (the usual split); if a change
+// has already been entered, the next one defaults to the period after it.
 function addGoalieRow(side) {
-    resultGoalieRows[side].push({ key: ++resultRowSeq, goalie_id: "", period: "1", game_time: "" });
+    const timedPeriods = resultGoalieStints(side)
+        .filter(stint => stint.time_out)
+        .map(stint => GOALIE_CLOCK_PERIODS.indexOf(stint.period));
+    const latest = timedPeriods.length ? Math.max(...timedPeriods) : -1;
+    const period = latest === -1
+        ? DEFAULT_GOALIE_OUT_PERIOD
+        : GOALIE_CLOCK_PERIODS[latest >= 2 ? latest : latest + 1];
+
+    resultGoalieRows[side].push({ key: ++resultRowSeq, goalie_id: "", period, game_time: "" });
     renderResultGoalieRows();
 }
 
@@ -1153,12 +1283,21 @@ function renderResultRows() {
     const homeGoals = resultGoalRows.home.filter(r => r.scorer_id).length;
     document.getElementById("result-score-preview").textContent =
         `${document.getElementById("result-away-team-name").textContent} ${awayGoals} — ${homeGoals} ${document.getElementById("result-home-team-name").textContent}`;
+
+    updateResultGoalieTallies();
 }
 
 async function saveGameResults() {
     const gameId = document.getElementById("result-game-select").value;
     const message = document.getElementById("result-form-message");
     if (!gameId) return;
+
+    // Check the goalie rows before touching anything that's already saved.
+    const goalieProblem = validateResultGoalies();
+    if (goalieProblem) {
+        message.textContent = goalieProblem;
+        return;
+    }
 
     message.textContent = "Saving...";
 
@@ -1185,7 +1324,7 @@ async function saveGameResults() {
                 assist1_id: row.assist1_id || null,
                 assist2_id: row.assist2_id || null,
                 period: row.period,
-                game_time: row.game_time || null
+                game_time: normalizeClockText(row.game_time)
             });
         });
     });
@@ -1202,17 +1341,25 @@ async function saveGameResults() {
                 infraction: row.infraction || null,
                 minutes: row.minutes || 2,
                 period: row.period,
-                game_time: row.game_time || null
+                game_time: normalizeClockText(row.game_time)
             });
         });
     });
 
+    // One row per goalie, saved in the order they played, with the period
+    // and time he came out (both empty for the goalie who finished).
     const goaliePeriodRows = [];
+    const otSeconds = resultOvertimeSeconds();
     ["away", "home"].forEach(side => {
         const teamId = currentResultTeamId(side);
-        resultGoalieRows[side].forEach(row => {
-            if (!row.goalie_id) return;
-            goaliePeriodRows.push({ game_id: gameId, team_id: teamId, period: row.period, goalie_id: row.goalie_id, time_in: row.game_time || null });
+        buildGoalieTimeline(resultGoalieStints(side), otSeconds).forEach(stint => {
+            goaliePeriodRows.push({
+                game_id: gameId,
+                team_id: teamId,
+                goalie_id: stint.row.goalie_id,
+                period: stint.row.period,
+                time_out: stint.row.time_out
+            });
         });
     });
 
@@ -1325,6 +1472,11 @@ async function initAdminPage() {
     document.getElementById("admin-player-team-filter").addEventListener("change", renderAdminPlayersTable);
 
     document.getElementById("result-game-select").addEventListener("change", onResultGameChange);
+
+    // Any edit in the results form (a goal's time or period, a goalie's
+    // time off...) can change who a goal is charged to, so refresh the
+    // goals-against tallies shown beside the goalies.
+    document.getElementById("result-editor").addEventListener("change", updateResultGoalieTallies);
 
     toggleGameFormSections();
 

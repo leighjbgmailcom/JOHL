@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
     <link rel="icon" href="images/icons/icon-192.png">
     <title>Admin | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=22">
+    <link rel="stylesheet" href="css/style.css?v=23">
 
     <style>
         .admin-panel {
@@ -195,7 +195,31 @@
         }
 
         .goalie-row {
-            grid-template-columns: 1fr 70px 70px auto;
+            grid-template-columns: 1fr 92px 70px 34px auto;
+        }
+
+        .goalie-row-head {
+            margin-bottom: 4px;
+            font-size: 11px;
+            letter-spacing: .3px;
+            text-transform: uppercase;
+            color: #75818b;
+        }
+
+        /* No time off yet, so the period isn't in play (he's still in net). */
+        .goalie-row select.is-unused {
+            opacity: .45;
+        }
+
+        .goalie-ga {
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            color: #071a2b;
+        }
+
+        .goalie-row-head span:nth-child(4) {
+            text-align: center;
         }
 
         .attendance-checklist {
@@ -274,10 +298,12 @@
             <div class="admin-panel" style="background:#f7f8f9; box-shadow:none; padding:16px 18px; margin-bottom:20px;">
                 <h4 style="margin-bottom:4px;">Goalies</h4>
                 <p style="font-size:13px; color:#687681; margin-bottom:14px;">
-                    Who was in net, and when they went in (M:SS). Add one row per goalie change --
-                    a mid-period swap is fine, just give its clock time. This drives the goalie stats
-                    on the Leaders page: a goalie is charged with every goal scored while their stint
-                    was the one in net.
+                    Enter these the same way as the score sheet: list each team's goalies in the order
+                    they played, with the period and time each one <strong>came out</strong>. Leave the
+                    time blank for the goalie who finished the game. If a goalie went back in later, add
+                    him again on a new row. GA is worked out from the goal times -- a goalie is charged
+                    with every goal up to and including the time he came out -- so you can check it
+                    against the Goals box on the sheet.
                 </p>
 
                 <div class="result-team-columns">
@@ -733,13 +759,13 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=22"></script>
-<script src="js/header.js?v=22"></script>
-<script src="js/install.js?v=22"></script>
-<script src="js/db.js?v=22"></script>
-<script src="js/app.js?v=22"></script>
-<script src="js/auth.js?v=22"></script>
-<script src="js/admin.js?v=22"></script>
+<script src="js/supabase.js?v=23"></script>
+<script src="js/header.js?v=23"></script>
+<script src="js/install.js?v=23"></script>
+<script src="js/db.js?v=23"></script>
+<script src="js/app.js?v=23"></script>
+<script src="js/auth.js?v=23"></script>
+<script src="js/admin.js?v=23"></script>
 
 </body>
 </html>

@@ -16,7 +16,10 @@ let currentLiveGame = null;
 let currentLivePeriod = "1";
 let currentLiveGoals = [];
 let currentLivePenalties = [];
-let currentLiveGoalieStints = { away: {}, home: {} }; // period -> [{ id, goalieId, timeIn }, ...]
+// Each team's goalies for this game, one entry per time in net, the same
+// as the score sheet: [{ id, goalieId, period, timeOut }, ...] where
+// period/timeOut are when that goalie CAME OUT (timeOut blank = still in).
+let currentLiveGoalieStints = { away: [], home: [] };
 let currentLiveAttendance = { away: new Set(), home: new Set() }; // player ids on the ice
 let pendingGoalSide = null; // "away" | "home", while the goal modal is open
 let pendingPenaltySide = null; // "away" | "home", while the penalty modal is open
@@ -171,11 +174,16 @@ async function loadLiveGameDetails() {
     currentLiveGoals = goals || [];
     currentLivePenalties = penalties || [];
 
-    currentLiveGoalieStints = { away: {}, home: {} };
-    (goaliePeriods || []).forEach(row => {
+    currentLiveGoalieStints = { away: [], home: [] };
+    (goaliePeriods || []).slice().sort((a, b) => a.id - b.id).forEach(row => {
         const side = String(row.team_id) === String(currentLiveGame.away_team_id) ? "away" : "home";
-        if (!currentLiveGoalieStints[side][row.period]) currentLiveGoalieStints[side][row.period] = [];
-        currentLiveGoalieStints[side][row.period].push({ id: row.id, goalieId: row.goalie_id, timeIn: row.time_in });
+        const timeOut = normalizeClockText(row.time_out);
+        currentLiveGoalieStints[side].push({
+            id: row.id,
+            goalieId: row.goalie_id,
+            period: timeOut && GOALIE_CLOCK_PERIODS.includes(row.period) ? row.period : null,
+            timeOut
+        });
     });
 
     currentLiveAttendance = { away: new Set(), home: new Set() };
@@ -233,38 +241,31 @@ function renderLiveScoreboard() {
     document.getElementById("live-go-button").disabled = currentLiveGame.status !== "scheduled";
 }
 
-// A period can now have more than one goalie stint (an injury swap
-// mid-period, say), each with its own M:SS clock reading for when that
-// goalie took over. Sorted so the stint that started the period comes
-// first -- a stint with no time recorded is treated as "started at the
-// top of the period" (parseClockToSeconds/isGoaliePosition come from
-// js/app.js, loaded before this file).
-function sortedGoalieStints(stints) {
-    return (stints || []).slice().sort((a, b) => {
-        const as = parseClockToSeconds(a.timeIn);
-        const bs = parseClockToSeconds(b.timeIn);
-        if (as == null && bs == null) return 0;
-        if (as == null) return -1;
-        if (bs == null) return 1;
-        return bs - as;
-    });
+// Goalies are tracked the way the score sheet records them: each goalie
+// is listed once per time in net, and the only time written down is when
+// he CAME OUT. The goalie with no time is the one in net right now. (The
+// shared goalie maths -- buildGoalieTimeline, parseClockToSeconds and
+// friends -- comes from js/app.js, loaded before this file.)
+
+// The period a "came out" time belongs to when one is typed in: whichever
+// period tab is selected, as long as it has a running clock.
+function defaultLiveOutPeriod() {
+    return GOALIE_CLOCK_PERIODS.includes(currentLivePeriod) ? currentLivePeriod : "OT";
 }
 
-// For display only, when a period has no stints of its own yet: whoever
-// finished the most recent earlier period is presumed to still be in net,
-// same rule the goalie stats page uses. Nothing is written to the
-// database until a stint is actually added for this period.
-function carriedForwardGoalieId(side, period) {
-    const index = LIVE_PERIODS.indexOf(period);
-    for (let i = index - 1; i >= 0; i--) {
-        const earlier = LIVE_PERIODS[i];
-        const stints = currentLiveGoalieStints[side][earlier];
-        if (stints && stints.length) {
-            const sorted = sortedGoalieStints(stints);
-            return sorted[sorted.length - 1].goalieId;
-        }
-    }
-    return "";
+// One team's goalies in the order they played.
+function orderedLiveGoalieStints(side) {
+    const otSeconds = overtimeLengthSeconds(
+        currentLiveGoals,
+        [...currentLiveGoalieStints.away, ...currentLiveGoalieStints.home].map(st => ({ period: st.period, time_out: st.timeOut }))
+    );
+    const rows = currentLiveGoalieStints[side].map(stint => ({
+        goalie_id: stint.goalieId,
+        period: stint.timeOut ? stint.period : null,
+        time_out: stint.timeOut,
+        stint
+    }));
+    return buildGoalieTimeline(rows, otSeconds).map(entry => entry.row.stint);
 }
 
 function goalieStintOptionsHtml(teamId, selectedId) {
@@ -273,30 +274,30 @@ function goalieStintOptionsHtml(teamId, selectedId) {
         goalies.map(p => `<option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""}>${playerLabel(p)}</option>`).join("");
 }
 
+function liveOutPeriodOptionsHtml(selected) {
+    return GOALIE_CLOCK_PERIODS.map(p =>
+        `<option value="${p}" ${p === selected ? "selected" : ""}>${p === "OT" ? "OT" : "P" + p}</option>`
+    ).join("");
+}
+
 function renderLiveGoalieStints() {
     ["away", "home"].forEach(side => {
         const teamId = liveTeamIdForSide(side);
         const container = document.getElementById(`live-${side}-goalie-stints`);
         if (!container) return;
 
-        const stints = sortedGoalieStints(currentLiveGoalieStints[side][currentLivePeriod]);
-        let html = "";
+        const stints = orderedLiveGoalieStints(side);
 
-        if (!stints.length) {
-            const carriedId = carriedForwardGoalieId(side, currentLivePeriod);
-            const carriedPlayer = carriedId ? PLAYERS.find(p => String(p.id) === String(carriedId)) : null;
-            if (carriedPlayer) {
-                html += `<div class="live-goalie-carried">Continuing: ${playerLabel(carriedPlayer)}</div>`;
-            }
-        }
-
-        html += stints.map(stint => `
+        let html = stints.map(stint => `
             <div class="live-goalie-stint-row">
                 <select onchange="updateLiveGoalieStint('${side}', ${stint.id}, 'goalieId', this.value)">
                     ${goalieStintOptionsHtml(teamId, stint.goalieId)}
                 </select>
-                <input type="text" class="live-time-input" placeholder="M:SS" inputmode="numeric" value="${stint.timeIn || ""}"
-                    onchange="updateLiveGoalieStint('${side}', ${stint.id}, 'timeIn', this.value)">
+                <select class="live-out-period" title="Period he came out in" onchange="updateLiveGoalieStint('${side}', ${stint.id}, 'period', this.value)">
+                    ${liveOutPeriodOptionsHtml(stint.period || defaultLiveOutPeriod())}
+                </select>
+                <input type="text" class="live-time-input" id="live-goalie-out-${stint.id}" placeholder="Off" title="The time he came out (M:SS)" inputmode="numeric" value="${stint.timeOut || ""}"
+                    onchange="updateLiveGoalieStint('${side}', ${stint.id}, 'timeOut', this.value)">
                 <button type="button" class="live-stint-remove" onclick="removeLiveGoalieStint('${side}', ${stint.id})">✕</button>
             </div>
         `).join("");
@@ -304,8 +305,12 @@ function renderLiveGoalieStints() {
         html += `
             <div class="live-goalie-stint-row live-goalie-add-row">
                 <select id="live-${side}-new-goalie">${goalieStintOptionsHtml(teamId, "")}</select>
-                <input type="text" class="live-time-input" id="live-${side}-new-goalie-time" placeholder="M:SS" inputmode="numeric">
                 <button type="button" class="live-stint-add" onclick="addLiveGoalieStint('${side}')">+ Add</button>
+            </div>
+            <div class="live-goalie-hint">
+                ${stints.length
+                    ? "When a goalie comes out, enter his time off, then add the goalie going in."
+                    : "Add the starting goalie."}
             </div>
         `;
 
@@ -313,42 +318,52 @@ function renderLiveGoalieStints() {
     });
 }
 
-// Adds a new goalie stint to the CURRENT period (a starting goalie, or a
-// mid-period change) -- inserted right away so it's live the moment it's
-// entered.
+// Adds the next goalie in net -- the starter, or whoever goes in after a
+// change. Inserted right away so it's live the moment it's entered. The
+// goalie already in net needs his time off first, so the order they
+// played in is never in doubt.
 async function addLiveGoalieStint(side) {
     const goalieSelect = document.getElementById(`live-${side}-new-goalie`);
-    const timeInput = document.getElementById(`live-${side}-new-goalie-time`);
     const goalieId = goalieSelect.value;
-    const timeIn = timeInput.value.trim() || null;
 
     if (!goalieId) {
         goalieSelect.focus();
         return;
     }
 
+    const stillIn = currentLiveGoalieStints[side].find(stint => !stint.timeOut);
+    if (stillIn) {
+        const player = PLAYERS.find(p => String(p.id) === String(stillIn.goalieId));
+        alert(`Enter the time ${player ? playerLabel(player) : "the current goalie"} came out first, then add the goalie going in.`);
+        const timeInput = document.getElementById(`live-goalie-out-${stillIn.id}`);
+        if (timeInput) timeInput.focus();
+        return;
+    }
+
     const teamId = liveTeamIdForSide(side);
     const { data, error } = await supabaseClient
         .from("game_goalie_periods")
-        .insert({ game_id: currentLiveGame.id, team_id: teamId, period: currentLivePeriod, goalie_id: goalieId, time_in: timeIn })
+        .insert({ game_id: currentLiveGame.id, team_id: teamId, goalie_id: goalieId, period: null, time_out: null })
         .select()
         .single();
 
     if (error) {
         console.error(error);
+        alert("There was a problem saving that goalie.");
         return;
     }
 
-    if (!currentLiveGoalieStints[side][currentLivePeriod]) currentLiveGoalieStints[side][currentLivePeriod] = [];
-    currentLiveGoalieStints[side][currentLivePeriod].push({ id: data.id, goalieId: data.goalie_id, timeIn: data.time_in });
+    currentLiveGoalieStints[side].push({ id: data.id, goalieId: data.goalie_id, period: null, timeOut: null });
     renderLiveGoalieStints();
 }
 
-// Edits one field of an existing stint. Clearing the goalie on an
-// existing stint just removes it, rather than leaving a blank one behind.
+// Edits one field of an existing goalie entry. Clearing the goalie just
+// removes the entry, rather than leaving a blank one behind. A time off
+// is saved together with its period (the selected period tab, unless a
+// different one was picked on the row); clearing the time puts the goalie
+// back "in net".
 async function updateLiveGoalieStint(side, id, field, value) {
-    const stints = currentLiveGoalieStints[side][currentLivePeriod] || [];
-    const stint = stints.find(s => String(s.id) === String(id));
+    const stint = currentLiveGoalieStints[side].find(s => String(s.id) === String(id));
     if (!stint) return;
 
     if (field === "goalieId" && !value) {
@@ -356,17 +371,47 @@ async function updateLiveGoalieStint(side, id, field, value) {
         return;
     }
 
-    const patch = field === "goalieId" ? { goalie_id: value } : { time_in: value.trim() || null };
-    const { error } = await supabaseClient.from("game_goalie_periods").update(patch).eq("id", id);
+    let patch;
+    let next;
 
-    if (error) {
-        console.error(error);
-        return;
+    if (field === "goalieId") {
+        patch = { goalie_id: value };
+        next = { goalieId: value };
+    } else if (field === "period") {
+        next = { period: value };
+        // The period only means something once there's a time to go with it.
+        patch = stint.timeOut ? { period: value } : null;
+    } else {
+        const typed = String(value || "").trim();
+        if (!typed) {
+            patch = { time_out: null, period: null };
+            next = { timeOut: null, period: null };
+        } else {
+            const seconds = parseClockToSeconds(typed);
+            if (seconds == null || seconds > REGULATION_PERIOD_SECONDS) {
+                alert(`Can't read "${typed}" as a time. Enter minutes and seconds, like 948 or 9:48.`);
+                renderLiveGoalieStints();
+                return;
+            }
+            const period = stint.period || defaultLiveOutPeriod();
+            const timeOut = formatSecondsAsClock(seconds);
+            patch = { time_out: timeOut, period };
+            next = { timeOut, period };
+        }
     }
 
-    if (field === "goalieId") stint.goalieId = value;
-    else stint.timeIn = value.trim() || null;
+    if (patch) {
+        const { error } = await supabaseClient.from("game_goalie_periods").update(patch).eq("id", id);
 
+        if (error) {
+            console.error(error);
+            alert("There was a problem saving that change.");
+            renderLiveGoalieStints();
+            return;
+        }
+    }
+
+    Object.assign(stint, next);
     renderLiveGoalieStints();
 }
 
@@ -378,8 +423,7 @@ async function removeLiveGoalieStint(side, id) {
         return;
     }
 
-    currentLiveGoalieStints[side][currentLivePeriod] =
-        (currentLiveGoalieStints[side][currentLivePeriod] || []).filter(s => String(s.id) !== String(id));
+    currentLiveGoalieStints[side] = currentLiveGoalieStints[side].filter(s => String(s.id) !== String(id));
     renderLiveGoalieStints();
 }
 
@@ -534,7 +578,7 @@ async function saveLiveGoal() {
     const teamId = liveTeamIdForSide(pendingGoalSide);
     const assist1Id = document.getElementById("live-goal-assist1").value || null;
     const assist2Id = document.getElementById("live-goal-assist2").value || null;
-    const gameTime = document.getElementById("live-goal-time").value.trim() || null;
+    const gameTime = normalizeClockText(document.getElementById("live-goal-time").value);
 
     const { error } = await supabaseClient.from("game_goals").insert({
         game_id: currentLiveGame.id,
@@ -629,7 +673,7 @@ async function saveLivePenalty() {
         ? (document.getElementById("live-penalty-infraction-other").value.trim() || null)
         : (infractionSelect.trim() || null);
     const minutes = Number(document.getElementById("live-penalty-minutes").value) || 2;
-    const gameTime = document.getElementById("live-penalty-time").value.trim() || null;
+    const gameTime = normalizeClockText(document.getElementById("live-penalty-time").value);
 
     const { error } = await supabaseClient.from("game_penalties").insert({
         game_id: currentLiveGame.id,
@@ -781,9 +825,9 @@ async function initLivePage() {
         if (event.target.id === "live-penalty-modal") closeLivePenaltyModal();
     });
 
-    // Goalie stint rows are (re)generated by renderLiveGoalieStints() with
+    // Goalie rows are (re)generated by renderLiveGoalieStints() with
     // their own inline handlers, since the number of rows changes as
-    // stints are added/removed -- nothing to wire up here.
+    // goalies are added/removed -- nothing to wire up here.
 }
 
 // Note: js/app.js's own DOMContentLoaded listener already runs
