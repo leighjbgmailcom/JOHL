@@ -5,21 +5,21 @@
    Only sheet.html loads this file, on top of css/style.css. Everything
    is prefixed .gs- ("game sheet") so nothing here can touch another page.
 
-   The look: a sheet of paper with printed black rules and labels, filled
-   in with blue ink. A line that isn't saved yet is highlighted yellow
-   (still "in pencil"); a box that can't be read is marked red.
+   The look is the pre-printed paper game sheet: white paper, thin black
+   rules, the dark "Game" band across the top, a grey band for each team
+   name -- filled in with blue pen. A line that isn't saved yet is
+   highlighted yellow; a box that can't be read is marked red.
    ========================================= */
 
 .gs-page {
-    --gs-paper: #fdfcf8;
-    --gs-rule: #1c232b;        /* heavy printed rules and box edges */
-    --gs-rule-light: #9aa3ab;  /* the fine rules between lines */
-    --gs-printed: #1c232b;     /* printed labels */
+    --gs-rule: #1a1a1a;        /* the printed rules */
     --gs-ink: #1638a6;         /* what's written on the sheet */
-    --gs-pencil: #5f6b76;      /* the notes beside a line */
-    --gs-highlight: #fff6c2;   /* a line that isn't saved yet */
+    --gs-pencil: #5f6b76;
+    --gs-highlight: #fff3b0;   /* a line that isn't saved yet */
     --gs-red: #c8102e;
-    --gs-line: 40px;           /* height of one ruled line */
+    --gs-line: 38px;           /* height of one ruled line */
+    --gs-roster-line: 30px;
+    --gs-margin: 30px;         /* the margin the roster ticks go in */
 
     width: min(1400px, 96%);
     padding-top: 35px;
@@ -27,6 +27,10 @@
 
 .gs-page .page-title {
     margin-bottom: 20px;
+}
+
+[hidden] {
+    display: none !important;
 }
 
 
@@ -123,213 +127,91 @@
     text-align: center;
 }
 
-[hidden] {
-    display: none !important;
-}
-
 
 /* =========================================
    THE SHEET
    ========================================= */
 
 .gs-sheet {
-    background: var(--gs-paper);
-    color: var(--gs-printed);
-    border: 2px solid var(--gs-rule);
-    box-shadow: 0 2px 0 rgba(0, 0, 0, .04), 0 10px 28px rgba(7, 26, 43, .16);
-    padding: 16px;
+    background: white;
+    color: #111;
+    font-family: Calibri, Carlito, "Segoe UI", Arial, Helvetica, sans-serif;
+    border: 1px solid #c3c9cf;
+    box-shadow: 0 10px 28px rgba(7, 26, 43, .18);
+    padding: 16px 16px 18px;
 }
 
-/* Small capitals in black: anything "printed" on the form. */
-.gs-printed,
-.gs-box-title,
-.gs-head .gs-cell {
-    font-size: 11px;
-    font-weight: 900;
-    letter-spacing: .07em;
-    text-transform: uppercase;
-    color: var(--gs-printed);
-}
-
-/* Blue ink: anything written on the form. */
+/* Blue pen: anything written on the form. */
 .gs-written,
-.gs-ink {
+.gs-ink,
+.gs-ga {
     color: var(--gs-ink);
     font-weight: bold;
 }
 
 
-/* ----- Masthead ----- */
+/* ----- The dark band across the top: Game 3 / date / time ----- */
 
-.gs-masthead {
-    display: flex;
+.gs-banner {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 12px;
-    padding-bottom: 12px;
-    border-bottom: 3px double var(--gs-rule);
-    position: relative;
+    min-height: 40px;
+    padding: 4px 12px;
+    background: linear-gradient(90deg, #3a3a3a, #6a6a6a);
+    color: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
 
-.gs-masthead-logo {
-    height: 46px;
-    width: auto;
-    border-radius: 6px;
-    flex-shrink: 0;
+.gs-banner-game {
+    font-size: 23px;
+    font-weight: bold;
 }
 
-.gs-masthead-title {
+.gs-banner-date {
+    font-size: 16px;
+}
+
+.gs-banner-time {
     display: flex;
-    flex-direction: column;
-    line-height: 1.15;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    font-size: 16px;
 }
 
-.gs-masthead-title strong {
-    font-size: clamp(16px, 2.4vw, 22px);
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: #071a2b;
-}
-
-.gs-masthead-title span {
-    font-size: 12px;
-    font-weight: 900;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    color: var(--gs-red);
-}
-
-/* The rubber stamp: LIVE while the game's on, FINAL once it's done. */
+/* LIVE while the game's on, FINAL once it's done. */
 .gs-stamp {
-    margin-left: auto;
-    padding: 3px 12px;
-    border: 3px solid var(--gs-red);
-    border-radius: 6px;
-    color: var(--gs-red);
-    font-size: 20px;
-    font-weight: 900;
-    letter-spacing: .14em;
+    padding: 1px 9px;
+    border: 2px solid #ff9aa8;
+    border-radius: 4px;
+    color: #ffd0d6;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: .12em;
     text-transform: uppercase;
-    transform: rotate(-5deg);
-    opacity: .85;
 }
 
 .gs-stamp.is-live {
-    border-color: #1f7a45;
-    color: #1f7a45;
+    border-color: #8fe3ae;
+    color: #c8f5d8;
 }
 
 
-/* ----- Game No. / Date / Time / Arena ----- */
-
-.gs-fields {
-    display: grid;
-    grid-template-columns: 1fr 2.4fr 1fr 2fr;
-    gap: 10px 18px;
-    padding: 12px 0;
-}
-
-.gs-field {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    min-width: 0;
-}
-
-.gs-field .gs-printed {
-    flex-shrink: 0;
-}
-
-.gs-field .gs-written {
-    flex: 1;
-    min-width: 0;
-    min-height: 26px;
-    padding: 0 4px 1px;
-    border-bottom: 1px solid var(--gs-rule);
-    font-size: 16px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-
-/* ----- Score by period ----- */
-
-.gs-scorebox {
-    border: 2px solid var(--gs-rule);
-    margin-bottom: 14px;
-}
-
-.gs-score-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) repeat(5, 52px) 76px;
-    min-height: 38px;
-}
-
-.gs-score-row + .gs-score-row {
-    border-top: 1px solid var(--gs-rule-light);
-}
-
-.gs-score-row > span {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-left: 1px solid var(--gs-rule-light);
-    font-size: 18px;
-}
-
-.gs-score-row > .gs-score-team {
-    justify-content: flex-start;
-    gap: 8px;
-    padding: 0 10px;
-    border-left: 0;
-    font-size: 16px;
-    font-weight: bold;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-}
-
-.gs-score-row > .gs-score-total {
-    border-left: 2px solid var(--gs-rule);
-    font-size: 24px;
-    font-weight: 900;
-}
-
-.gs-score-head {
-    min-height: 26px;
-    background: #eceae2;
-    border-bottom: 1px solid var(--gs-rule);
-}
-
-.gs-score-head > span,
-.gs-score-head > .gs-score-total,
-.gs-score-head > .gs-score-team {
-    font-size: 11px;
-    font-weight: 900;
-    letter-spacing: .07em;
-    text-transform: uppercase;
-}
-
-.gs-score-team .gs-printed {
-    width: 58px;
-    flex-shrink: 0;
-    color: var(--gs-pencil);
-}
-
-
-/* ----- Home | Visitor tabs (phone width only) ----- */
+/* ----- V | H tabs (phone width only) ----- */
 
 .gs-side-tabs {
     display: none;
 }
 
 
-/* ----- The two teams ----- */
+/* ----- The two teams, Visitors | Home ----- */
 
 .gs-teams {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
     align-items: start;
 }
 
@@ -337,182 +219,13 @@
     container-type: inline-size;
     min-width: 0;
     margin-bottom: 0; /* style.css spaces every <section> out; not on the sheet */
+    padding-right: 8px;
 }
 
-.gs-team-head {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 46px;
-    padding: 4px 10px;
-    border: 2px solid var(--gs-rule);
-    border-bottom: 0;
-    background: #eceae2;
-}
-
-.gs-team-head .gs-printed {
-    flex-shrink: 0;
-}
-
-.gs-team-name {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 19px;
-    min-width: 0;
-}
-
-.gs-team-name .team-badge-logo,
-.gs-team-name .team-badge {
-    width: 36px;
-    height: 36px;
-    margin: 0;
-    flex-shrink: 0;
-    font-size: 10px;
-}
-
-.gs-box {
-    border: 2px solid var(--gs-rule);
-    border-bottom: 0;
-}
-
-.gs-team .gs-box:last-child {
-    border-bottom: 2px solid var(--gs-rule);
-}
-
-.gs-box-title {
-    padding: 5px 10px;
-    background: #1c232b;
-    color: white;
-    font-size: 12px;
-}
-
-.gs-box-title small {
-    font-size: 10px;
-    font-weight: normal;
-    letter-spacing: .03em;
-    text-transform: none;
-    opacity: .75;
-    margin-left: 6px;
-}
-
-.gs-box-foot {
-    font-size: 12px;
-    color: var(--gs-red);
-    font-weight: bold;
-}
-
-.gs-box-foot:not(:empty) {
-    padding: 6px 10px;
-    border-top: 1px solid var(--gs-rule-light);
-}
-
-
-/* ----- Line-up ----- */
-
-.gs-lineup {
-    columns: 2;
-    column-gap: 0;
-    column-rule: 1px solid var(--gs-rule);
-}
-
-.gs-lineup-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 36px;
-    padding: 0 8px;
-    border-bottom: 1px solid var(--gs-rule-light);
-    break-inside: avoid;
-    cursor: pointer;
-    position: relative;
-}
-
-.gs-lineup-row input,
-.gs-ot input {
-    position: absolute;
-    opacity: 0;
-    width: 1px;
-    height: 1px;
-}
-
-/* The box that gets the check mark. */
-.gs-check {
-    width: 22px;
-    height: 22px;
-    flex-shrink: 0;
-    border: 1.5px solid var(--gs-rule);
-    background: white;
-    display: grid;
-    place-items: center;
-    color: var(--gs-ink);
-    font-size: 22px;
-    font-weight: 900;
-    line-height: 1;
-}
-
-input:checked + .gs-check::after {
-    content: "✓";
-}
-
-input:focus-visible + .gs-check {
-    outline: 3px solid #f2b705;
-    outline-offset: 1px;
-}
-
-.gs-lineup-no {
-    width: 26px;
-    flex-shrink: 0;
-    text-align: right;
-    font-weight: 900;
-    font-variant-numeric: tabular-nums;
-}
-
-.gs-lineup-name {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 15px;
-}
-
-.gs-lineup-goalie {
-    flex-shrink: 0;
-    font-style: normal;
-    font-size: 10px;
-    font-weight: 900;
-    line-height: 1.3;
-    padding: 0 4px;
-    margin-left: -3px;
-    border: 1px solid var(--gs-rule);
-    border-radius: 3px;
-}
-
-.gs-lineup-empty {
-    padding: 12px 10px;
-    color: var(--gs-pencil);
-    font-size: 14px;
-}
-
-
-/* ----- Ruled lines: Scoring, Penalties, Goalkeepers ----- */
-
-.gs-row {
-    display: grid;
-    min-height: var(--gs-line);
-    border-top: 1px solid var(--gs-rule-light);
-}
-
-.gs-box-goal .gs-row {
-    grid-template-columns: 30px 52px 68px 50px 50px 50px minmax(0, 1fr) 32px;
-}
-
-.gs-box-pen .gs-row {
-    grid-template-columns: 52px 50px 48px minmax(110px, 1.1fr) 68px minmax(0, 1fr) 32px;
-}
-
-.gs-box-goalie .gs-row {
-    grid-template-columns: minmax(130px, 1.5fr) 52px 72px 56px minmax(0, 1fr) 32px;
+.gs-team + .gs-team {
+    padding-right: 0;
+    padding-left: 8px;
+    border-left: 3px double var(--gs-rule);
 }
 
 .gs-cell {
@@ -520,38 +233,326 @@ input:focus-visible + .gs-check {
     align-items: center;
     justify-content: center;
     min-width: 0;
-    border-right: 1px solid var(--gs-rule-light);
 }
 
-.gs-head {
-    min-height: 26px;
-    background: #eceae2;
+
+/* ----- Top of each half: roster on the left, goalie box and score on the right ----- */
+
+.gs-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 12px;
+}
+
+/* The big V / H box. */
+.gs-side-head {
+    display: flex;
+    align-items: stretch;
+    margin-left: var(--gs-margin);
+    border: 1.5px solid var(--gs-rule);
     border-top: 0;
+    min-height: 54px;
+}
+
+.gs-side-letter {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    border-right: 1.5px solid var(--gs-rule);
+    font-size: 40px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.gs-side-title {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    font-size: 23px;
+    font-weight: bold;
+}
+
+/* The grey band with the team's name. */
+.gs-team-band {
+    margin-left: var(--gs-margin);
+    padding: 12px 6px 5px;
+    border: 1px solid var(--gs-rule);
+    border-top: 0;
+    background: linear-gradient(90deg, #dcdcdc, #8d8d8d);
+    font-size: 21px;
+    font-weight: bold;
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* The roster: # | last name | first name, with the tick in the margin. */
+.gs-roster-row {
+    display: grid;
+    grid-template-columns: var(--gs-margin) 38px minmax(0, 1.2fr) minmax(0, 1fr);
+    min-height: var(--gs-roster-line);
+    cursor: pointer;
+    position: relative;
+}
+
+.gs-roster-no,
+.gs-roster-name {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    padding: 0 6px;
+    border-right: 1px solid var(--gs-rule);
+    border-bottom: 1px solid var(--gs-rule);
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gs-roster-no {
+    justify-content: center;
+    padding: 0;
+    border-left: 1px solid var(--gs-rule);
+    font-size: 17px;
+}
+
+.gs-roster-gap {
+    height: calc(var(--gs-roster-line) * .8);
+    margin-left: var(--gs-margin);
     border-bottom: 1px solid var(--gs-rule);
 }
 
-.gs-rows .gs-row:first-child {
-    border-top: 0;
+.gs-roster-row input,
+.gs-ot input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
 }
 
-.gs-num {
-    font-size: 12px;
+/* Where the tick goes: faint until it's ticked. */
+.gs-tick {
+    align-self: center;
+    justify-self: start;
+    width: 22px;
+    height: 22px;
+    border: 1.5px dashed #b3bac1;
+    border-radius: 4px;
+    display: grid;
+    place-items: center;
+    color: var(--gs-ink);
+    font-size: 24px;
     font-weight: bold;
+    line-height: 1;
+}
+
+input:checked + .gs-tick {
+    border-color: transparent;
+}
+
+input:checked + .gs-tick::after {
+    content: "✓";
+}
+
+input:focus-visible + .gs-tick {
+    outline: 3px solid #f2b705;
+    outline-offset: 1px;
+}
+
+.gs-roster-empty {
+    margin-left: var(--gs-margin);
+    padding: 10px 6px;
     color: var(--gs-pencil);
-    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+}
+
+
+/* ----- Goalie box (Goals | Time) and the other team's score by period ----- */
+
+.gs-top-boxes {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 12px;
+    min-width: 0;
+}
+
+.gs-goalie-row {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) minmax(0, 1.9fr);
+    min-height: 36px;
+}
+
+.gs-goalie-row .gs-cell {
+    border-right: 1px solid var(--gs-rule);
+    border-bottom: 1px solid var(--gs-rule);
+}
+
+.gs-goalie-head {
+    min-height: 30px;
+}
+
+.gs-goalie-head .gs-cell {
+    border-top: 1px solid var(--gs-rule);
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.gs-goalie-head .gs-cell:nth-child(2) {
+    border-left: 1px solid var(--gs-rule);
+}
+
+/* The goalie's number: tap it to circle him as having played. */
+.gs-goalie-no {
+    position: relative;
+    font: inherit;
+    font-size: 17px;
+    font-weight: bold;
+    color: #111;
+    background: white;
+    border: 1px solid var(--gs-rule);
+    border-top: 0;
+    cursor: pointer;
+}
+
+.gs-goalie-head + .gs-goalie-row .gs-goalie-no {
+    border-top: 1px solid var(--gs-rule);
+}
+
+.gs-goalie-no.is-playing::after {
+    content: "";
+    position: absolute;
+    inset: 3px 5px;
+    border: 2px solid var(--gs-ink);
+    border-radius: 50%;
+}
+
+.gs-goalie-no:focus-visible {
+    outline: 3px solid #f2b705;
+    outline-offset: -3px;
+}
+
+.gs-ga {
+    font-size: 19px;
+}
+
+.gs-goalie-time {
+    gap: 2px;
+    padding: 0 2px;
+}
+
+.gs-goalie-time select.gs-ink {
+    flex: 0 0 46px;
+    width: 46px;
+    font-size: 14px;
+}
+
+.gs-goalie-time:not(.has-time) select.gs-ink {
+    display: none;
+}
+
+.gs-goalie-foot {
+    font-size: 13px;
+    font-weight: bold;
+    line-height: 1.25;
+    color: var(--gs-red);
+}
+
+.gs-goalie-foot:not(:empty) {
+    padding-top: 5px;
+}
+
+.gs-goalie-foot.is-retry {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.gs-goalies.is-read-only .gs-goalie-no {
+    cursor: default;
+}
+
+/* "Home" / "Visitor" over 1 | 2 | 3 | Total. */
+.gs-score-label {
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--gs-rule);
+}
+
+.gs-score-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--gs-score-columns, 3), minmax(0, 1fr)) minmax(0, 1.9fr);
+    border-left: 1px solid var(--gs-rule);
+}
+
+.gs-score-grid .gs-cell {
+    min-height: 44px;
+    border-right: 1px solid var(--gs-rule);
+    border-bottom: 1px solid var(--gs-rule);
+    font-size: 24px;
+}
+
+.gs-score-grid .gs-score-head {
+    min-height: 30px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+
+/* ----- Ruled lines: Penalties and Scoring ----- */
+
+.gs-box {
+    margin-top: 10px;
+}
+
+.gs-row {
+    display: grid;
+    min-height: var(--gs-line);
+}
+
+.gs-box-pen .gs-row {
+    grid-template-columns: 48px 56px minmax(0, 1.5fr) 64px 82px minmax(0, 1.25fr) 26px;
+}
+
+.gs-box-goal .gs-row {
+    grid-template-columns: 48px minmax(0, 1.7fr) 70px 62px 62px 62px 26px;
+}
+
+.gs-row .gs-cell {
+    border-right: 1px solid var(--gs-rule);
+    border-bottom: 1px solid var(--gs-rule);
+}
+
+.gs-row .gs-cell:first-child {
+    border-left: 1px solid var(--gs-rule);
+}
+
+.gs-head {
+    min-height: 34px;
+}
+
+.gs-head .gs-cell {
+    border-top: 1px solid var(--gs-rule);
+    border-bottom: 3px double var(--gs-rule);
+    font-size: 16px;
 }
 
 /* The boxes to write in: no box of their own, just the ruled cell. */
 .gs-cell .gs-ink {
     width: 100%;
     height: 100%;
+    min-width: 0;
     min-height: calc(var(--gs-line) - 1px);
     padding: 0 3px;
     border: 0;
     border-radius: 0;
     background: transparent;
     font-family: inherit;
-    font-size: 18px;
+    font-size: 19px;
     font-variant-numeric: tabular-nums;
     text-align: center;
     text-align-last: center;
@@ -564,49 +565,54 @@ input:focus-visible + .gs-check {
     cursor: pointer;
 }
 
+.gs-cell select.gs-ink:disabled,
+.gs-cell input.gs-ink:disabled {
+    opacity: 1;
+    cursor: default;
+}
+
 .gs-cell .gs-ink:focus {
     outline: 3px solid #f2b705;
     outline-offset: -3px;
     background: #fffbe0;
 }
 
-.gs-offence select.gs-ink,
-.gs-goalie-name select.gs-ink {
-    font-size: 15px;
+.gs-name select.gs-ink {
+    font-size: 17px;
     text-align: left;
     text-align-last: left;
-    padding-left: 8px;
+    padding-left: 7px;
     text-overflow: ellipsis;
 }
 
-.gs-head .gs-offence,
-.gs-head .gs-goalie-name {
-    justify-content: flex-start;
-    padding-left: 8px;
+.gs-on select.gs-ink {
+    font-size: 17px;
 }
 
-.gs-ga {
-    color: var(--gs-ink);
-    font-size: 18px;
-    font-weight: bold;
+/* A line with nothing on it yet doesn't show the length of a penalty. */
+.gs-row:not(.is-used) .gs-on select.gs-ink {
+    color: transparent;
 }
 
-/* The pencilled note at the end of a line: who the numbers are, or
-   what's still needed. */
+/* What's wrong with a line, or what it's waiting for, written under it. */
 .gs-note {
-    justify-content: flex-start;
-    padding: 0 8px;
-    border-right: 0;
-    color: var(--gs-pencil);
-    font-size: 13px;
-    font-style: italic;
-    line-height: 1.2;
-    overflow: hidden;
+    grid-column: 1 / -1;
+    padding: 3px 8px 4px;
+    font-size: 14px;
+    line-height: 1.25;
+    color: #6b5200;
+    background: var(--gs-highlight);
+    border: 1px solid var(--gs-rule);
+    border-top: 0;
+    margin-right: 26px;
+}
+
+.gs-note:empty {
+    display: none;
 }
 
 .gs-note.is-problem {
     color: var(--gs-red);
-    font-style: normal;
     font-weight: bold;
 }
 
@@ -616,16 +622,15 @@ input:focus-visible + .gs-check {
 }
 
 .gs-erase-cell {
-    border-right: 0;
+    display: flex;
 }
 
 .gs-erase {
     width: 100%;
-    height: 100%;
     border: 0;
     background: transparent;
     color: #9aa3ab;
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
     visibility: hidden;
 }
@@ -639,12 +644,13 @@ input:focus-visible + .gs-check {
     color: var(--gs-red);
 }
 
-/* Written but not saved yet: still in pencil. */
-.gs-row.is-pencil {
+/* Written but not saved yet. */
+.gs-row.is-pencil .gs-cell {
     background: var(--gs-highlight);
 }
 
-.gs-cell.is-bad {
+.gs-row .gs-cell.is-bad,
+.gs-goalie-time.is-bad {
     background: #fde3e6;
 }
 
@@ -653,67 +659,103 @@ input:focus-visible + .gs-check {
 }
 
 
-/* When a team's half of the sheet is narrow (a phone, or two teams side
-   by side on a tablet), the note drops onto its own line under the
-   boxes instead of being squeezed in at the end. */
-@container (max-width: 560px) {
-
-    .gs-box-goal .gs-row {
-        grid-template-columns: 28px 1fr 1.3fr 1fr 1fr 1fr 32px;
-    }
+/* A team's half of the sheet gets narrow on a tablet with both teams
+   side by side, and on a phone. */
+@container (max-width: 520px) {
 
     .gs-box-pen .gs-row {
-        grid-template-columns: 1fr 1fr 1fr 2.6fr 1.3fr 32px;
+        grid-template-columns: 38px 42px minmax(0, 1.3fr) 54px 62px minmax(0, 1fr) 22px;
     }
 
-    .gs-box-goalie .gs-row {
-        grid-template-columns: 3fr 1fr 1.4fr 1.1fr 32px;
+    .gs-box-goal .gs-row {
+        grid-template-columns: 38px minmax(0, 1.5fr) 58px 46px 46px 46px 22px;
     }
 
-    .gs-row .gs-note {
-        grid-column: 1 / -1;
-        grid-row: 2;
-        min-height: 24px;
-        padding: 3px 8px 4px;
-        border-top: 1px dashed var(--gs-rule-light);
-    }
-
-    .gs-row .gs-note:empty {
-        display: none;
-    }
-
-    .gs-row .gs-erase-cell {
-        grid-row: 1;
-        grid-column: -2 / -1;
+    .gs-note {
+        margin-right: 22px;
     }
 
     .gs-cell .gs-ink {
         font-size: 17px;
+        padding: 0 1px;
     }
 
-    .gs-offence select.gs-ink,
-    .gs-goalie-name select.gs-ink {
+    .gs-name select.gs-ink,
+    .gs-on select.gs-ink {
+        font-size: 16px;
+        padding-left: 4px;
+    }
+
+    .gs-head .gs-cell {
         font-size: 14px;
-        padding-left: 5px;
+    }
+
+    .gs-side-letter {
+        width: 44px;
+        font-size: 34px;
+    }
+
+    .gs-side-title {
+        font-size: 20px;
+    }
+
+    .gs-team-band {
+        font-size: 19px;
+    }
+
+    .gs-roster-no,
+    .gs-roster-name {
+        font-size: 15px;
+        padding: 0 4px;
+    }
+
+    .gs-roster-no {
+        padding: 0;
+    }
+
+    .gs-roster-row {
+        grid-template-columns: var(--gs-margin) 32px minmax(0, 1.2fr) minmax(0, 1fr);
+    }
+
+    .gs-goalie-row {
+        grid-template-columns: 38px minmax(0, 1fr) minmax(0, 2.2fr);
+    }
+
+    .gs-goalie-time select.gs-ink {
+        flex-basis: 40px;
+        width: 40px;
+    }
+
+    .gs-score-grid .gs-cell {
+        font-size: 21px;
     }
 
 }
 
+/* Too narrow for the roster and the boxes side by side: the goalie box
+   and the score go under the roster instead. */
 @container (max-width: 400px) {
 
-    .gs-lineup-name {
-        font-size: 14px;
+    .gs-top {
+        grid-template-columns: minmax(0, 1fr);
     }
 
-    .gs-lineup-row {
-        gap: 6px;
-        padding: 0 5px;
+    .gs-top-boxes {
+        flex-direction: row;
+        align-items: flex-start;
+        margin-left: var(--gs-margin);
+    }
+
+    .gs-goalies,
+    .gs-score {
+        flex: 1 1 0;
+        min-width: 0;
     }
 
 }
 
 
-/* ----- Sign-off: overtime box and the status buttons ----- */
+/* ----- Sign-off (not on the paper): overtime box and the status buttons ----- */
 
 .gs-signoff {
     display: flex;
@@ -721,9 +763,10 @@ input:focus-visible + .gs-check {
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 14px 20px;
-    margin-top: 16px;
+    margin-top: 18px;
     padding-top: 14px;
-    border-top: 3px double var(--gs-rule);
+    border-top: 1px solid #c3c9cf;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 .gs-ot {
@@ -733,6 +776,16 @@ input:focus-visible + .gs-check {
     font-weight: bold;
     cursor: pointer;
     position: relative;
+}
+
+.gs-ot .gs-tick {
+    border-style: solid;
+    border-color: #6b7680;
+    flex-shrink: 0;
+}
+
+.gs-ot input:checked + .gs-tick {
+    border-color: #6b7680;
 }
 
 .gs-ot small {
@@ -761,6 +814,7 @@ input:focus-visible + .gs-check {
 
     .gs-page {
         --gs-line: 44px;
+        --gs-roster-line: 34px;
         width: 100%;
         padding-top: 20px;
     }
@@ -774,19 +828,26 @@ input:focus-visible + .gs-check {
     .gs-sheet {
         border-left: 0;
         border-right: 0;
-        padding: 12px 8px;
+        padding: 10px 6px 14px;
     }
 
-    .gs-fields {
-        grid-template-columns: 1fr 1fr;
+    .gs-banner-game {
+        font-size: 20px;
     }
 
-    .gs-score-row {
-        grid-template-columns: minmax(0, 1fr) repeat(5, 34px) 48px;
+    .gs-banner-date,
+    .gs-banner-time {
+        font-size: 13px;
+        white-space: nowrap;
     }
 
-    .gs-score-team .gs-printed {
-        display: none;
+    .gs-banner {
+        gap: 6px;
+        padding: 4px 8px;
+    }
+
+    .gs-banner-time {
+        gap: 6px;
     }
 
     .gs-side-tabs {
@@ -795,19 +856,18 @@ input:focus-visible + .gs-check {
         position: sticky;
         top: 0;
         z-index: 5;
-        background: var(--gs-paper);
-        border: 2px solid var(--gs-rule);
-        margin-bottom: 10px;
+        background: white;
+        border: 1.5px solid var(--gs-rule);
+        border-top: 0;
     }
 
     .gs-side-tabs button {
         font: inherit;
-        font-size: 15px;
-        font-weight: bold;
+        font-size: 17px;
         padding: 11px 6px;
         border: 0;
         background: transparent;
-        color: var(--gs-pencil);
+        color: #555;
         cursor: pointer;
         white-space: nowrap;
         overflow: hidden;
@@ -815,17 +875,11 @@ input:focus-visible + .gs-check {
     }
 
     .gs-side-tabs button + button {
-        border-left: 1px solid var(--gs-rule);
-    }
-
-    .gs-side-tabs button .gs-printed {
-        display: block;
-        color: inherit;
-        font-size: 10px;
+        border-left: 1.5px solid var(--gs-rule);
     }
 
     .gs-side-tabs button.active {
-        background: #1c232b;
+        background: #3a3a3a;
         color: white;
     }
 
@@ -833,9 +887,20 @@ input:focus-visible + .gs-check {
         grid-template-columns: minmax(0, 1fr);
     }
 
+    .gs-team,
+    .gs-team + .gs-team {
+        padding: 0;
+        border-left: 0;
+    }
+
     .gs-sheet[data-active-side="home"] .gs-team[data-side="away"],
     .gs-sheet[data-active-side="away"] .gs-team[data-side="home"] {
         display: none;
+    }
+
+    .gs-signoff {
+        padding-left: 6px;
+        padding-right: 6px;
     }
 
     .gs-signoff-actions,
@@ -865,64 +930,46 @@ input:focus-visible + .gs-check {
     footer,
     .gs-screen-only,
     .gs-side-tabs,
-    .gs-erase,
-    .gs-note {
+    .gs-erase-cell,
+    .gs-note,
+    .gs-goalie-foot,
+    .gs-stamp {
         display: none !important;
     }
 
     .gs-page {
-        --gs-line: 18px;
+        --gs-line: 21px;
+        --gs-roster-line: 18px;
+        --gs-margin: 18px;
         width: 100%;
         padding: 0;
     }
 
-    /* Tightened up so both teams and all four boxes fit one page. */
-    .gs-masthead {
-        padding-bottom: 6px;
+    /* Laid out like the paper whatever the width: roster on the left,
+       goalie box and score beside it. */
+    .gs-top {
+        grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) !important;
+        gap: 8px;
     }
 
-    .gs-masthead-logo {
-        height: 34px;
+    .gs-top-boxes {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        margin-left: 0 !important;
+        gap: 8px;
     }
 
-    .gs-fields {
-        padding: 4px 0;
+    .gs-goalies,
+    .gs-score {
+        flex: 0 0 auto !important;
     }
 
-    .gs-scorebox {
-        margin-bottom: 6px;
+    .gs-banner {
+        min-height: 30px;
     }
 
-    .gs-score-row {
-        min-height: 22px;
-    }
-
-    .gs-score-head,
-    .gs-head {
-        min-height: 18px;
-    }
-
-    .gs-team-head {
-        min-height: 32px;
-        padding: 2px 8px;
-    }
-
-    .gs-team-name .team-badge-logo,
-    .gs-team-name .team-badge {
-        width: 26px;
-        height: 26px;
-    }
-
-    .gs-box-title {
-        padding: 2px 8px;
-    }
-
-    .gs-signoff {
-        margin-top: 5px;
-        padding-top: 3px;
-        border-top-width: 1px;
-        border-top-style: solid;
-        font-size: 12px;
+    .gs-banner-game {
+        font-size: 18px;
     }
 
     .gs-sheet {
@@ -933,45 +980,116 @@ input:focus-visible + .gs-check {
 
     .gs-teams {
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 10px;
     }
 
     .gs-team {
         display: block !important;
     }
 
-    .gs-row.is-pencil,
-    .gs-cell.is-bad {
+    .gs-box-pen .gs-row {
+        grid-template-columns: 30px 32px minmax(0, 1.5fr) 44px 50px minmax(0, 1.1fr);
+    }
+
+    .gs-box-goal .gs-row {
+        grid-template-columns: 30px minmax(0, 1.6fr) 46px 42px 42px 42px;
+    }
+
+    .gs-row.is-pencil .gs-cell,
+    .gs-row .gs-cell.is-bad {
         background: transparent;
     }
 
-    .gs-box-title,
-    .gs-head,
-    .gs-score-head,
-    .gs-team-head {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+    .gs-side-head {
+        min-height: 32px;
     }
 
-    .gs-lineup-row {
-        min-height: 17px;
+    .gs-side-letter {
+        width: 34px;
+        font-size: 25px;
     }
 
-    .gs-check {
-        width: 14px;
-        height: 14px;
+    .gs-side-title {
+        font-size: 17px;
+    }
+
+    .gs-team-band {
         font-size: 14px;
+        padding: 5px 5px 2px;
+    }
+
+    .gs-roster-no,
+    .gs-roster-name {
+        font-size: 12px;
+        padding: 0 4px;
+    }
+
+    .gs-roster-row {
+        grid-template-columns: var(--gs-margin) 26px minmax(0, 1.2fr) minmax(0, 1fr);
+    }
+
+    .gs-tick {
+        width: 13px;
+        height: 13px;
+        border: 0;
+        font-size: 15px;
+    }
+
+    .gs-goalie-row {
+        grid-template-columns: 26px minmax(0, 1fr) minmax(0, 1.9fr);
+        min-height: 22px;
+    }
+
+    .gs-goalie-head,
+    .gs-head {
+        min-height: 19px;
+    }
+
+    .gs-goalie-no.is-playing::after {
+        inset: 1px 2px;
+        border-width: 1.5px;
+    }
+
+    .gs-goalie-head .gs-cell,
+    .gs-head .gs-cell,
+    .gs-score-label,
+    .gs-score-grid .gs-score-head {
+        font-size: 12px;
+    }
+
+    .gs-score-grid .gs-cell {
+        min-height: 26px;
+        font-size: 15px;
+    }
+
+    .gs-score-grid .gs-score-head {
+        min-height: 18px;
+        font-size: 12px;
     }
 
     .gs-cell .gs-ink,
-    .gs-ga {
+    .gs-ga,
+    .gs-goalie-no {
         font-size: 13px;
     }
 
-    .gs-offence select.gs-ink,
-    .gs-goalie-name select.gs-ink,
-    .gs-lineup-name {
+    .gs-name select.gs-ink,
+    .gs-on select.gs-ink,
+    .gs-goalie-time select.gs-ink {
         font-size: 11px;
+        padding-left: 3px;
+    }
+
+    .gs-goalie-time select.gs-ink {
+        flex-basis: 30px;
+        width: 30px;
+    }
+
+    .gs-box {
+        margin-top: 5px;
+    }
+
+    .gs-cell .gs-ink {
+        min-height: 0;
     }
 
 }
