@@ -19,8 +19,8 @@
      a few lines and has a button to add more.)
 
    Nothing here has a Save button. A line is saved the moment it has
-   its period, its player and its time, and saved again every time it's
-   changed. The games table is subscribed to by every visitor's
+   its period, its player and its time (and, for a penalty, its S/W),
+   and saved again every time it's changed. The games table is subscribed to by every visitor's
    Home/Schedule/Standings page, so the score updates for them too.
 
    Shared helpers (clock parsing, the goalie maths, the infraction list)
@@ -277,7 +277,7 @@ function sheetRowHasEntry(kind, row) {
 
 // What a line still needs before it can be saved, in the timekeeper's
 // words -- or null if it has everything. Once a line is started it has
-// to have a period, a player and a time. Nothing is assumed: a goal in
+// to have a period, a player and a time (and a penalty its S/W). Nothing is assumed: a goal in
 // the wrong period, or at the wrong time, is charged to the wrong goalie.
 function sheetRowMissing(kind, row) {
     const clock = sheetClockMissing(row);
@@ -289,6 +289,9 @@ function sheetRowMissing(kind, row) {
 
     // A shootout goal is the one thing with no time on the clock.
     if (!row.time && row.period !== "SO") return "pick the time";
+
+    // ...and a penalty has to say what it was for.
+    if (kind === "pen" && !row.infraction) return "pick the S/W (what the penalty was for)";
 
     return null;
 }

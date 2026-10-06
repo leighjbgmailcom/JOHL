@@ -249,11 +249,17 @@ function renderNextGame() {
                     const isLive = game.status === "live";
                     const isFinal = game.status === "final";
                     const hasScore = isLive || isFinal;
+                    const isOpen = hasScore && HOME_DETAIL_OPEN.has(String(game.id));
 
                     return `
-                    <div class="homepage-game ${isLive ? "is-live" : ""}">
+                    <div class="homepage-game ${isLive ? "is-live" : ""} ${isOpen ? "is-open" : ""}">
                         <div class="homepage-game-time">
                             ${isLive ? `<span class="live-badge">Live</span>` : formatTime12h(game.time)}
+                            ${hasScore ? `
+                                <button type="button" class="homepage-detail-link" id="home-detail-link-${game.id}"
+                                    aria-expanded="${isOpen ? "true" : "false"}" aria-controls="home-detail-${game.id}"
+                                    onclick="toggleHomeGameDetail(${game.id})">${homeDetailLinkLabel(game, isOpen)}</button>
+                            ` : ""}
                         </div>
 
                         <a class="homepage-team" href="teams.html?team=${game.away}" title="View ${teamName(game.away)}">
@@ -270,12 +276,131 @@ function renderNextGame() {
                             ${hasScore ? `<span class="homepage-score">${game.homeScore ?? 0}</span>` : ""}
                         </a>
                     </div>
+                    ${hasScore ? `<div class="homepage-game-detail" id="home-detail-${game.id}" ${isOpen ? "" : "hidden"}>${isOpen ? (HOME_DETAIL_HTML[game.id] || "") : ""}</div>` : ""}
                 `;
                 }).join("")}
             </div>
 
         </div>
     `;
+
+    // The box is redrawn every time a score changes, so anything that
+    // was open is brought up to date rather than closed.
+    refreshHomeGameDetails();
+}
+
+
+/* =========================================
+   HOME PAGE — WATCH LIVE / RECAP
+
+   Each game in the "Next Game Day" box that's under way or finished has
+   a link beside its time: "Watch live" while it's on, "Recap" once it's
+   final. It opens the same game detail as a finished game on the
+   Schedule page -- who's in net, who scored, who took a penalty -- right
+   under the game.
+
+   A live game's panel keeps itself current: it's re-read whenever the
+   box is redrawn (every goal changes the game's score, which redraws
+   it) and every HOME_DETAIL_POLL_MS besides, which is what picks up
+   penalties and goalie changes.
+   ========================================= */
+
+const HOME_DETAIL_OPEN = new Set();   // ids of the games whose panel is open
+const HOME_DETAIL_HTML = {};          // last drawn panel per game, to redraw without a flicker
+const HOME_DETAIL_POLL_MS = 15000;
+let homeDetailTimer = null;
+
+function homeDetailLinkLabel(game, isOpen) {
+    if (isOpen) return "Hide ▴";
+    return game.status === "live" ? "Watch live ▾" : "Recap ▾";
+}
+
+function toggleHomeGameDetail(gameId) {
+    const key = String(gameId);
+    const game = SCHEDULE.find(g => String(g.id) === key);
+    const panel = document.getElementById(`home-detail-${gameId}`);
+    const link = document.getElementById(`home-detail-link-${gameId}`);
+    if (!game || !panel) return;
+
+    const open = !HOME_DETAIL_OPEN.has(key);
+    if (open) HOME_DETAIL_OPEN.add(key);
+    else HOME_DETAIL_OPEN.delete(key);
+
+    panel.hidden = !open;
+    if (panel.previousElementSibling) panel.previousElementSibling.classList.toggle("is-open", open);
+    if (link) {
+        link.textContent = homeDetailLinkLabel(game, open);
+        link.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+
+    if (open) {
+        panel.innerHTML = HOME_DETAIL_HTML[gameId] || `<p class="schedule-detail-loading">Loading game details…</p>`;
+        loadHomeGameDetail(gameId);
+    }
+
+    updateHomeDetailPolling();
+}
+
+// Reads one game's goals, goalies and penalties and (re)draws its panel.
+async function loadHomeGameDetail(gameId) {
+    const key = String(gameId);
+    const game = SCHEDULE.find(g => String(g.id) === key);
+    if (!game) return;
+
+    const [{ data: goals, error: goalsError }, { data: periods, error: periodsError }, { data: penalties, error: penaltiesError }] = await Promise.all([
+        supabaseClient.from("game_goals").select("*").eq("game_id", gameId),
+        supabaseClient.from("game_goalie_periods").select("*").eq("game_id", gameId),
+        supabaseClient.from("game_penalties").select("*").eq("game_id", gameId)
+    ]);
+
+    // Closed, or the box was redrawn without this game, while it loaded.
+    const panel = document.getElementById(`home-detail-${gameId}`);
+    if (!panel || !HOME_DETAIL_OPEN.has(key)) return;
+
+    if (goalsError || periodsError || penaltiesError) {
+        console.error("Error loading game detail:", goalsError || periodsError || penaltiesError);
+        // Keep whatever's showing; only say so if there's nothing yet.
+        if (!HOME_DETAIL_HTML[gameId]) panel.innerHTML = `<p class="schedule-detail-empty">Couldn't load game details right now.</p>`;
+        return;
+    }
+
+    // The game as it is now -- it may have gone final while this loaded.
+    const current = SCHEDULE.find(g => String(g.id) === key) || game;
+    const html = renderScheduleGameDetail(current, goals || [], periods || [], penalties || [], { live: current.status === "live" });
+
+    HOME_DETAIL_HTML[gameId] = html;
+    if (panel.innerHTML !== html) panel.innerHTML = html;
+}
+
+// After the box is redrawn: forget panels for games no longer in it and
+// re-read the ones still open.
+function refreshHomeGameDetails() {
+    HOME_DETAIL_OPEN.forEach(key => {
+        if (document.getElementById(`home-detail-${key}`)) loadHomeGameDetail(key);
+        else HOME_DETAIL_OPEN.delete(key);
+    });
+    updateHomeDetailPolling();
+}
+
+// Runs the timer only while a live game's panel is open.
+function updateHomeDetailPolling() {
+    const watching = [...HOME_DETAIL_OPEN].some(key => {
+        const game = SCHEDULE.find(g => String(g.id) === key);
+        return game && game.status === "live";
+    });
+
+    if (watching && !homeDetailTimer) {
+        homeDetailTimer = setInterval(() => {
+            if (document.hidden) return;
+            HOME_DETAIL_OPEN.forEach(key => {
+                const game = SCHEDULE.find(g => String(g.id) === key);
+                if (game && game.status === "live") loadHomeGameDetail(key);
+            });
+        }, HOME_DETAIL_POLL_MS);
+    } else if (!watching && homeDetailTimer) {
+        clearInterval(homeDetailTimer);
+        homeDetailTimer = null;
+    }
 }
 
 
@@ -608,7 +733,7 @@ function scheduleEventPlayerTag(playerId) {
 // logo, the event type, and the player(s) involved by full name -- this
 // is the public schedule view, so it stays lighter on detail than Admin's
 // full Enter Game Results screen.
-function renderScheduleGameDetail(game, goals, periods, penalties) {
+function renderScheduleGameDetail(game, goals, periods, penalties, options = {}) {
     const awayTeam = getTeam(game.away);
     const homeTeam = getTeam(game.home);
     const awayTeamId = awayTeam ? awayTeam.id : null;
@@ -637,6 +762,7 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
     // the game, and every one after came in when the one before came out.
     const otSeconds = overtimeLengthSeconds(goals, periods);
     const startingGoalieEntries = [];
+    const inNetEntries = [];
     const goalieChangeEntries = [];
 
     [...new Set(periods.map(gp => String(gp.team_id)))]
@@ -647,6 +773,9 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
                 .sort((a, b) => a.id - b.id);
 
             buildGoalieTimeline(teamRows, otSeconds).forEach((stint, i, timeline) => {
+                // Whoever's last in the order is the one in net now.
+                if (i === timeline.length - 1) inNetEntries.push({ teamId, goalieId: stint.goalieId });
+
                 if (i === 0) {
                     startingGoalieEntries.push({ teamId, goalieId: stint.goalieId });
                     return;
@@ -727,7 +856,7 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
         return a.key[2] - b.key[2];
     });
 
-    const eventsHtml = events.map(event => `
+    const eventRowHtml = event => `
         <div class="schedule-event-row ${event.cssClass}">
             <span class="schedule-event-team">${teamBadge(event.teamCode)}</span>
             <span class="schedule-event-main">
@@ -737,7 +866,39 @@ function renderScheduleGameDetail(game, goals, periods, penalties) {
             </span>
             <span class="schedule-event-time">${event.timeLabel}</span>
         </div>
-    `).join("");
+    `;
+
+    const eventsHtml = events.map(eventRowHtml).join("");
+
+    // A game that's still on (the home page's "Watch live"): who's in
+    // net right now, then everything that's happened with the latest first.
+    if (options.live) {
+        const inNetHtml = inNetEntries.map(entry => `
+            <div class="schedule-event-row is-starting-goalie">
+                <span class="schedule-event-team">${teamBadge(sideCodeForTeamId(entry.teamId))}</span>
+                <span class="schedule-event-main">
+                    <span class="schedule-event-label">In Net</span>
+                    <span class="schedule-event-detail">${scheduleEventPlayerTag(entry.goalieId)}</span>
+                </span>
+                <span class="schedule-event-time"></span>
+            </div>
+        `).join("");
+
+        const latestFirstHtml = events.slice().reverse().map(eventRowHtml).join("");
+
+        return `
+            ${inNetHtml ? `
+                <div class="schedule-detail-section">
+                    <h5>In Net Now</h5>
+                    ${inNetHtml}
+                </div>
+            ` : ""}
+            <div class="schedule-detail-section">
+                <h5>Game Events — latest first</h5>
+                ${latestFirstHtml || `<p class="schedule-detail-empty">Nothing yet. Goals and penalties show here as they happen.</p>`}
+            </div>
+        `;
+    }
 
     if (!startingGoaliesHtml && !eventsHtml) {
         return `<p class="schedule-detail-empty">No game events recorded for this game.</p>`;

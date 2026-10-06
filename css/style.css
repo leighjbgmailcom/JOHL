@@ -338,6 +338,39 @@ section {
     font-size: 14px;
 }
 
+/* "Watch live" / "Recap" beside a game's time, and the game detail it
+   opens underneath (the same event rows as a finished game on Schedule). */
+.homepage-detail-link {
+    display: block;
+    margin-top: 5px;
+    padding: 2px 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 13px;
+    font-weight: bold;
+    color: #c8102e;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.homepage-detail-link:hover,
+.homepage-detail-link:focus-visible {
+    text-decoration: underline;
+}
+
+.homepage-game-detail {
+    background: #f7f9fa;
+    border: 1px solid #e5e9ec;
+    border-radius: 6px;
+    padding: 16px 18px 18px;
+    margin-bottom: 8px;
+}
+
+.homepage-game-detail[hidden] {
+    display: none;
+}
+
 .homepage-team {
     display: flex;
     align-items: center;
@@ -2300,6 +2333,23 @@ footer {
         grid-template-columns: 1fr;
         row-gap: 6px;
         text-align: left;
+    }
+
+    /* Time and the Watch live / Recap link share the top line. */
+    .homepage-game-time {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .homepage-detail-link {
+        margin-top: 0;
+        font-size: 14px;
+    }
+
+    .homepage-game-detail {
+        padding: 14px 12px 16px;
     }
 
     .homepage-vs {
