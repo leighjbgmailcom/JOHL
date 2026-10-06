@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#071a2b">
     <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
     <link rel="icon" href="images/icons/icon-192.png">
-    <title>Standings | Jordan Oldtimers Hockey League</title>
+    <title>Rinkside Report | Jordan Oldtimers Hockey League</title>
     <link rel="stylesheet" href="css/style.css?v=29">
 </head>
 
@@ -19,30 +19,19 @@
 <main class="container page-content">
 
     <div class="page-title">
-        <p class="eyebrow">2026-27 SEASON</p>
-        <h2>League Standings</h2>
-        <p>Current Jordan Oldtimers Hockey League standings.</p>
+        <p class="eyebrow">GAME RECAPS</p>
+        <h2>Rinkside Report</h2>
+        <p>Rusty Dunnigan's take on every game night. Press play, or read along.</p>
     </div>
 
-    <div class="table-wrapper">
-        <table class="standings-table">
-            <thead>
-                <tr>
-                    <th>Team</th>
-                    <th>GP</th>
-                    <th>W</th>
-                    <th>L</th>
-                    <th>T</th>
-                    <th>OT</th>
-                    <th>GF</th>
-                    <th>GA</th>
-                    <th>PTS</th>
-                </tr>
-            </thead>
-
-            <tbody id="standings-table"></tbody>
-        </table>
+    <div id="recap-list">
+        <p class="recap-empty">Loading the recaps…</p>
     </div>
+
+    <p class="recap-disclaimer">
+        Rusty Dunnigan is a made-up character. His recaps are written and voiced by computer
+        from the league's score sheets, so if he gets your name or your goal wrong, blame the timekeeper.
+    </p>
 
 </main>
 
@@ -62,6 +51,7 @@
 
 </footer>
 
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js?v=29"></script>
 <script src="js/header.js?v=29"></script>
@@ -69,12 +59,7 @@
 <script src="js/db.js?v=29"></script>
 <script src="js/app.js?v=29"></script>
 <script src="js/auth.js?v=29"></script>
-
-<!--
-<script>
-    checkLogin();
-</script>
--->
+<script src="js/recaps.js?v=29"></script>
 
 </body>
 </html>
