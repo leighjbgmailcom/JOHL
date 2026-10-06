@@ -12,12 +12,14 @@
        - beside it, the goalie box (Goals / Time for each goalie, with a
          "+" for any extra goalie change) and the other team's score by
          period
-       - Penalties:  Per. | # | Player | OFF | ON | S/W
-       - Scoring:    Per  | Player | Time | Goal | Assist | Assist
+       - Penalties:  Per. | Player | OFF | ON | S/W
+       - Goals:      Per  | Player | Time | Goal | Assist | Assist
+     (The paper also has a # column in Penalties; here the Player box
+     already carries the number, so it's left out. Each box starts with
+     a few lines and has a button to add more.)
 
    Nothing here has a Save button. A line is saved the moment it has
-   enough on it to mean something (a period and a scorer for a goal, a
-   period and a player for a penalty), and saved again every time it's
+   its period, its player and its time, and saved again every time it's
    changed. The games table is subscribed to by every visitor's
    Home/Schedule/Standings page, so the score updates for them too.
 
@@ -33,9 +35,9 @@ const SHEET_SIDE_SHORT = { away: "Visitor", home: "Home" };
 const SHEET_PERIODS = ["1", "2", "3", "OT", "SO"];
 const SHEET_ROW_KINDS = ["pen", "goal"];
 
-// How many lines each box is printed with. A box always keeps at least
-// one blank line at the bottom, so it can never fill up.
-const SHEET_LINES = { pen: 10, goal: 13 };
+// How many lines each box starts with. "+ Add penalty" / "+ Add goal"
+// under the box adds another whenever they run out.
+const SHEET_LINES = { pen: 3, goal: 8 };
 
 // Penalty lengths, per the constitution (run time).
 const SHEET_PENALTY_LENGTHS = [
@@ -238,6 +240,7 @@ function sheetNewGoalRow(db) {
         gId: db ? db.scorer_id : null,
         a1Id: db ? db.assist1_id : null,
         a2Id: db ? db.assist2_id : null,
+        touched: false,
         bad: {},
         failed: false,
         chain: Promise.resolve()
@@ -255,6 +258,7 @@ function sheetNewPenRow(db) {
         playerId: db ? db.player_id : null,
         minutes: db ? db.minutes : null,
         infraction: db ? (db.infraction || "").trim() || null : null,
+        touched: false,
         bad: {},
         failed: false,
         chain: Promise.resolve()
@@ -272,19 +276,20 @@ function sheetRowHasEntry(kind, row) {
 }
 
 // What a line still needs before it can be saved, in the timekeeper's
-// words -- or null if it has everything. The period is never assumed: a
-// goal in the wrong period charges it to the wrong goalie.
+// words -- or null if it has everything. Once a line is started it has
+// to have a period, a player and a time. Nothing is assumed: a goal in
+// the wrong period, or at the wrong time, is charged to the wrong goalie.
 function sheetRowMissing(kind, row) {
     const clock = sheetClockMissing(row);
     if (clock) return clock;
 
-    if (kind === "goal") {
-        if (!row.gId) return "pick who scored";
-        if (!row.period) return "pick the period";
-        return null;
-    }
-    if (!row.playerId) return "pick the player";
     if (!row.period) return "pick the period";
+    if (kind === "goal" && !row.gId) return "pick who scored";
+    if (kind === "pen" && !row.playerId) return "pick the player";
+
+    // A shootout goal is the one thing with no time on the clock.
+    if (!row.time && row.period !== "SO") return "pick the time";
+
     return null;
 }
 
@@ -306,17 +311,13 @@ function sheetChronological(a, b) {
     return a.id - b.id;
 }
 
-// Tops a box up with blank lines: the printed number of lines, and
-// always at least one blank one after the last line that's been used.
+// Tops a box up to the number of lines it starts with (after a line is
+// erased, say). It never grows a box by itself: that's what the
+// "+ Add" button under it is for.
 function sheetPadRows(kind, side) {
     const rows = sheetRows[kind][side];
-    let lastUsed = -1;
-    rows.forEach((row, index) => {
-        if (sheetRowHasEntry(kind, row)) lastUsed = index;
-    });
-    const wanted = Math.max(SHEET_LINES[kind], lastUsed + 2);
     let added = false;
-    while (rows.length < wanted) {
+    while (rows.length < SHEET_LINES[kind]) {
         rows.push(SHEET_NEW_ROW[kind](null));
         added = true;
     }
@@ -685,8 +686,7 @@ function sheetPenRowHtml(side, row) {
     return `
         <div class="gs-row" data-kind="pen" data-side="${side}" data-key="${row.key}">
             <span class="gs-cell"><select class="gs-ink" data-field="period" aria-label="Period">${sheetPeriodOptionsHtml(row.period)}</select></span>
-            ${sheetPickHtml("no", side, row.playerId, "Penalized player")}
-            <span class="gs-cell gs-name"><select class="gs-ink" data-field="player" aria-label="Penalized player (name)">${sheetPlayerOptionsHtml(side, row.playerId)}</select></span>
+            <span class="gs-cell gs-name"><select class="gs-ink" data-field="player" aria-label="Penalized player">${sheetPlayerOptionsHtml(side, row.playerId)}</select></span>
             <span class="gs-cell gs-clock">${sheetClockHtml("data-field", row, "Time off")}</span>
             <span class="gs-cell gs-on"><select class="gs-ink" data-field="minutes" aria-label="Time back on (length of penalty)">${sheetOnOptionsHtml(row)}</select></span>
             <span class="gs-cell gs-name"><select class="gs-ink" data-field="infraction" aria-label="Offence">${sheetOffenceOptionsHtml(row.infraction)}</select></span>
@@ -796,7 +796,7 @@ function sheetGoalieBoxHtml(side) {
                 <span class="gs-cell">Time</span>
             </div>
             ${lines || `<p class="gs-roster-empty">No goalies on this roster.</p>`}
-            ${box.readOnly || !lines ? "" : `<button type="button" class="gs-goalie-add" data-action="goalie-add" title="Add a line for another goalie change">+ Goalie change</button>`}
+            ${box.readOnly || !lines ? "" : `<button type="button" class="gs-add gs-goalie-add" data-action="goalie-add" title="Add a line for another goalie change">+ Goalie change</button>`}
             <p class="gs-goalie-foot" id="sheet-goalie-foot-${side}"></p>
         </div>
     `;
@@ -826,19 +826,21 @@ function sheetTeamHtml(side) {
             </div>
 
             <div class="gs-box gs-box-pen">
+                <h3 class="gs-box-title">Penalties</h3>
                 <div class="gs-row gs-head">
                     <span class="gs-cell">Per.</span>
-                    <span class="gs-cell">#</span>
-                    <span class="gs-cell">${side === "away" ? "Player" : "Players"}</span>
+                    <span class="gs-cell">Player</span>
                     <span class="gs-cell">OFF</span>
                     <span class="gs-cell">ON</span>
                     <span class="gs-cell">S/W</span>
                     <span class="gs-erase-cell"></span>
                 </div>
                 <div class="gs-rows" id="sheet-pen-${side}">${sheetRowsHtml("pen", side)}</div>
+                <button type="button" class="gs-add gs-row-add" data-action="row-add" data-kind="pen" data-side="${side}">+ Add penalty</button>
             </div>
 
             <div class="gs-box gs-box-goal">
+                <h3 class="gs-box-title">Goals</h3>
                 <div class="gs-row gs-head">
                     <span class="gs-cell">Per</span>
                     <span class="gs-cell">Player</span>
@@ -849,6 +851,7 @@ function sheetTeamHtml(side) {
                     <span class="gs-erase-cell"></span>
                 </div>
                 <div class="gs-rows" id="sheet-goal-${side}">${sheetRowsHtml("goal", side)}</div>
+                <button type="button" class="gs-add gs-row-add" data-action="row-add" data-kind="goal" data-side="${side}">+ Add goal</button>
             </div>
 
         </section>
@@ -956,6 +959,9 @@ function sheetRowNote(kind, row) {
 
     const missing = sheetRowMissing(kind, row);
     if (missing) {
+        // A line saved before a time was required, and not touched since:
+        // it stays as it is, with a nudge to finish it.
+        if (row.id && !row.touched) return { text: `Saved earlier without it — ${missing} to finish the line`, legacy: true };
         // Already saved once: what's in the database is the line as it
         // was before this change, so say so.
         if (row.id) return { text: `Change not saved — ${missing}, or ✕ to erase the line`, problem: true };
@@ -971,7 +977,7 @@ function sheetRowFieldValue(kind, row, field) {
     if (kind === "goal") {
         if (field === "player" || field === "g") return row.gId;
         if (field === "a1" || field === "a2") return row[field + "Id"];
-    } else if (field === "player" || field === "no") {
+    } else if (field === "player") {
         return row.playerId;
     }
     return row[field];
@@ -1017,7 +1023,7 @@ function refreshSheetRow(kind, side, row, justWritten) {
     noteEl.classList.toggle("is-retry", !!note.retry);
 
     const used = sheetRowHasEntry(kind, row);
-    const saved = !!row.id && !note.text;
+    const saved = !!row.id && (!note.text || !!note.legacy);
     el.classList.toggle("is-used", used);
     el.classList.toggle("is-saved", saved);
     el.classList.toggle("is-pencil", used && !saved);
@@ -1413,6 +1419,7 @@ function onSheetFieldChange(control) {
 
     const field = control.dataset.field;
     const value = control.value;
+    row.touched = true;
 
     // The player picked from a list, by his real id (or nobody).
     const picked = () => {
@@ -1429,7 +1436,7 @@ function onSheetFieldChange(control) {
         // The same player can't be on one goal twice.
         row.bad.a1 = row.a1Id && String(row.a1Id) === String(row.gId) ? "Same player as the goal scorer" : null;
         row.bad.a2 = row.a2Id && (String(row.a2Id) === String(row.gId) || String(row.a2Id) === String(row.a1Id)) ? "Same player twice on one goal" : null;
-    } else if (field === "player" || field === "no") row.playerId = picked();
+    } else if (field === "player") row.playerId = picked();
     else if (field === "minutes") row.minutes = parseInt(value, 10) || SHEET_DEFAULT_PENALTY_MINUTES;
     else if (field === "infraction") {
         if (value === "__other__") {
@@ -1484,6 +1491,20 @@ function onSheetErase(button) {
     if (row.id && !confirm(`Erase this ${kind === "goal" ? "goal" : "penalty"} from the sheet?`)) return;
 
     queueSheetRowErase(kind, side, row);
+}
+
+// "+ Add penalty" / "+ Add goal": one more blank line on the box.
+function onSheetRowAdd(button) {
+    if (!sheetRows) return;
+    const kind = button.dataset.kind;
+    const side = button.dataset.side;
+
+    const row = SHEET_NEW_ROW[kind](null);
+    sheetRows[kind][side].push(row);
+    appendSheetRows(kind, side);
+
+    const first = sheetRowEl(row) && sheetRowEl(row).querySelector("select");
+    if (first) first.focus();
 }
 
 function sheetGoalieLineFor(target) {
@@ -1689,7 +1710,9 @@ function sheetUnsavedLineCount() {
     SHEET_ROW_KINDS.forEach(kind => {
         SHEET_SIDES.forEach(side => {
             sheetRows[kind][side].forEach(row => {
-                if (sheetRowHasEntry(kind, row) && (!row.id || row.failed || !sheetRowIsComplete(kind, row))) count++;
+                if (!sheetRowHasEntry(kind, row)) return;
+                // A line saved earlier and not touched since isn't held against the game.
+                if (!row.id || row.failed || (row.touched && !sheetRowIsComplete(kind, row))) count++;
             });
         });
     });
@@ -1787,6 +1810,7 @@ function setupSheetEvents() {
 
         const action = button.dataset.action;
         if (action === "erase") onSheetErase(button);
+        else if (action === "row-add") onSheetRowAdd(button);
         else if (action === "goalie-played") onSheetGoaliePlayed(button);
         else if (action === "goalie-add") onSheetGoalieAdd(button);
         else if (action === "goalie-remove") onSheetGoalieRemove(button);

@@ -480,11 +480,11 @@ span.gs-goalie-no {
     color: var(--gs-red);
 }
 
-/* "+ Goalie change" */
-.gs-goalie-add {
+/* "+ Goalie change", "+ Add penalty", "+ Add goal" */
+.gs-add {
     display: block;
     margin: 6px 0 0 auto;
-    padding: 6px 12px;
+    padding: 7px 13px;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 13px;
     font-weight: bold;
@@ -495,8 +495,13 @@ span.gs-goalie-no {
     cursor: pointer;
 }
 
-.gs-goalie-add:hover {
+.gs-add:hover {
     background: #eef1f4;
+}
+
+/* Lines up with the edge of the box, inside the column of erase marks. */
+.gs-row-add {
+    margin-right: 26px;
 }
 
 .gs-goalie-foot {
@@ -551,7 +556,16 @@ span.gs-goalie-no {
 /* ----- Ruled lines: Penalties and Scoring ----- */
 
 .gs-box {
-    margin-top: 10px;
+    margin-top: 14px;
+}
+
+/* "Penalties" / "Goals" over each box. */
+.gs-box-title {
+    margin: 0 0 4px;
+    font-size: 20px;
+    font-weight: bold;
+    line-height: 1.2;
+    color: #111;
 }
 
 .gs-row {
@@ -560,7 +574,7 @@ span.gs-goalie-no {
 }
 
 .gs-box-pen .gs-row {
-    grid-template-columns: 48px 56px minmax(0, 1.5fr) 82px 82px minmax(0, 1.25fr) 26px;
+    grid-template-columns: 48px minmax(0, 1.5fr) 82px 82px minmax(0, 1.25fr) 26px;
 }
 
 .gs-box-goal .gs-row {
@@ -853,7 +867,7 @@ span.gs-goalie-no {
 @container (max-width: 520px) {
 
     .gs-box-pen .gs-row {
-        grid-template-columns: 34px 38px minmax(0, 1.3fr) 64px 62px minmax(0, 1fr) 22px;
+        grid-template-columns: 34px minmax(0, 1.3fr) 64px 62px minmax(0, 1fr) 22px;
     }
 
     .gs-box-goal .gs-row {
@@ -864,7 +878,8 @@ span.gs-goalie-no {
         font-size: 17px;
     }
 
-    .gs-note {
+    .gs-note,
+    .gs-row-add {
         margin-right: 22px;
     }
 
@@ -1138,7 +1153,7 @@ span.gs-goalie-no {
     .gs-erase-cell,
     .gs-note,
     .gs-goalie-foot,
-    .gs-goalie-add,
+    .gs-add,
     .gs-goalie-remove,
     .gs-stamp {
         display: none !important;
@@ -1194,7 +1209,7 @@ span.gs-goalie-no {
     }
 
     .gs-box-pen .gs-row {
-        grid-template-columns: 30px 32px minmax(0, 1.5fr) 48px 50px minmax(0, 1.1fr);
+        grid-template-columns: 30px minmax(0, 1.5fr) 48px 50px minmax(0, 1.1fr);
     }
 
     .gs-box-goal .gs-row {
@@ -1309,7 +1324,12 @@ span.gs-goalie-no {
     }
 
     .gs-box {
-        margin-top: 5px;
+        margin-top: 8px;
+    }
+
+    .gs-box-title {
+        font-size: 14px;
+        margin-bottom: 2px;
     }
 
     .gs-cell .gs-ink {
