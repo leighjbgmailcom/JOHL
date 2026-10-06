@@ -61,10 +61,15 @@ let sheetActiveSide = "away"; // which team is showing on a phone-width screen
 
 
 /* =========================================
-   ACCESS CONTROL (same rule as admin.html / live.html)
+   ACCESS CONTROL
+
+   The Score Sheet is for timekeepers: anyone whose profile has
+   is_timekeeper set (see supabase-migrations/004_timekeeper_role.sql).
+   Being an admin isn't enough on its own. The database enforces the
+   same thing -- this just keeps everyone else off the page.
    ========================================= */
 
-async function requireSheetAdmin() {
+async function requireSheetTimekeeper() {
     const {
         data: { session }
     } = await supabaseClient.auth.getSession();
@@ -76,11 +81,11 @@ async function requireSheetAdmin() {
 
     const { data: profile, error } = await supabaseClient
         .from("profiles")
-        .select("is_admin")
+        .select("is_timekeeper")
         .eq("id", session.user.id)
         .single();
 
-    if (error || !profile || !profile.is_admin) {
+    if (error || !profile || !profile.is_timekeeper) {
         window.location.href = "index.html";
         return false;
     }
@@ -1808,7 +1813,7 @@ function setupSheetEvents() {
 }
 
 async function initSheetPage() {
-    const ok = await requireSheetAdmin();
+    const ok = await requireSheetTimekeeper();
     if (!ok) return;
 
     document.getElementById("sheet-page-content").style.display = "";

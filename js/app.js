@@ -1753,10 +1753,11 @@ async function setupAuthNav() {
     }
 
     let isAdmin = false;
+    let isTimekeeper = false;
 
     const { data: profile } = await supabaseClient
         .from("profiles")
-        .select("is_admin")
+        .select("is_admin, is_timekeeper")
         .eq("id", session.user.id)
         .single();
 
@@ -1764,9 +1765,14 @@ async function setupAuthNav() {
         isAdmin = true;
     }
 
+    // The Score Sheet goes by its own role, not by admin.
+    if (profile && profile.is_timekeeper) {
+        isTimekeeper = true;
+    }
+
     slot.innerHTML = `
         ${isAdmin ? `<a href="live.html">Live Game</a>` : ""}
-        ${isAdmin ? `<a href="sheet.html">Score Sheet</a>` : ""}
+        ${isTimekeeper ? `<a href="sheet.html">Score Sheet</a>` : ""}
         ${isAdmin ? `<a href="admin.html">Admin</a>` : ""}
         <a href="#" id="nav-logout-link">Logout</a>
     `;
