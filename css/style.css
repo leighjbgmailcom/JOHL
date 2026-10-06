@@ -895,6 +895,64 @@ tbody tr:hover {
     margin-top: 4px;
 }
 
+.schedule-expand-chevron.is-live {
+    color: #c8102e;
+    font-weight: bold;
+}
+
+/* "Results": on a game day, the days already played are folded away
+   under this bar so tonight's games are at the top. */
+.schedule-results {
+    margin-bottom: 30px;
+}
+
+.schedule-results-toggle {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    padding: 14px 18px;
+    background: white;
+    border: 1px solid #dfe5ea;
+    border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.schedule-results-toggle:hover {
+    box-shadow: 0 2px 10px rgba(0,0,0,.12);
+}
+
+.schedule-results-title {
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.schedule-results-count {
+    color: #687681;
+    font-size: 14px;
+}
+
+.schedule-results-chevron {
+    margin-left: auto;
+    color: #c8102e;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.schedule-results-body {
+    display: none;
+    padding-top: 24px;
+}
+
+.schedule-results.open .schedule-results-body {
+    display: block;
+}
+
 .schedule-game-detail {
     display: none;
     background: white;

@@ -876,11 +876,14 @@ function renderSheet() {
             </span>
         </div>
 
-        <div class="gs-legend gs-screen-only">
-            <span><i class="is-input"></i>Fill in</span>
-            <span><i class="is-auto"></i>Works itself out</span>
-            <span><i class="is-pencil"></i>Not saved yet</span>
-            <span><i class="is-bad"></i>Needs fixing</span>
+        <div class="gs-topbar gs-screen-only">
+            <div class="gs-legend">
+                <span><i class="is-input"></i>Fill in</span>
+                <span><i class="is-auto"></i>Works itself out</span>
+                <span><i class="is-pencil"></i>Not saved yet</span>
+                <span><i class="is-bad"></i>Needs fixing</span>
+            </div>
+            <button type="button" class="button gs-start-button" id="sheet-start-button" data-action="start">Start game — go live</button>
         </div>
 
         <div class="gs-side-tabs" role="tablist">
@@ -903,7 +906,6 @@ function renderSheet() {
             </label>
             <div class="gs-signoff-actions">
                 <span class="gs-signoff-message" id="sheet-signoff-message"></span>
-                <button type="button" class="gs-tool-button" id="sheet-start-button" data-action="start">Start game — go live</button>
                 <button type="button" class="button" id="sheet-final-button" data-action="final">Game over — mark final</button>
                 <button type="button" class="gs-tool-button" id="sheet-reopen-button" data-action="reopen">Reopen game</button>
             </div>

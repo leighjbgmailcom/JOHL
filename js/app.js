@@ -249,7 +249,7 @@ function renderNextGame() {
                     const isLive = game.status === "live";
                     const isFinal = game.status === "final";
                     const hasScore = isLive || isFinal;
-                    const isOpen = hasScore && HOME_DETAIL_OPEN.has(String(game.id));
+                    const isOpen = hasScore && GAME_DETAIL_OPEN.home.has(String(game.id));
 
                     return `
                     <div class="homepage-game ${isLive ? "is-live" : ""} ${isOpen ? "is-open" : ""}">
@@ -276,7 +276,7 @@ function renderNextGame() {
                             ${hasScore ? `<span class="homepage-score">${game.homeScore ?? 0}</span>` : ""}
                         </a>
                     </div>
-                    ${hasScore ? `<div class="homepage-game-detail" id="home-detail-${game.id}" ${isOpen ? "" : "hidden"}>${isOpen ? (HOME_DETAIL_HTML[game.id] || "") : ""}</div>` : ""}
+                    ${hasScore ? `<div class="homepage-game-detail" id="home-detail-${game.id}" ${isOpen ? "" : "hidden"}>${isOpen ? gameDetailCachedHtml(game.id) : ""}</div>` : ""}
                 `;
                 }).join("")}
             </div>
@@ -286,63 +286,112 @@ function renderNextGame() {
 
     // The box is redrawn every time a score changes, so anything that
     // was open is brought up to date rather than closed.
-    refreshHomeGameDetails();
+    refreshOpenGameDetails("home");
 }
 
 
 /* =========================================
-   HOME PAGE — WATCH LIVE / RECAP
+   GAME DETAIL PANELS — WATCH LIVE / RECAP (home page and Schedule)
 
-   Each game in the "Next Game Day" box that's under way or finished has
-   a link beside its time: "Watch live" while it's on, "Recap" once it's
-   final. It opens the same game detail as a finished game on the
-   Schedule page -- who's in net, who scored, who took a penalty -- right
-   under the game.
+   A game that's under way or finished can be opened up to show what
+   happened in it: who's in net, who scored, who took a penalty.
+     - Home page: the "Watch live" / "Recap" link beside a game's time
+       in the Next Game Day box.
+     - Schedule: tapping a live or finished game.
+   Both draw the same thing (renderScheduleGameDetail) and share the code
+   below; only where the panel sits on the page differs.
 
    A live game's panel keeps itself current: it's re-read whenever the
-   box is redrawn (every goal changes the game's score, which redraws
-   it) and every HOME_DETAIL_POLL_MS besides, which is what picks up
-   penalties and goalie changes.
+   page redraws (every goal changes the game's score, which redraws it)
+   and every GAME_DETAIL_POLL_MS besides, which is what picks up
+   penalties and goalie changes. A finished game is read once and kept.
    ========================================= */
 
-const HOME_DETAIL_OPEN = new Set();   // ids of the games whose panel is open
-const HOME_DETAIL_HTML = {};          // last drawn panel per game, to redraw without a flicker
-const HOME_DETAIL_POLL_MS = 15000;
-let homeDetailTimer = null;
+const GAME_DETAIL_OPEN = { home: new Set(), schedule: new Set() }; // ids of the games whose panel is open
+const GAME_DETAIL_HTML = {};   // game id -> { html, status }: the last drawn panel
+const GAME_DETAIL_POLL_MS = 15000;
+let gameDetailTimer = null;
+
+function gameDetailCachedHtml(gameId) {
+    const cached = GAME_DETAIL_HTML[gameId];
+    return cached ? cached.html : "";
+}
+
+// Does this game's panel need reading (again)? Always for a live game;
+// for a finished one only if it hasn't been read since it went final.
+function gameDetailIsStale(game) {
+    const cached = GAME_DETAIL_HTML[game.id];
+    return !cached || cached.status !== game.status || game.status === "live";
+}
 
 function homeDetailLinkLabel(game, isOpen) {
     if (isOpen) return "Hide ▴";
     return game.status === "live" ? "Watch live ▾" : "Recap ▾";
 }
 
-function toggleHomeGameDetail(gameId) {
+function scheduleDetailHintLabel(game, isOpen) {
+    if (isOpen) return "Hide ▴";
+    return game.status === "live" ? "Tap to watch live ▾" : "Tap for game details ▾";
+}
+
+// Opens or closes a panel where it sits on its page.
+function setGameDetailOpen(where, game, open) {
+    if (where === "home") {
+        const panel = document.getElementById(`home-detail-${game.id}`);
+        const link = document.getElementById(`home-detail-link-${game.id}`);
+        if (panel) panel.hidden = !open;
+        if (link) {
+            link.textContent = homeDetailLinkLabel(game, open);
+            link.setAttribute("aria-expanded", open ? "true" : "false");
+        }
+        return;
+    }
+
+    const wrapper = document.getElementById(`schedule-wrapper-${game.id}`);
+    if (!wrapper) return;
+    wrapper.classList.toggle("open", open);
+    const hint = wrapper.querySelector(".schedule-expand-chevron");
+    if (hint) hint.textContent = scheduleDetailHintLabel(game, open);
+}
+
+function toggleGameDetail(where, gameId) {
     const key = String(gameId);
     const game = SCHEDULE.find(g => String(g.id) === key);
-    const panel = document.getElementById(`home-detail-${gameId}`);
-    const link = document.getElementById(`home-detail-link-${gameId}`);
+    const panel = document.getElementById(`${where}-detail-${gameId}`);
     if (!game || !panel) return;
 
-    const open = !HOME_DETAIL_OPEN.has(key);
-    if (open) HOME_DETAIL_OPEN.add(key);
-    else HOME_DETAIL_OPEN.delete(key);
+    const open = !GAME_DETAIL_OPEN[where].has(key);
+    if (open) GAME_DETAIL_OPEN[where].add(key);
+    else GAME_DETAIL_OPEN[where].delete(key);
 
-    panel.hidden = !open;
-    if (panel.previousElementSibling) panel.previousElementSibling.classList.toggle("is-open", open);
-    if (link) {
-        link.textContent = homeDetailLinkLabel(game, open);
-        link.setAttribute("aria-expanded", open ? "true" : "false");
-    }
+    setGameDetailOpen(where, game, open);
 
     if (open) {
-        panel.innerHTML = HOME_DETAIL_HTML[gameId] || `<p class="schedule-detail-loading">Loading game details…</p>`;
-        loadHomeGameDetail(gameId);
+        panel.innerHTML = gameDetailCachedHtml(gameId) || `<p class="schedule-detail-loading">Loading game details…</p>`;
+        if (gameDetailIsStale(game)) loadGameDetail(gameId);
     }
 
-    updateHomeDetailPolling();
+    updateGameDetailPolling();
+}
+
+function toggleHomeGameDetail(gameId) {
+    toggleGameDetail("home", gameId);
+}
+
+function toggleScheduleGameDetail(gameId) {
+    toggleGameDetail("schedule", gameId);
+}
+
+// The open panel(s) for a game on whichever page this is.
+function openGameDetailPanels(gameId) {
+    return Object.keys(GAME_DETAIL_OPEN)
+        .filter(where => GAME_DETAIL_OPEN[where].has(String(gameId)))
+        .map(where => document.getElementById(`${where}-detail-${gameId}`))
+        .filter(Boolean);
 }
 
 // Reads one game's goals, goalies and penalties and (re)draws its panel.
-async function loadHomeGameDetail(gameId) {
+async function loadGameDetail(gameId) {
     const key = String(gameId);
     const game = SCHEDULE.find(g => String(g.id) === key);
     if (!game) return;
@@ -353,14 +402,14 @@ async function loadHomeGameDetail(gameId) {
         supabaseClient.from("game_penalties").select("*").eq("game_id", gameId)
     ]);
 
-    // Closed, or the box was redrawn without this game, while it loaded.
-    const panel = document.getElementById(`home-detail-${gameId}`);
-    if (!panel || !HOME_DETAIL_OPEN.has(key)) return;
-
     if (goalsError || periodsError || penaltiesError) {
         console.error("Error loading game detail:", goalsError || periodsError || penaltiesError);
         // Keep whatever's showing; only say so if there's nothing yet.
-        if (!HOME_DETAIL_HTML[gameId]) panel.innerHTML = `<p class="schedule-detail-empty">Couldn't load game details right now.</p>`;
+        if (!GAME_DETAIL_HTML[gameId]) {
+            openGameDetailPanels(gameId).forEach(panel => {
+                panel.innerHTML = `<p class="schedule-detail-empty">Couldn't load game details right now.</p>`;
+            });
+        }
         return;
     }
 
@@ -368,38 +417,43 @@ async function loadHomeGameDetail(gameId) {
     const current = SCHEDULE.find(g => String(g.id) === key) || game;
     const html = renderScheduleGameDetail(current, goals || [], periods || [], penalties || [], { live: current.status === "live" });
 
-    HOME_DETAIL_HTML[gameId] = html;
-    if (panel.innerHTML !== html) panel.innerHTML = html;
+    GAME_DETAIL_HTML[gameId] = { html, status: current.status };
+    openGameDetailPanels(gameId).forEach(panel => {
+        if (panel.innerHTML !== html) panel.innerHTML = html;
+    });
 }
 
-// After the box is redrawn: forget panels for games no longer in it and
-// re-read the ones still open.
-function refreshHomeGameDetails() {
-    HOME_DETAIL_OPEN.forEach(key => {
-        if (document.getElementById(`home-detail-${key}`)) loadHomeGameDetail(key);
-        else HOME_DETAIL_OPEN.delete(key);
+// After a page redraws: forget panels for games no longer on it and
+// re-read the open ones that need it.
+function refreshOpenGameDetails(where) {
+    GAME_DETAIL_OPEN[where].forEach(key => {
+        const game = SCHEDULE.find(g => String(g.id) === key);
+        if (!game || !document.getElementById(`${where}-detail-${key}`)) {
+            GAME_DETAIL_OPEN[where].delete(key);
+        } else if (gameDetailIsStale(game)) {
+            loadGameDetail(key);
+        }
     });
-    updateHomeDetailPolling();
+    updateGameDetailPolling();
 }
 
 // Runs the timer only while a live game's panel is open.
-function updateHomeDetailPolling() {
-    const watching = [...HOME_DETAIL_OPEN].some(key => {
+function updateGameDetailPolling() {
+    const liveOpen = () => [...GAME_DETAIL_OPEN.home, ...GAME_DETAIL_OPEN.schedule].filter(key => {
         const game = SCHEDULE.find(g => String(g.id) === key);
         return game && game.status === "live";
     });
 
-    if (watching && !homeDetailTimer) {
-        homeDetailTimer = setInterval(() => {
+    const watching = liveOpen().length > 0;
+
+    if (watching && !gameDetailTimer) {
+        gameDetailTimer = setInterval(() => {
             if (document.hidden) return;
-            HOME_DETAIL_OPEN.forEach(key => {
-                const game = SCHEDULE.find(g => String(g.id) === key);
-                if (game && game.status === "live") loadHomeGameDetail(key);
-            });
-        }, HOME_DETAIL_POLL_MS);
-    } else if (!watching && homeDetailTimer) {
-        clearInterval(homeDetailTimer);
-        homeDetailTimer = null;
+            [...new Set(liveOpen())].forEach(loadGameDetail);
+        }, GAME_DETAIL_POLL_MS);
+    } else if (!watching && gameDetailTimer) {
+        clearInterval(gameDetailTimer);
+        gameDetailTimer = null;
     }
 }
 
@@ -569,6 +623,86 @@ function setupTeamsAccordion() {
    SCHEDULE (schedule.html)
    ========================================= */
 
+// Whether the "Results" section (games already played, folded away on a
+// game day) is open. Kept here so it stays as it was left when a score
+// changes and the page redraws.
+let scheduleResultsOpen = false;
+
+function scheduleGameHtml(game) {
+    const isTbd = game.home === "TBD" || game.away === "TBD";
+    const isLive = game.status === "live";
+    const isFinal = game.status === "final";
+    const hasDetail = isLive || isFinal;
+    const isOpen = hasDetail && GAME_DETAIL_OPEN.schedule.has(String(game.id));
+
+    let scoreHtml;
+    if (isTbd) {
+        scoreHtml = "TBD";
+    } else if (isLive) {
+        scoreHtml = `<span class="live-badge">Live</span><div>${game.awayScore ?? 0} – ${game.homeScore ?? 0}</div>`;
+    } else if (isFinal) {
+        scoreHtml = `<div class="schedule-score-final">${game.awayScore ?? 0} – ${game.homeScore ?? 0}</div><div class="schedule-final-tag">Final${game.wentOT ? " (OT)" : ""}</div>`;
+    } else {
+        scoreHtml = "GAME " + game.gameNo;
+    }
+
+    return `
+        <div class="schedule-game-wrapper ${isOpen ? "open" : ""}" id="schedule-wrapper-${game.id}">
+            <div class="schedule-game ${isTbd ? "is-tbd" : ""} ${isLive ? "is-live" : ""} ${hasDetail ? "is-clickable" : ""}"
+                ${hasDetail ? `onclick="toggleScheduleGameDetail(${game.id})"` : ""}>
+
+                <div class="schedule-time">
+                    ${formatTime12h(game.time)}
+                </div>
+
+                <div>
+                    <div class="schedule-matchup">
+                        <div class="schedule-team">
+                            ${teamBadge(game.away)}
+                            <span>${teamName(game.away)}</span>
+                        </div>
+                        <span class="at-symbol">vs.</span>
+                        <div class="schedule-team">
+                            ${teamBadge(game.home)}
+                            <span>${teamName(game.home)}</span>
+                        </div>
+                        ${game.note ? `<span class="note-tag">${game.note}</span>` : ""}
+                    </div>
+                    ${game.location && game.location !== "Jordan Arena" ? `<div class="schedule-location">${game.location}</div>` : ""}
+                    ${hasDetail ? `<div class="schedule-expand-chevron ${isLive ? "is-live" : ""}">${scheduleDetailHintLabel(game, isOpen)}</div>` : ""}
+                </div>
+
+                <div class="schedule-score">
+                    ${scoreHtml}
+                </div>
+
+            </div>
+            ${hasDetail ? `<div class="schedule-game-detail" id="schedule-detail-${game.id}">${isOpen ? gameDetailCachedHtml(game.id) : ""}</div>` : ""}
+        </div>
+    `;
+}
+
+function scheduleDayHtml(group) {
+    const dateLabel = formatDateISO(group.date);
+    const byeEntry = group.entries.find(e => e.noGames);
+
+    if (byeEntry) {
+        return `
+            <div class="schedule-day">
+                <div class="schedule-date">${dateLabel}</div>
+                <div class="schedule-bye">No games — ${byeEntry.note}</div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="schedule-day">
+            <div class="schedule-date">${dateLabel}</div>
+            ${group.entries.map(scheduleGameHtml).join("")}
+        </div>
+    `;
+}
+
 function renderSchedule(filter = "ALL") {
     const element = document.getElementById("schedule-list");
     if (!element) return;
@@ -590,130 +724,47 @@ function renderSchedule(filter = "ALL") {
         return;
     }
 
-    element.innerHTML = groups.map(group => {
-        const dateLabel = formatDateISO(group.date);
-        const byeEntry = group.entries.find(e => e.noGames);
+    // On a game day, the days already played are folded away under
+    // "Results" so tonight's games are at the top of the page. Any other
+    // day the whole season is listed as usual.
+    const today = todayISO();
+    const isGameDay = SCHEDULE.some(entry => !entry.noGames && entry.date === today);
+    const played = isGameDay ? groups.filter(group => group.date < today) : [];
+    const rest = isGameDay ? groups.filter(group => group.date >= today) : groups;
+    const playedGames = played.reduce((count, group) => count + group.entries.filter(e => !e.noGames).length, 0);
 
-        if (byeEntry) {
-            return `
-                <div class="schedule-day">
-                    <div class="schedule-date">${dateLabel}</div>
-                    <div class="schedule-bye">No games — ${byeEntry.note}</div>
-                </div>
-            `;
-        }
-
-        return `
-            <div class="schedule-day">
-                <div class="schedule-date">${dateLabel}</div>
-
-                ${group.entries.map(game => {
-                    const isTbd = game.home === "TBD" || game.away === "TBD";
-                    const isLive = game.status === "live";
-                    const isFinal = game.status === "final";
-
-                    let scoreHtml;
-                    if (isTbd) {
-                        scoreHtml = "TBD";
-                    } else if (isLive) {
-                        scoreHtml = `<span class="live-badge">Live</span><div>${game.awayScore ?? 0} – ${game.homeScore ?? 0}</div>`;
-                    } else if (isFinal) {
-                        scoreHtml = `<div class="schedule-score-final">${game.awayScore ?? 0} – ${game.homeScore ?? 0}</div><div class="schedule-final-tag">Final${game.wentOT ? " (OT)" : ""}</div>`;
-                    } else {
-                        scoreHtml = "GAME " + game.gameNo;
-                    }
-
-                    return `
-                        <div class="schedule-game-wrapper" id="schedule-wrapper-${game.id}">
-                            <div class="schedule-game ${isTbd ? "is-tbd" : ""} ${isLive ? "is-live" : ""} ${isFinal ? "is-clickable" : ""}"
-                                ${isFinal ? `onclick="toggleScheduleGameDetail(${game.id})"` : ""}>
-
-                                <div class="schedule-time">
-                                    ${formatTime12h(game.time)}
-                                </div>
-
-                                <div>
-                                    <div class="schedule-matchup">
-                                        <div class="schedule-team">
-                                            ${teamBadge(game.away)}
-                                            <span>${teamName(game.away)}</span>
-                                        </div>
-                                        <span class="at-symbol">vs.</span>
-                                        <div class="schedule-team">
-                                            ${teamBadge(game.home)}
-                                            <span>${teamName(game.home)}</span>
-                                        </div>
-                                        ${game.note ? `<span class="note-tag">${game.note}</span>` : ""}
-                                    </div>
-                                    ${game.location && game.location !== "Jordan Arena" ? `<div class="schedule-location">${game.location}</div>` : ""}
-                                    ${isFinal ? `<div class="schedule-expand-chevron">Tap for game details ▾</div>` : ""}
-                                </div>
-
-                                <div class="schedule-score">
-                                    ${scoreHtml}
-                                </div>
-
-                            </div>
-                            ${isFinal ? `<div class="schedule-game-detail" id="schedule-detail-${game.id}"></div>` : ""}
-                        </div>
-                    `;
-                }).join("")}
+    const resultsHtml = played.length ? `
+        <div class="schedule-results ${scheduleResultsOpen ? "open" : ""}" id="schedule-results">
+            <button type="button" class="schedule-results-toggle" id="schedule-results-toggle"
+                aria-expanded="${scheduleResultsOpen ? "true" : "false"}" aria-controls="schedule-results-body"
+                onclick="toggleScheduleResults()">
+                <span class="schedule-results-title">Results</span>
+                <span class="schedule-results-count">${playedGames} game${playedGames === 1 ? "" : "s"} already played</span>
+                <span class="schedule-results-chevron">${scheduleResultsOpen ? "Hide ▴" : "Show ▾"}</span>
+            </button>
+            <div class="schedule-results-body" id="schedule-results-body">
+                ${played.map(scheduleDayHtml).join("")}
             </div>
-        `;
-    }).join("");
+        </div>
+    ` : "";
+
+    element.innerHTML = resultsHtml + rest.map(scheduleDayHtml).join("");
+
+    // The page is redrawn every time a score changes, so any game that
+    // was open is brought up to date rather than closed.
+    refreshOpenGameDetails("schedule");
 }
 
-/* =========================================
-   SCHEDULE — PAST GAME DETAIL (goals, goalie in net, attendance)
-   ========================================= */
+function toggleScheduleResults() {
+    scheduleResultsOpen = !scheduleResultsOpen;
 
-// Cache of per-game detail (goals + goalie stints + attendance), so
-// re-opening an already-expanded game doesn't re-fetch it.
-const SCHEDULE_DETAIL_CACHE = {};
+    const section = document.getElementById("schedule-results");
+    const toggle = document.getElementById("schedule-results-toggle");
+    if (!section || !toggle) return;
 
-// Toggles a final game's inline detail panel open/closed. Fetches the
-// game's goals, penalties and goalie stints from Supabase the first time
-// it's opened, then reuses the cached result on subsequent clicks. This
-// public view is deliberately player-anonymous -- team logo and event type
-// only, no scorer/assist/goalie/attendance names (those live in Admin).
-async function toggleScheduleGameDetail(gameId) {
-    const wrapper = document.getElementById(`schedule-wrapper-${gameId}`);
-    const panel = document.getElementById(`schedule-detail-${gameId}`);
-    if (!wrapper || !panel) return;
-
-    const isOpen = wrapper.classList.contains("open");
-    if (isOpen) {
-        wrapper.classList.remove("open");
-        return;
-    }
-
-    wrapper.classList.add("open");
-
-    if (SCHEDULE_DETAIL_CACHE[gameId]) {
-        panel.innerHTML = SCHEDULE_DETAIL_CACHE[gameId];
-        return;
-    }
-
-    panel.innerHTML = `<p class="schedule-detail-loading">Loading game details…</p>`;
-
-    const game = SCHEDULE.find(g => String(g.id) === String(gameId));
-    if (!game) return;
-
-    const [{ data: goals, error: goalsError }, { data: periods, error: periodsError }, { data: penalties, error: penaltiesError }] = await Promise.all([
-        supabaseClient.from("game_goals").select("*").eq("game_id", gameId),
-        supabaseClient.from("game_goalie_periods").select("*").eq("game_id", gameId),
-        supabaseClient.from("game_penalties").select("*").eq("game_id", gameId)
-    ]);
-
-    if (goalsError || periodsError || penaltiesError) {
-        console.error("Error loading game detail:", goalsError || periodsError || penaltiesError);
-        panel.innerHTML = `<p class="schedule-detail-empty">Couldn't load game details right now.</p>`;
-        return;
-    }
-
-    const html = renderScheduleGameDetail(game, goals || [], periods || [], penalties || []);
-    SCHEDULE_DETAIL_CACHE[gameId] = html;
-    panel.innerHTML = html;
+    section.classList.toggle("open", scheduleResultsOpen);
+    toggle.setAttribute("aria-expanded", scheduleResultsOpen ? "true" : "false");
+    toggle.querySelector(".schedule-results-chevron").textContent = scheduleResultsOpen ? "Hide ▴" : "Show ▾";
 }
 
 // "#<number> First Last" tag for an event row.
@@ -1932,7 +1983,6 @@ async function setupAuthNav() {
     }
 
     slot.innerHTML = `
-        ${isAdmin ? `<a href="live.html">Live Game</a>` : ""}
         ${isTimekeeper ? `<a href="sheet.html">Score Sheet</a>` : ""}
         ${isAdmin ? `<a href="admin.html">Admin</a>` : ""}
         <a href="#" id="nav-logout-link">Logout</a>
