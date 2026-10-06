@@ -865,6 +865,13 @@ function renderSheet() {
             </span>
         </div>
 
+        <div class="gs-legend gs-screen-only">
+            <span><i class="is-input"></i>Fill in</span>
+            <span><i class="is-auto"></i>Works itself out</span>
+            <span><i class="is-pencil"></i>Not saved yet</span>
+            <span><i class="is-bad"></i>Needs fixing</span>
+        </div>
+
         <div class="gs-side-tabs" role="tablist">
             ${SHEET_SIDES.map(side => `
                 <button type="button" role="tab" data-action="show-side" data-side="${side}">

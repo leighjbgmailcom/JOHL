@@ -16,6 +16,9 @@
     --gs-ink: #1638a6;         /* what's written on the sheet */
     --gs-pencil: #5f6b76;
     --gs-highlight: #fff3b0;   /* a line that isn't saved yet */
+    --gs-input: #e6f0ff;       /* a box the timekeeper fills in */
+    --gs-auto: #e4e4e1;        /* a box that works itself out */
+    --gs-auto-ink: #1c232b;    /* ...and what's worked out in it */
     --gs-red: #c8102e;
     --gs-line: 38px;           /* height of one ruled line */
     --gs-roster-line: 30px;
@@ -758,9 +761,82 @@ span.gs-goalie-no {
     color: var(--gs-red);
 }
 
+/* ----- Colour code: what to fill in, and what works itself out -----
+   Blue boxes are the timekeeper's to fill in. Grey boxes are worked out
+   from them (goals against, the score by period, when a penalty is back
+   ON) and show their figures in black rather than pen blue. Yellow (a
+   line not saved yet) and red (a box that needs fixing) go over the top
+   of both. The key is printed under the Game band. */
+
+.gs-rows .gs-row .gs-cell,
+.gs-goalie-row .gs-goalie-time,
+.gs-goalie-row .gs-goalie-no,
+.gs-tick {
+    background: var(--gs-input);
+}
+
+.gs-rows .gs-row .gs-cell.gs-on,
+.gs-goalie-row .gs-ga,
+.gs-score-grid .gs-written {
+    background: var(--gs-auto);
+    color: var(--gs-auto-ink);
+}
+
+.gs-on select.gs-ink {
+    color: var(--gs-auto-ink);
+}
+
+/* ON works itself out, but opens to switch a minor to a major. */
+.gs-on {
+    position: relative;
+}
+
+.gs-row.is-used .gs-on::after {
+    content: "▾";
+    position: absolute;
+    right: 3px;
+    bottom: 1px;
+    font-size: 11px;
+    color: #6b7680;
+    pointer-events: none;
+}
+
+/* The key to the colours. */
+.gs-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    padding: 8px 2px 10px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    color: #45525c;
+}
+
+.gs-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.gs-legend i {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border: 1px solid var(--gs-rule);
+}
+
+.gs-legend .is-input { background: var(--gs-input); }
+.gs-legend .is-auto { background: var(--gs-auto); }
+.gs-legend .is-pencil { background: var(--gs-highlight); }
+.gs-legend .is-bad { background: #fde3e6; }
+
 /* Written but not saved yet. */
 .gs-row.is-pencil .gs-cell {
     background: var(--gs-highlight);
+}
+
+.gs-row.is-pencil .gs-cell.gs-on {
+    background: var(--gs-auto);
 }
 
 .gs-row .gs-cell.is-bad {
@@ -1130,8 +1206,19 @@ span.gs-goalie-no {
     }
 
     .gs-row.is-pencil .gs-cell,
-    .gs-row .gs-cell.is-bad {
+    .gs-row .gs-cell.is-bad,
+    .gs-rows .gs-row .gs-cell,
+    .gs-rows .gs-row .gs-cell.gs-on,
+    .gs-goalie-row .gs-goalie-time,
+    .gs-goalie-row .gs-goalie-no,
+    .gs-goalie-row .gs-ga,
+    .gs-score-grid .gs-written,
+    .gs-tick {
         background: transparent;
+    }
+
+    .gs-on::after {
+        display: none;
     }
 
     .gs-side-head {
