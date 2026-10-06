@@ -900,8 +900,8 @@ tbody tr:hover {
     font-weight: bold;
 }
 
-/* "Results": on a game day, the days already played are folded away
-   under this bar so tonight's games are at the top. */
+/* "Game Results": earlier games are filed away under this bar. The
+   most recent game day stays in view until the next one comes round. */
 .schedule-results {
     margin-bottom: 30px;
 }

@@ -623,8 +623,7 @@ function setupTeamsAccordion() {
    SCHEDULE (schedule.html)
    ========================================= */
 
-// Whether the "Results" section (games already played, folded away on a
-// game day) is open. Kept here so it stays as it was left when a score
+// Whether the "Game Results" section (earlier games, filed away) is open. Kept here so it stays as it was left when a score
 // changes and the page redraws.
 let scheduleResultsOpen = false;
 
@@ -724,13 +723,18 @@ function renderSchedule(filter = "ALL") {
         return;
     }
 
-    // On a game day, the days already played are folded away under
-    // "Results" so tonight's games are at the top of the page. Any other
-    // day the whole season is listed as usual.
+    // Games already played are filed under a closed "Game Results" bar,
+    // except the most recent game day: last week's games stay in view
+    // until the next game day comes round, and then join the rest so
+    // that night's games are at the top of the page.
     const today = todayISO();
-    const isGameDay = SCHEDULE.some(entry => !entry.noGames && entry.date === today);
-    const played = isGameDay ? groups.filter(group => group.date < today) : [];
-    const rest = isGameDay ? groups.filter(group => group.date >= today) : groups;
+    const gameDates = SCHEDULE.filter(entry => !entry.noGames).map(entry => entry.date);
+    const isGameDay = gameDates.includes(today);
+    const lastPlayed = gameDates.filter(date => date < today).sort().pop() || null;
+    const cutoff = isGameDay ? today : lastPlayed; // days before this are filed away
+
+    const played = cutoff ? groups.filter(group => group.date < cutoff) : [];
+    const rest = cutoff ? groups.filter(group => group.date >= cutoff) : groups;
     const playedGames = played.reduce((count, group) => count + group.entries.filter(e => !e.noGames).length, 0);
 
     const resultsHtml = played.length ? `
@@ -738,8 +742,8 @@ function renderSchedule(filter = "ALL") {
             <button type="button" class="schedule-results-toggle" id="schedule-results-toggle"
                 aria-expanded="${scheduleResultsOpen ? "true" : "false"}" aria-controls="schedule-results-body"
                 onclick="toggleScheduleResults()">
-                <span class="schedule-results-title">Results</span>
-                <span class="schedule-results-count">${playedGames} game${playedGames === 1 ? "" : "s"} already played</span>
+                <span class="schedule-results-title">Game Results</span>
+                <span class="schedule-results-count">${playedGames} earlier game${playedGames === 1 ? "" : "s"}</span>
                 <span class="schedule-results-chevron">${scheduleResultsOpen ? "Hide ▴" : "Show ▾"}</span>
             </button>
             <div class="schedule-results-body" id="schedule-results-body">
