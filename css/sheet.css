@@ -450,6 +450,52 @@ input:focus-visible + .gs-tick {
     font-size: 14px;
 }
 
+/* An added goalie-change line: its number box opens the list of goalies. */
+span.gs-goalie-no {
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+}
+
+.gs-goalie-no .gs-pick-shown {
+    color: #111;
+    font-size: 17px;
+}
+
+.gs-goalie-remove {
+    flex: 0 0 22px;
+    align-self: stretch;
+    border: 0;
+    background: transparent;
+    color: #9aa3ab;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.gs-goalie-remove:hover,
+.gs-goalie-remove:focus-visible {
+    color: var(--gs-red);
+}
+
+/* "+ Goalie change" */
+.gs-goalie-add {
+    display: block;
+    margin: 6px 0 0 auto;
+    padding: 6px 12px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    color: #17212b;
+    background: white;
+    border: 1px solid #b4bec7;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.gs-goalie-add:hover {
+    background: #eef1f4;
+}
+
 .gs-goalie-foot {
     font-size: 13px;
     font-weight: bold;
@@ -571,6 +617,46 @@ input:focus-visible + .gs-tick {
     outline: 3px solid #f2b705;
     outline-offset: -3px;
     background: #fffbe0;
+}
+
+/* A number box: it shows the sweater number, and the list of players
+   to pick from lies invisibly over it, so a tap anywhere opens the list. */
+.gs-pick {
+    position: relative;
+}
+
+.gs-pick-shown {
+    max-width: 100%;
+    padding: 0 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--gs-ink);
+    font-size: 19px;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+
+.gs-pick select.gs-pick-select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.gs-pick:focus-within {
+    outline: 3px solid #f2b705;
+    outline-offset: -3px;
+    background: #fffbe0;
+}
+
+.gs-cell.is-bad .gs-pick-shown {
+    color: var(--gs-red);
 }
 
 /* A time: the minutes roll, a colon, the seconds roll. */
@@ -709,6 +795,10 @@ input:focus-visible + .gs-tick {
     .gs-cell .gs-ink {
         font-size: 17px;
         padding: 0 1px;
+    }
+
+    .gs-pick-shown {
+        font-size: 17px;
     }
 
     .gs-name select.gs-ink,
@@ -972,6 +1062,8 @@ input:focus-visible + .gs-tick {
     .gs-erase-cell,
     .gs-note,
     .gs-goalie-foot,
+    .gs-goalie-add,
+    .gs-goalie-remove,
     .gs-stamp {
         display: none !important;
     }
@@ -1111,7 +1203,9 @@ input:focus-visible + .gs-tick {
 
     .gs-cell .gs-ink,
     .gs-ga,
-    .gs-goalie-no {
+    .gs-goalie-no,
+    .gs-pick-shown,
+    .gs-goalie-no .gs-pick-shown {
         font-size: 13px;
     }
 

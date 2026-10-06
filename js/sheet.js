@@ -9,8 +9,9 @@
      Visitors on the left, Home on the right. For each team, top to bottom:
        - the roster (# / last name / first name, goalies at the bottom),
          ticked off in the margin as players show up
-       - beside it, the goalie box (Goals / Time for each goalie) and the
-         other team's score by period
+       - beside it, the goalie box (Goals / Time for each goalie, with a
+         "+" for any extra goalie change) and the other team's score by
+         period
        - Penalties:  Per. | # | Player | OFF | ON | S/W
        - Scoring:    Per  | Player | Time | Goal | Assist | Assist
 
@@ -51,7 +52,7 @@ const SHEET_PERIOD_ORDINAL = { "1": "1st", "2": "2nd", "3": "3rd", "OT": "OT" };
 let SHEET_GAMES = [];
 let sheetGame = null;
 let sheetRows = null;        // { goal: { home: [], away: [] }, pen: {...} }
-let sheetGoalies = null;     // { home: { rows, dbRows, ... }, away: {...} }
+let sheetGoalies = null;     // { home: { lines, dbRows, ... }, away: {...} }
 let sheetAttendance = null;  // { home: Set(playerId), away: Set(playerId) }
 let sheetKeySeq = 0;
 let sheetPendingSaves = 0;
@@ -143,17 +144,12 @@ function sheetPlayer(id) {
     return PLAYERS.find(p => String(p.id) === String(id)) || null;
 }
 
-// The player on this team wearing the number that was written down.
-function sheetPlayerByNumber(side, text) {
-    const digits = String(text || "").replace(/^#/, "").trim();
-    if (!/^\d{1,3}$/.test(digits)) return null;
-    const number = parseInt(digits, 10);
-    return sheetRoster(side).find(p => p.number === number) || null;
-}
-
+// What a picked player shows as in a number box: his sweater number (or
+// his last name, if he hasn't got one).
 function sheetNumberOf(playerId) {
     const player = sheetPlayer(playerId);
-    return player && player.number != null ? String(player.number) : "";
+    if (!player) return "";
+    return player.number != null ? String(player.number) : player.last;
 }
 
 // A time is picked in two rolls, minutes (0-20) and seconds (00-59),
@@ -213,7 +209,7 @@ function sheetRowEl(row) {
 // { period, time_out } goalie changes, for the shared OT-length check.
 function sheetOvertimeSeconds(rows, goalies) {
     const goals = SHEET_SIDES.flatMap(side => rows.goal[side].map(row => ({ period: row.period, game_time: row.time })));
-    const changes = SHEET_SIDES.flatMap(side => goalies[side].rows.map(row => ({ period: row.period, time_out: row.timeOut })));
+    const changes = SHEET_SIDES.flatMap(side => goalies[side].lines.map(line => ({ period: line.period, time_out: line.timeOut })));
     return overtimeLengthSeconds(goals, changes);
 }
 
@@ -221,9 +217,9 @@ function sheetOvertimeSeconds(rows, goalies) {
 /* =========================================
    LINES ("rows") — one per goal or penalty
 
-   A row keeps what was written (sweater numbers as text) beside what it
-   resolved to (player ids), so a number that isn't on the roster can be
-   shown back for fixing without anything wrong reaching the database.
+   Players are always picked from the team's list, never typed, so a row
+   only ever holds player ids. Its time is held as the two rolls it's
+   picked on (timeMin / timeSec) beside the whole time they make.
    ========================================= */
 
 function sheetNewGoalRow(db) {
@@ -234,9 +230,6 @@ function sheetNewGoalRow(db) {
         time: db ? normalizeClockText(db.game_time) : null,
         timeMin: db ? sheetSplitClock(db.game_time).min : null,
         timeSec: db ? sheetSplitClock(db.game_time).sec : null,
-        g: db ? sheetNumberOf(db.scorer_id) : "",
-        a1: db ? sheetNumberOf(db.assist1_id) : "",
-        a2: db ? sheetNumberOf(db.assist2_id) : "",
         gId: db ? db.scorer_id : null,
         a1Id: db ? db.assist1_id : null,
         a2Id: db ? db.assist2_id : null,
@@ -254,7 +247,6 @@ function sheetNewPenRow(db) {
         time: db ? normalizeClockText(db.game_time) : null,
         timeMin: db ? sheetSplitClock(db.game_time).min : null,
         timeSec: db ? sheetSplitClock(db.game_time).sec : null,
-        no: db ? sheetNumberOf(db.player_id) : "",
         playerId: db ? db.player_id : null,
         minutes: db ? db.minutes : null,
         infraction: db ? (db.infraction || "").trim() || null : null,
@@ -270,8 +262,8 @@ const SHEET_NEW_ROW = { goal: sheetNewGoalRow, pen: sheetNewPenRow };
 function sheetRowHasEntry(kind, row) {
     if (row.id) return true;
     if (row.time || row.timeMin != null || row.timeSec != null) return true;
-    if (kind === "goal") return !!(row.g || row.gId || row.a1 || row.a2);
-    return !!(row.no || row.playerId || row.infraction);
+    if (kind === "goal") return !!(row.gId || row.a1Id || row.a2Id);
+    return !!(row.playerId || row.infraction);
 }
 
 // What a line still needs before it can be saved, in the timekeeper's
@@ -282,12 +274,12 @@ function sheetRowMissing(kind, row) {
     if (clock) return clock;
 
     if (kind === "goal") {
-        if (!row.gId) return "write who scored — his number under Goal, or pick him under Player";
-        if (!row.period) return "write the period";
+        if (!row.gId) return "pick who scored";
+        if (!row.period) return "pick the period";
         return null;
     }
-    if (!row.playerId) return "write the player's number, or pick him under Player";
-    if (!row.period) return "write the period";
+    if (!row.playerId) return "pick the player";
+    if (!row.period) return "pick the period";
     return null;
 }
 
@@ -334,39 +326,47 @@ function sheetPadRows(kind, side) {
    each: Goals and Time. The time is when that goalie CAME OUT, so the
    goalie with a time started and the one without finished.
 
-   On the sheet that's one line per goalie:
+   On the sheet that's one line per goalie, as printed:
      - a time (plus its period, the 2nd unless changed) = he came out then
      - his number circled, no time = he was in net at the end
-   and from those the usual one-row-per-stint records are worked out for
-   the database (game_goalie_periods), the same shape Admin and the Live
-   Game screen write.
+   The "+" under the box adds a line for another goalie change, for the
+   odd game where a goalie comes out more than once.
+
+   From those lines the usual one-row-per-stint records are worked out
+   for the database (game_goalie_periods), the same shape Admin and the
+   Live Game screen write.
    ========================================= */
 
-function sheetNewGoalieLine(goalieId) {
-    return { goalieId, played: false, mark: 0, period: null, timeOut: null, timeMin: null, timeSec: null };
+function sheetNewGoalieLine(goalieId, extra) {
+    return { key: ++sheetKeySeq, goalieId, extra: !!extra, played: false, mark: 0, period: null, timeOut: null, timeMin: null, timeSec: null };
 }
 
 // The stints, in the order they were played, that one team's goalie
-// lines add up to: [{ goalie_id, period, time_out }].
+// lines add up to: [{ goalie_id, period, time_out, line }], where `line`
+// is the line on the sheet the stint's goals are shown against.
 function sheetGoalieStints(lines, otSeconds) {
     const elapsed = line => gameElapsedSeconds(line.period, parseClockToSeconds(line.timeOut), otSeconds);
 
     const timed = lines
-        .filter(line => line.timeOut && line.period)
+        .filter(line => line.goalieId && line.timeOut && line.period)
         .sort((a, b) => elapsed(a) - elapsed(b));
     const stillIn = lines
-        .filter(line => line.played && !line.timeOut)
+        .filter(line => line.goalieId && line.played && line.timeMin == null && line.timeSec == null)
         .sort((a, b) => a.mark - b.mark);
 
-    const stints = timed.map(line => ({ goalie_id: line.goalieId, period: line.period, time_out: line.timeOut }));
+    const stints = timed.map(line => ({ goalie_id: line.goalieId, period: line.period, time_out: line.timeOut, line }));
 
     if (stillIn.length) {
-        stillIn.forEach(line => stints.push({ goalie_id: line.goalieId, period: null, time_out: null }));
+        stillIn.forEach(line => stints.push({ goalie_id: line.goalieId, period: null, time_out: null, line }));
     } else if (timed.length) {
         // Somebody went in when the last goalie came out. With two goalies
         // it can only be the other one.
-        const others = lines.filter(line => line !== timed[timed.length - 1]);
-        if (others.length === 1) stints.push({ goalie_id: others[0].goalieId, period: null, time_out: null });
+        const lastOut = String(timed[timed.length - 1].goalieId);
+        const others = [...new Set(lines.filter(line => line.goalieId).map(line => String(line.goalieId)))].filter(id => id !== lastOut);
+        if (others.length === 1) {
+            const line = lines.find(l => String(l.goalieId) === others[0]);
+            stints.push({ goalie_id: line.goalieId, period: null, time_out: null, line });
+        }
     }
 
     return stints;
@@ -393,36 +393,42 @@ function sheetBuildGoalieBox(side, dbRows, otSeconds) {
         };
     });
 
-    // A line for each goalie on the roster, plus anyone else who's
-    // already down as having played goal in this game.
-    const ids = sheetRoster(side).filter(p => isGoaliePosition(p.position)).map(p => p.id);
-    ordered.forEach(stint => {
-        if (!ids.some(id => String(id) === String(stint.goalie_id))) ids.push(stint.goalie_id);
+    // The printed lines: one for each goalie on the roster.
+    const lines = sheetRoster(side).filter(p => isGoaliePosition(p.position)).map(p => sheetNewGoalieLine(p.id, false));
+
+    // A goalie's own printed line if it's still blank, otherwise an added one.
+    const lineFor = goalieId => {
+        const printed = lines.find(l => !l.extra && String(l.goalieId) === String(goalieId));
+        if (printed && !printed.timeOut && !printed.played) return printed;
+        const added = sheetNewGoalieLine(goalieId, true);
+        lines.push(added);
+        return added;
+    };
+
+    // Every time a goalie came out goes on a line...
+    ordered.filter(stint => stint.time_out).forEach(stint => {
+        const line = lineFor(stint.goalie_id);
+        line.timeOut = stint.time_out;
+        line.timeMin = sheetSplitClock(stint.time_out).min;
+        line.timeSec = sheetSplitClock(stint.time_out).sec;
+        line.period = stint.period;
     });
 
-    const lines = ids.map(sheetNewGoalieLine);
-    let fits = true;
-
+    // ...and whoever was in net at the end is circled -- unless the lines
+    // already say so by themselves (the other goalie went back in).
     ordered.forEach((stint, index) => {
-        const line = lines.find(l => String(l.goalieId) === String(stint.goalie_id));
-        if (stint.time_out) {
-            if (line.timeOut) fits = false; // out twice: more than one line can hold
-            line.timeOut = stint.time_out;
-            line.timeMin = sheetSplitClock(stint.time_out).min;
-            line.timeSec = sheetSplitClock(stint.time_out).sec;
-            line.period = stint.period;
-        } else {
-            line.played = true;
-            line.mark = index + 1;
-        }
+        if (stint.time_out) return;
+        if (sheetSameStints(sheetGoalieStints(lines, otSeconds), ordered)) return;
+        const line = lineFor(stint.goalie_id);
+        line.played = true;
+        line.mark = index + 1;
     });
 
-    // Anything the one-line-per-goalie box can't show exactly (a goalie
-    // who came out twice, say) is left alone for Admin rather than
-    // being rewritten into something it wasn't.
-    const readOnly = !fits || !sheetSameStints(sheetGoalieStints(lines, otSeconds), ordered);
+    // Anything the box still can't show exactly is left alone for Admin
+    // rather than being rewritten into something it wasn't.
+    const readOnly = !sheetSameStints(sheetGoalieStints(lines, otSeconds), ordered);
 
-    return { lines, rows: lines, dbRows: ordered, readOnly, failed: false, chain: Promise.resolve() };
+    return { lines, dbRows: ordered, readOnly, failed: false, chain: Promise.resolve() };
 }
 
 
@@ -590,15 +596,19 @@ function sheetClockHtml(attr, target, label) {
     `;
 }
 
-function sheetInputHtml(field, value, label, extra = "") {
-    return `<input type="text" class="gs-ink" data-field="${field}" value="${sheetEsc(value || "")}" aria-label="${label}" autocomplete="off" autocapitalize="off" spellcheck="false" ${extra}>`;
+// A box that shows just a sweater number but opens the full list of
+// players ("9 – Bergeron, Ken") to pick from: the list sits invisibly
+// over the number.
+function sheetPickHtml(field, side, selectedId, label) {
+    return `
+        <span class="gs-cell gs-pick">
+            <span class="gs-pick-shown" aria-hidden="true"></span>
+            <select class="gs-ink gs-pick-select" data-field="${field}" aria-label="${label}">${sheetPlayerOptionsHtml(side, selectedId)}</select>
+        </span>
+    `;
 }
 
-function sheetNumberInputHtml(field, value, label) {
-    return sheetInputHtml(field, value, label, `inputmode="numeric" maxlength="3"`);
-}
-
-// The team's roster for the Player box, number and name together
+// The team's roster for every player box, number and name together
 // ("9 – Bergeron, Ken") in sweater-number order, since the number is
 // what gets called out. Whoever's already on the line is always listed,
 // even if he's since left the roster.
@@ -670,8 +680,8 @@ function sheetPenRowHtml(side, row) {
     return `
         <div class="gs-row" data-kind="pen" data-side="${side}" data-key="${row.key}">
             <span class="gs-cell"><select class="gs-ink" data-field="period" aria-label="Period">${sheetPeriodOptionsHtml(row.period)}</select></span>
-            <span class="gs-cell">${sheetNumberInputHtml("no", row.no, "Penalized player, sweater number")}</span>
-            <span class="gs-cell gs-name"><select class="gs-ink" data-field="player" aria-label="Penalized player">${sheetPlayerOptionsHtml(side, row.playerId)}</select></span>
+            ${sheetPickHtml("no", side, row.playerId, "Penalized player")}
+            <span class="gs-cell gs-name"><select class="gs-ink" data-field="player" aria-label="Penalized player (name)">${sheetPlayerOptionsHtml(side, row.playerId)}</select></span>
             <span class="gs-cell gs-clock">${sheetClockHtml("data-field", row, "Time off")}</span>
             <span class="gs-cell gs-on"><select class="gs-ink" data-field="minutes" aria-label="Time back on (length of penalty)">${sheetOnOptionsHtml(row)}</select></span>
             <span class="gs-cell gs-name"><select class="gs-ink" data-field="infraction" aria-label="Offence">${sheetOffenceOptionsHtml(row.infraction)}</select></span>
@@ -685,11 +695,11 @@ function sheetGoalRowHtml(side, row) {
     return `
         <div class="gs-row" data-kind="goal" data-side="${side}" data-key="${row.key}">
             <span class="gs-cell"><select class="gs-ink" data-field="period" aria-label="Period">${sheetPeriodOptionsHtml(row.period)}</select></span>
-            <span class="gs-cell gs-name"><select class="gs-ink" data-field="player" aria-label="Goal scored by">${sheetPlayerOptionsHtml(side, row.gId)}</select></span>
+            <span class="gs-cell gs-name"><select class="gs-ink" data-field="player" aria-label="Goal scored by (name)">${sheetPlayerOptionsHtml(side, row.gId)}</select></span>
             <span class="gs-cell gs-clock">${sheetClockHtml("data-field", row, "Time of goal")}</span>
-            <span class="gs-cell">${sheetNumberInputHtml("g", row.g, "Goal, sweater number")}</span>
-            <span class="gs-cell">${sheetNumberInputHtml("a1", row.a1, "First assist, sweater number")}</span>
-            <span class="gs-cell">${sheetNumberInputHtml("a2", row.a2, "Second assist, sweater number")}</span>
+            ${sheetPickHtml("g", side, row.gId, "Goal scored by")}
+            ${sheetPickHtml("a1", side, row.a1Id, "First assist")}
+            ${sheetPickHtml("a2", side, row.a2Id, "Second assist")}
             ${sheetEraseHtml()}
             <span class="gs-note"></span>
         </div>
@@ -726,27 +736,52 @@ function sheetRosterHtml(side) {
         goalies.map(line).join("");
 }
 
+// The goalies who can be picked on an added line: the roster's goalies,
+// plus anyone already on a line in this box.
+function sheetGoalieOptionsHtml(side, box, selectedId) {
+    const goalies = sheetRoster(side).filter(p => isGoaliePosition(p.position));
+    box.lines.forEach(line => {
+        const player = sheetPlayer(line.goalieId);
+        if (player && !goalies.some(p => String(p.id) === String(player.id))) goalies.push(player);
+    });
+
+    return `<option value=""></option>` + goalies.map(p =>
+        `<option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""}>${p.number != null ? p.number + " – " : ""}${sheetEsc(p.last)}, ${sheetEsc(p.first)}</option>`
+    ).join("");
+}
+
+function sheetGoalieLineHtml(side, box, line) {
+    const player = sheetPlayer(line.goalieId);
+    const name = player ? `${player.first} ${player.last}` : "the goalie";
+
+    // A printed line has the goalie's number to tap; an added line has a
+    // number box that opens the list of goalies.
+    const numberCell = line.extra
+        ? `<span class="gs-goalie-no gs-pick">
+               <span class="gs-pick-shown" aria-hidden="true"></span>
+               <select class="gs-ink gs-pick-select" data-gfield="goalieId" aria-label="Goalie who came out">${sheetGoalieOptionsHtml(side, box, line.goalieId)}</select>
+           </span>`
+        : `<button type="button" class="gs-goalie-no" data-action="goalie-played" title="${sheetEsc(name)} — tap if he played">${sheetEsc(sheetNumberOf(line.goalieId) || "?")}</button>`;
+
+    return `
+        <div class="gs-goalie-row ${line.extra ? "is-extra" : ""}" data-line="${line.key}" ${line.extra ? "" : `data-goalie="${line.goalieId}"`}>
+            ${numberCell}
+            <span class="gs-cell gs-ga" title="Goals against, worked out from the goal times"></span>
+            <span class="gs-cell gs-goalie-time">
+                <select class="gs-ink gs-goalie-period" data-gfield="period" aria-label="Period ${sheetEsc(name)} came out in">
+                    <option value=""></option>
+                    ${GOALIE_CLOCK_PERIODS.map(p => `<option value="${p}">${SHEET_PERIOD_ORDINAL[p]}</option>`).join("")}
+                </select>
+                ${sheetClockHtml("data-gfield", line, `Time ${sheetEsc(name)} came out`)}
+                ${line.extra ? `<button type="button" class="gs-goalie-remove" data-action="goalie-remove" aria-label="Remove this goalie change" title="Remove this goalie change">✕</button>` : ""}
+            </span>
+        </div>
+    `;
+}
+
 function sheetGoalieBoxHtml(side) {
     const box = sheetGoalies[side];
-
-    const lines = box.lines.map(line => {
-        const player = sheetPlayer(line.goalieId);
-        const number = player && player.number != null ? player.number : (player ? player.last : "?");
-        const name = player ? `${player.first} ${player.last}` : "Goalie";
-        return `
-            <div class="gs-goalie-row" data-goalie="${line.goalieId}">
-                <button type="button" class="gs-goalie-no" data-action="goalie-played" title="${sheetEsc(name)} — tap if he played">${sheetEsc(number)}</button>
-                <span class="gs-cell gs-ga" title="Goals against, worked out from the goal times"></span>
-                <span class="gs-cell gs-goalie-time">
-                    <select class="gs-ink gs-goalie-period" data-gfield="period" aria-label="Period ${sheetEsc(name)} came out in">
-                        <option value=""></option>
-                        ${GOALIE_CLOCK_PERIODS.map(p => `<option value="${p}">${SHEET_PERIOD_ORDINAL[p]}</option>`).join("")}
-                    </select>
-                    ${sheetClockHtml("data-gfield", line, `Time ${sheetEsc(name)} came out`)}
-                </span>
-            </div>
-        `;
-    }).join("");
+    const lines = box.lines.map(line => sheetGoalieLineHtml(side, box, line)).join("");
 
     return `
         <div class="gs-goalies ${box.readOnly ? "is-read-only" : ""}" data-side="${side}">
@@ -756,6 +791,7 @@ function sheetGoalieBoxHtml(side) {
                 <span class="gs-cell">Time</span>
             </div>
             ${lines || `<p class="gs-roster-empty">No goalies on this roster.</p>`}
+            ${box.readOnly || !lines ? "" : `<button type="button" class="gs-goalie-add" data-action="goalie-add" title="Add a line for another goalie change">+ Goalie change</button>`}
             <p class="gs-goalie-foot" id="sheet-goalie-foot-${side}"></p>
         </div>
     `;
@@ -917,8 +953,15 @@ function sheetRowNote(kind, row) {
     return { text: "" };
 }
 
+// Which bit of the row a box shows. The Player box and the number box
+// beside it are two views of the same pick.
 function sheetRowFieldValue(kind, row, field) {
-    if (field === "player") return kind === "goal" ? row.gId : row.playerId;
+    if (kind === "goal") {
+        if (field === "player" || field === "g") return row.gId;
+        if (field === "a1" || field === "a2") return row[field + "Id"];
+    } else if (field === "player" || field === "no") {
+        return row.playerId;
+    }
     return row[field];
 }
 
@@ -942,6 +985,11 @@ function refreshSheetRow(kind, side, row, justWritten) {
             const raw = sheetRowFieldValue(kind, row, field);
             const value = raw == null ? "" : String(raw);
             if (control.value !== value) control.value = value;
+        }
+
+        // A number box shows the sweater number of whoever's picked.
+        if (control.classList.contains("gs-pick-select")) {
+            control.parentElement.querySelector(".gs-pick-shown").textContent = sheetNumberOf(sheetRowFieldValue(kind, row, field));
         }
 
         if (!field.startsWith("time")) control.closest(".gs-cell").classList.toggle("is-bad", !!row.bad[field]);
@@ -982,14 +1030,23 @@ function refreshSheetGoalies(side, justWritten) {
     const counts = goalsAgainstByGoalieRow(stints, against, otSeconds);
 
     box.lines.forEach(line => {
-        const rowEl = el.querySelector(`.gs-goalie-row[data-goalie="${line.goalieId}"]`);
+        const rowEl = el.querySelector(`.gs-goalie-row[data-line="${line.key}"]`);
         if (!rowEl) return;
 
-        const mine = stints.filter(stint => String(stint.goalie_id) === String(line.goalieId));
+        // A read-only box has no line for each stint, so each goalie's
+        // goals are added up on his first line.
+        const mine = box.readOnly
+            ? (box.lines.find(l => String(l.goalieId) === String(line.goalieId)) === line
+                ? stints.filter(stint => String(stint.goalie_id) === String(line.goalieId))
+                : [])
+            : stints.filter(stint => stint.line === line);
         const playing = mine.length > 0;
 
-        rowEl.querySelector(".gs-goalie-no").classList.toggle("is-playing", playing);
-        rowEl.querySelector(".gs-goalie-no").setAttribute("aria-pressed", playing ? "true" : "false");
+        const numberEl = rowEl.querySelector(".gs-goalie-no");
+        numberEl.classList.toggle("is-playing", playing);
+        if (!line.extra) numberEl.setAttribute("aria-pressed", playing ? "true" : "false");
+        else numberEl.querySelector(".gs-pick-shown").textContent = sheetNumberOf(line.goalieId);
+
         rowEl.querySelector(".gs-ga").textContent = playing
             ? mine.reduce((sum, stint) => sum + counts.get(stint), 0)
             : "";
@@ -1015,6 +1072,7 @@ function refreshSheetGoalies(side, justWritten) {
     else if (halfPicked) message = `Not saved yet — ${halfPicked}.`;
     else if (box.failed) { message = "Goalies not saved — tap here to try again"; retry = true; }
     else if (stillIn > 1) message = "Write the time the first goalie came out.";
+    else if (box.lines.some(line => line.extra && !line.goalieId && (line.timeMin != null || line.timeSec != null))) message = "Pick which goalie came out on the added line.";
     else if (stints.length && stillIn === 0) message = "Tap the number of the goalie who went in.";
 
     foot.textContent = message;
@@ -1245,7 +1303,8 @@ function queueSheetGoalieSync(side) {
     box.chain = box.chain.then(async () => {
         // Worked out when the save actually runs, so it's always the
         // latest state of the box that's written.
-        const wanted = sheetGoalieStints(box.lines, sheetOvertimeSeconds(rows, goalies));
+        const wanted = sheetGoalieStints(box.lines, sheetOvertimeSeconds(rows, goalies))
+            .map(stint => ({ goalie_id: stint.goalie_id, period: stint.period, time_out: stint.time_out }));
         const table = () => supabaseClient.from("game_goalie_periods");
 
         for (let i = 0; i < wanted.length; i++) {
@@ -1331,37 +1390,6 @@ function retryAllSheetRows() {
    WRITING ON THE SHEET
    ========================================= */
 
-// A sweater number written in a Goal / Assist / # box.
-function sheetSetPlayerNumber(side, row, field, idField, typed) {
-    const text = String(typed || "").trim();
-    row[field] = text;
-
-    if (!text) {
-        row[idField] = null;
-        row.bad[field] = null;
-        return;
-    }
-
-    const player = sheetPlayerByNumber(side, text);
-    if (!player) {
-        row[idField] = null;
-        row.bad[field] = `No #${text.replace(/^#/, "")} on ${sheetTeamName(side)}`;
-        return;
-    }
-
-    row[field] = String(player.number);
-    row[idField] = player.id;
-    row.bad[field] = null;
-}
-
-// A name picked in a Player box: fills in his number beside it.
-function sheetSetPlayerPicked(row, field, idField, playerId) {
-    const player = sheetPlayer(playerId);
-    row[idField] = player ? player.id : null;
-    row[field] = sheetNumberOf(playerId);
-    row.bad[field] = null;
-}
-
 function onSheetFieldChange(control) {
     const el = control.closest(".gs-row");
     if (!el || !sheetRows) return;
@@ -1374,20 +1402,22 @@ function onSheetFieldChange(control) {
     const field = control.dataset.field;
     const value = control.value;
 
+    // The player picked from a list, by his real id (or nobody).
+    const picked = () => {
+        const player = sheetPlayer(value);
+        return player ? player.id : null;
+    };
+
     if (field === "period") row.period = value || null;
     else if (field === "timeMin" || field === "timeSec") sheetSetClockPart(row, "time", field, value);
-    else if (kind === "goal") {
-        if (field === "player") sheetSetPlayerPicked(row, "g", "gId", value);
-        else sheetSetPlayerNumber(side, row, field, field + "Id", value);
+    else if (kind === "goal" && ["player", "g", "a1", "a2"].includes(field)) {
+        if (field === "player" || field === "g") row.gId = picked();
+        else row[field + "Id"] = picked();
 
         // The same player can't be on one goal twice.
-        ["a1", "a2"].forEach(f => {
-            if (row.bad[f] && row.bad[f].startsWith("Same")) row.bad[f] = null;
-        });
-        if (row.a1Id && String(row.a1Id) === String(row.gId)) row.bad.a1 = "Same player as the goal scorer";
-        if (row.a2Id && (String(row.a2Id) === String(row.gId) || String(row.a2Id) === String(row.a1Id))) row.bad.a2 = "Same player twice on one goal";
-    } else if (field === "player") sheetSetPlayerPicked(row, "no", "playerId", value);
-    else if (field === "no") sheetSetPlayerNumber(side, row, "no", "playerId", value);
+        row.bad.a1 = row.a1Id && String(row.a1Id) === String(row.gId) ? "Same player as the goal scorer" : null;
+        row.bad.a2 = row.a2Id && (String(row.a2Id) === String(row.gId) || String(row.a2Id) === String(row.a1Id)) ? "Same player twice on one goal" : null;
+    } else if (field === "player" || field === "no") row.playerId = picked();
     else if (field === "minutes") row.minutes = parseInt(value, 10) || SHEET_DEFAULT_PENALTY_MINUTES;
     else if (field === "infraction") {
         if (value === "__other__") {
@@ -1451,8 +1481,27 @@ function sheetGoalieLineFor(target) {
 
     const side = boxEl.dataset.side;
     const box = sheetGoalies[side];
-    const line = box.lines.find(l => String(l.goalieId) === rowEl.dataset.goalie);
+    const line = box.lines.find(l => String(l.key) === rowEl.dataset.line);
     return line && !box.readOnly ? { side, box, line } : null;
+}
+
+// Redraws one team's whole goalie box, after a line is added or removed.
+function redrawSheetGoalieBox(side) {
+    const el = document.querySelector(`.gs-goalies[data-side="${side}"]`);
+    if (el) el.outerHTML = sheetGoalieBoxHtml(side);
+    refreshSheetGoalies(side);
+}
+
+// The period a newly timed goalie change is taken to be in when none was
+// picked: the 2nd for the first change of the game (goalies split the
+// game, and the paper has no period there), and for a later one the
+// period after the change before it.
+function sheetDefaultGoalieOutPeriod(box, line) {
+    const earlier = box.lines
+        .filter(l => l !== line && l.timeOut && l.period)
+        .map(l => GOALIE_CLOCK_PERIODS.indexOf(l.period));
+    if (!earlier.length) return SHEET_DEFAULT_GOALIE_OUT_PERIOD;
+    return GOALIE_CLOCK_PERIODS[Math.min(Math.max(...earlier) + 1, 2)] || "3";
 }
 
 // A period or a time picked beside a goalie: when he came out. The
@@ -1460,19 +1509,37 @@ function sheetGoalieLineFor(target) {
 function onSheetGoalieFieldChange(control) {
     const found = sheetGoalieLineFor(control);
     if (!found) return;
-    const { side, line } = found;
+    const { side, box, line } = found;
     const field = control.dataset.gfield;
 
-    if (field === "period") line.period = control.value || null;
-    else {
+    if (field === "goalieId") {
+        const player = sheetPlayer(control.value);
+        line.goalieId = player ? player.id : null;
+    } else if (field === "period") {
+        line.period = control.value || null;
+    } else {
         sheetSetClockPart(line, "timeOut", field, control.value);
         // Time rubbed out altogether: he didn't come out, so no period either.
         if (line.timeMin == null && line.timeSec == null) line.period = null;
     }
 
-    // The paper has no period beside the time: it's the 2nd unless one
-    // was picked.
-    if (line.timeOut && !line.period) line.period = SHEET_DEFAULT_GOALIE_OUT_PERIOD;
+    if (line.timeOut && !line.period) line.period = sheetDefaultGoalieOutPeriod(box, line);
+
+    // A change added with "+" for a goalie whose own printed line is still
+    // blank belongs on that line -- which is also where it shows when the
+    // sheet is opened again. Only a second time for the same goalie needs
+    // a line of its own.
+    if (line.extra && line.timeOut && line.goalieId) {
+        const own = box.lines.find(l => !l.extra && String(l.goalieId) === String(line.goalieId));
+        if (own && own.timeMin == null && own.timeSec == null) {
+            Object.assign(own, { period: line.period, timeOut: line.timeOut, timeMin: line.timeMin, timeSec: line.timeSec });
+            box.lines.splice(box.lines.indexOf(line), 1);
+            redrawSheetGoalieBox(side);
+            refreshSheetTotals();
+            queueSheetGoalieSync(side);
+            return;
+        }
+    }
 
     refreshSheetGoalies(side, control);
     refreshSheetTotals();
@@ -1488,12 +1555,44 @@ function onSheetGoaliePlayed(button) {
     if (!found) return;
     const { side, box, line } = found;
 
-    if (line.timeOut) return;
+    if (line.timeMin != null || line.timeSec != null) return;
 
     line.played = !line.played;
     line.mark = Math.max(0, ...box.lines.map(l => l.mark)) + 1;
 
     refreshSheetGoalies(side);
+    refreshSheetTotals();
+    queueSheetGoalieSync(side);
+}
+
+// "+ Goalie change": another line, for a goalie who comes out again. It
+// starts on whoever's in net now, since he's the one who'd come out next.
+function onSheetGoalieAdd(button) {
+    const boxEl = button.closest(".gs-goalies");
+    if (!boxEl || !sheetGoalies) return;
+
+    const side = boxEl.dataset.side;
+    const box = sheetGoalies[side];
+    if (box.readOnly) return;
+
+    const stints = sheetGoalieStints(box.lines, sheetOvertimeSeconds(sheetRows, sheetGoalies));
+    const inNet = stints.length && !stints[stints.length - 1].time_out ? stints[stints.length - 1].goalie_id : null;
+
+    const line = sheetNewGoalieLine(inNet, true);
+    box.lines.push(line);
+    redrawSheetGoalieBox(side);
+
+    const first = document.querySelector(`.gs-goalie-row[data-line="${line.key}"] select`);
+    if (first) first.focus();
+}
+
+function onSheetGoalieRemove(button) {
+    const found = sheetGoalieLineFor(button);
+    if (!found || !found.line.extra) return;
+    const { side, box, line } = found;
+
+    box.lines.splice(box.lines.indexOf(line), 1);
+    redrawSheetGoalieBox(side);
     refreshSheetTotals();
     queueSheetGoalieSync(side);
 }
@@ -1677,21 +1776,12 @@ function setupSheetEvents() {
         const action = button.dataset.action;
         if (action === "erase") onSheetErase(button);
         else if (action === "goalie-played") onSheetGoaliePlayed(button);
+        else if (action === "goalie-add") onSheetGoalieAdd(button);
+        else if (action === "goalie-remove") onSheetGoalieRemove(button);
         else if (action === "show-side") setSheetActiveSide(button.dataset.side);
         else if (action === "start") startSheetGame();
         else if (action === "final") finalizeSheetGame();
         else if (action === "reopen") reopenSheetGame();
-    });
-
-    // Enter moves to the next box on the line, like tabbing across the sheet.
-    sheet.addEventListener("keydown", event => {
-        if (event.key !== "Enter" || !event.target.matches("input.gs-ink")) return;
-        event.preventDefault();
-        const boxes = Array.from(sheet.querySelectorAll(".gs-team input.gs-ink, .gs-team select.gs-ink"))
-            .filter(box => box.offsetParent !== null && !box.disabled);
-        const next = boxes[boxes.indexOf(event.target) + 1];
-        if (next) next.focus();
-        else event.target.blur();
     });
 
     document.getElementById("sheet-save-status").addEventListener("click", event => {
