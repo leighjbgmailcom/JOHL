@@ -76,7 +76,7 @@ async function loadRecap(date: string) {
   const data = await response.json();
   const recap = (data.recaps || []).find((entry: any) => entry.date === date);
   if (!recap) throw new Error(`There is no recap for ${date} on the site yet`);
-  return { show: data.show || "Rinkside Report", host: data.host || "Rusty Dunnigan", recap };
+  return { show: data.show || "Rinkside Report", host: data.host || "Arnie Jordan", recap };
 }
 
 async function loadScores(admin: any, date: string) {
@@ -117,7 +117,7 @@ function buildEmail(show: string, host: string, recap: any, scores: any[]) {
   const html = `<!DOCTYPE html>
 <html lang="en">
 <body style="margin:0;padding:0;background:#eef2f6;">
-  <div style="display:none;max-height:0;overflow:hidden;">${esc(recap.title)} &mdash; press play and hear ${esc(host)}'s take on the night.</div>
+  <div style="display:none;max-height:0;overflow:hidden;">${esc(recap.title)} &mdash; press play and hear ${esc(host)}'s notes from the stands.</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f6;">
     <tr>
       <td align="center" style="padding:24px 12px;">
@@ -141,12 +141,12 @@ function buildEmail(show: string, host: string, recap: any, scores: any[]) {
                   </td>
                 </tr>
               </table>
-              <p style="margin:22px 0 0;font-size:13px;line-height:1.5;color:#6b7a8a;text-align:center;">About three minutes. Press play, or read along on the page.</p>
+              <p style="margin:22px 0 0;font-size:13px;line-height:1.5;color:#6b7a8a;text-align:center;">A few minutes of your week. Press play, or read along on the page.</p>
             </td>
           </tr>
           <tr>
             <td style="background:#f6f8fa;padding:16px 24px;font-size:12px;line-height:1.5;color:#6b7a8a;">
-              You're getting this because you're on a JOHL roster this season. ${esc(host)} is a made-up character &mdash; his recaps are written and voiced by computer from the league's score sheets. Don't want these? Reply to this email and we'll take you off the list.
+              You're getting this because you're on a JOHL roster this season. ${esc(host)} is a made-up character &mdash; the goals and scores are real, straight from the league's score sheets, and the rest of his notes are written and voiced by computer for a laugh. Don't want these? Reply to this email and we'll take you off the list.
             </td>
           </tr>
         </table>
@@ -167,14 +167,16 @@ function buildEmail(show: string, host: string, recap: any, scores: any[]) {
     scoreText ? "" : null,
     teaser,
     "",
-    `Hear the full recap (about three minutes): ${link}`,
+    `Hear the full recap: ${link}`,
     "",
-    `You're getting this because you're on a JOHL roster this season. ${host} is a made-up character - his recaps are written and voiced by computer from the league's score sheets. Don't want these? Reply to this email and we'll take you off the list.`,
+    `You're getting this because you're on a JOHL roster this season. ${host} is a made-up character - the goals and scores are real, straight from the league's score sheets, and the rest of his notes are written and voiced by computer for a laugh. Don't want these? Reply to this email and we'll take you off the list.`,
   ]
     .filter((line) => line !== null)
     .join("\n");
 
-  return { subject: `${show}: ${recap.title}`, html, text };
+  // The sender's name already says whose report it is, so the subject is
+  // just the night's headline.
+  return { subject: recap.title, html, text };
 }
 
 Deno.serve(async (req: Request) => {

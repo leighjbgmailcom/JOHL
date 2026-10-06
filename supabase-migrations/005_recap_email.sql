@@ -43,7 +43,7 @@ insert into public.app_config (key, value) values
     -- The password the database shows the Edge Function. Made up here, never shown anywhere.
     ('recap_email_secret', encode(extensions.gen_random_bytes(32), 'hex')),
     -- Who the email comes from. Has to be on a domain verified in Resend.
-    ('recap_email_from', 'Rinkside Report <noreply@jordanohl.ca>'),
+    ('recap_email_from', 'JOHL Rinkside Report <noreply@jordanohl.ca>'),
     -- Whole-league sends stay off until the league says go.
     ('recap_email_all_enabled', 'false')
 on conflict (key) do nothing;

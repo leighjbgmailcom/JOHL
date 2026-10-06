@@ -2,9 +2,11 @@
 
 Every game night gets a recap on the site: a short piece of colour
 commentary on all the games, as text and as an audio file, at
-`recaps.html`. The voice is **Rusty Dunnigan**, a made-up old-time colour
-man. He is an original character — he is not, and must never be written
-or voiced as, an impression of a real broadcaster.
+`recaps.html`. The voice is **Arnie Jordan**, a made-up local who watches
+every game from row three at Jordan Arena with a coffee and a notebook
+and reports on it for his podcast's two (sometimes three) loyal
+listeners. He is an original character — he is not, and must never be
+written or voiced as, an impression of a real broadcaster.
 
 This is the whole job, start to finish.
 
@@ -22,17 +24,32 @@ From Supabase (project `wjsxpywxwjordtzzjrue`), for the game date:
 If a game from that night isn't `final` yet, stop and say so rather than
 writing around it.
 
-## 2. Write Rusty's script
+## 2. Write Arnie's script
 
 Save it as `recaps/scripts/YYYY-MM-DD.txt`, plain text, a blank line
-between paragraphs. About 450–550 words (three minutes).
+between paragraphs. About 600–750 words (three to four minutes).
 
-- Open with "Rusty Dunnigan here with the Rinkside Report for …" and
-  close with "This has been Rusty Dunnigan with the Rinkside Report."
+- Open with "Arnie Jordan here, coming to you from row three at Jordan
+  Arena, with the Rinkside Report …" and close with "This has been Arnie
+  Jordan with the Rinkside Report."
+- He was **there**: he tells it as a fella in the stands taking notes,
+  not as someone reading a score sheet. Give him a running bit or two a
+  week — the coffee, the pencil and notebook, the stairs to row three,
+  his tiny audience — and don't repeat last week's jokes word for word.
 - A paragraph or two a game: the score, who drove it, the turning point,
   a goalie note, the penalty box. Finish with the night as a whole.
-- **Only what the score sheets say.** Every name, number and time has to
-  come from the data. No invented plays, quotes, injuries or history.
+- **The hockey is real.** Every name, score, goal, assist, penalty and
+  time has to come from the data, and nothing a named player is said to
+  have done can be invented.
+- **The bloopers are made up, and nobody owns them.** Two or three a
+  week for colour: a pass that missed everybody, a shot that went so wide
+  it hit the glass in front of him, his own spilled coffee. They never
+  get a player's name or number ("I didn't catch who threw it, and I'm
+  not asking"), and a goalie "making it look easy" is only said about a
+  goalie whose numbers that night back it up. No invented quotes,
+  injuries, fights or history.
+- End with his standing excuse: if he got a name or a goal wrong, take it
+  up with the refs, the timekeeper, and how fast they all move out there.
 - Good-natured. Tease a team, never a man: nothing about anyone's age,
   body, health, family or job, and a player with a penalty gets a wink,
   not a roasting. These are neighbours reading about themselves.
