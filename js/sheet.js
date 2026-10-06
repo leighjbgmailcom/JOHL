@@ -25,6 +25,11 @@
 
    Shared helpers (clock parsing, the goalie maths, the infraction list)
    come from js/app.js, loaded before this file.
+
+   Everything about a game is read and written through sheetDb() (see
+   js/sheet-practice.js, also loaded before this file): the league
+   database on the real sheet, a throwaway copy in the page's memory on
+   the practice one (sheet.html?practice).
    ========================================= */
 
 // Visitors on the left, Home on the right -- the order on the paper sheet.
@@ -194,7 +199,8 @@ function sheetGameSlot(game) {
     const sameNight = SCHEDULE
         .filter(g => g.date === game.game_date && !g.noGames)
         .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
-    const index = sameNight.findIndex(g => String(g.id) === String(game.id));
+    // (The practice game is a copy; it sits in the slot of the game it copies.)
+    const index = sameNight.findIndex(g => String(g.id) === String(game.practiceOf || game.id));
     return index === -1 ? null : index + 1;
 }
 
@@ -450,7 +456,13 @@ function sheetBuildGoalieBox(side, dbRows, otSeconds) {
 // finished games, so a sheet can be reopened to fix something after the
 // game's been marked final.
 async function loadSheetGames() {
-    const { data, error } = await supabaseClient
+    // Practice: the list is one game, a copy of the next one coming up.
+    if (SHEET_PRACTICE && !(await sheetPracticeBuildGame())) {
+        document.getElementById("sheet-empty").textContent = "Couldn't set up a practice game — there's nothing on the schedule to copy. Check the connection and reload.";
+        return;
+    }
+
+    const { data, error } = await sheetDb()
         .from("games")
         .select("id, game_no, game_date, game_time, location, away_team_id, home_team_id, away_score, home_score, status, went_ot, no_games")
         .eq("no_games", false)
@@ -473,7 +485,7 @@ async function loadSheetGames() {
         .slice(0, 3);
     const justFinished = all.filter(game => game.status === "final" && game.game_date >= recentIso);
 
-    SHEET_GAMES = [...justFinished, ...upcoming];
+    SHEET_GAMES = SHEET_PRACTICE ? all : [...justFinished, ...upcoming];
 
     // Whatever sheet is open stays in the list, whatever its date or status.
     if (sheetGame && !SHEET_GAMES.some(game => String(game.id) === String(sheetGame.id))) {
@@ -490,7 +502,7 @@ async function loadSheetGames() {
                 return t ? t.name : "TBD";
             };
             const tag = game.status === "live" ? " (Live)" : game.status === "final" ? " (Final)" : "";
-            const label = `${game.game_date} ${formatTime12h(game.game_time ? game.game_time.substring(0, 5) : "")} — ` +
+            const label = (SHEET_PRACTICE ? "PRACTICE — " : `${game.game_date} ${formatTime12h(game.game_time ? game.game_time.substring(0, 5) : "")} — `) +
                 `${team(game.away_team_id)} @ ${team(game.home_team_id)}${tag}`;
             return `<option value="${game.id}">${sheetEsc(label)}</option>`;
         }).join("");
@@ -530,10 +542,10 @@ async function onSheetGameChange() {
     sheet.innerHTML = `<p class="gs-loading">Opening the sheet…</p>`;
 
     const [goals, penalties, goaliePeriods, attendance] = await Promise.all([
-        supabaseClient.from("game_goals").select("*").eq("game_id", game.id),
-        supabaseClient.from("game_penalties").select("*").eq("game_id", game.id),
-        supabaseClient.from("game_goalie_periods").select("*").eq("game_id", game.id),
-        supabaseClient.from("game_attendance").select("*").eq("game_id", game.id)
+        sheetDb().from("game_goals").select("*").eq("game_id", game.id),
+        sheetDb().from("game_penalties").select("*").eq("game_id", game.id),
+        sheetDb().from("game_goalie_periods").select("*").eq("game_id", game.id),
+        sheetDb().from("game_attendance").select("*").eq("game_id", game.id)
     ]);
 
     // Somebody picked a different game while this one was loading.
@@ -867,6 +879,7 @@ function renderSheet() {
     const slot = sheetGameSlot(game);
 
     sheet.innerHTML = `
+        ${SHEET_PRACTICE ? `<div class="gs-practice-strip"><strong>Practice game</strong> Nothing written here is saved or shown on the site.</div>` : ""}
         <div class="gs-banner">
             <span class="gs-banner-game">Game${slot ? " " + slot : ""}</span>
             <span class="gs-banner-date">${sheetEsc(sheetLongDate(game.game_date))}</span>
@@ -934,6 +947,9 @@ function setSheetActiveSide(side) {
         button.classList.toggle("active", active);
         button.setAttribute("aria-selected", active ? "true" : "false");
     });
+
+    // The practice coach points at whichever team is showing.
+    if (SHEET_PRACTICE) updateSheetCoach();
 }
 
 // Appends any newly added blank lines to a box that's already on screen.
@@ -1144,12 +1160,14 @@ function refreshSheetStatus() {
     const stamp = document.getElementById("sheet-stamp");
     if (!stamp) return;
     stamp.hidden = status !== "final" && status !== "live";
-    stamp.textContent = status === "final" ? "Final" : "Live";
+    stamp.textContent = (SHEET_PRACTICE ? "Practice · " : "") + (status === "final" ? "Final" : "Live");
     stamp.classList.toggle("is-live", status === "live");
 
     document.getElementById("sheet-start-button").hidden = status !== "scheduled";
     document.getElementById("sheet-final-button").hidden = status === "final";
     document.getElementById("sheet-reopen-button").hidden = status !== "final";
+
+    if (SHEET_PRACTICE) updateSheetCoach();
 }
 
 function sheetFailedRows() {
@@ -1171,6 +1189,8 @@ function updateSheetSaveStatus() {
 
     el.classList.remove("is-saving", "is-problem");
 
+    if (SHEET_PRACTICE) updateSheetCoach();
+
     if (!sheetGame || !sheetRows) {
         el.textContent = "";
         return;
@@ -1185,7 +1205,7 @@ function updateSheetSaveStatus() {
         el.innerHTML = `${failed} line${failed === 1 ? "" : "s"} not saved <button type="button" class="gs-retry" data-action="retry-all">Try again</button>`;
         el.classList.add("is-problem");
     } else {
-        el.textContent = "✓ Everything on the sheet is saved";
+        el.textContent = SHEET_PRACTICE ? "Practice only — nothing here is saved to the site" : "✓ Everything on the sheet is saved";
     }
 }
 
@@ -1236,9 +1256,9 @@ function queueSheetRowSave(kind, side, row) {
         let result;
 
         if (row.id) {
-            result = await supabaseClient.from(SHEET_TABLE[kind]).update(payload).eq("id", row.id);
+            result = await sheetDb().from(SHEET_TABLE[kind]).update(payload).eq("id", row.id);
         } else {
-            result = await supabaseClient
+            result = await sheetDb()
                 .from(SHEET_TABLE[kind])
                 .insert({ game_id: game.id, team_id: teamId, ...payload })
                 .select()
@@ -1275,7 +1295,7 @@ function queueSheetRowErase(kind, side, row) {
 
     row.chain = row.chain.then(async () => {
         if (!row.id) return;
-        const { error } = await supabaseClient.from(SHEET_TABLE[kind]).delete().eq("id", row.id);
+        const { error } = await sheetDb().from(SHEET_TABLE[kind]).delete().eq("id", row.id);
         if (error) throw error;
         row.id = null;
     }).then(() => {
@@ -1328,7 +1348,7 @@ function queueSheetGoalieSync(side) {
         // latest state of the box that's written.
         const wanted = sheetGoalieStints(box.lines, sheetOvertimeSeconds(rows, goalies))
             .map(stint => ({ goalie_id: stint.goalie_id, period: stint.period, time_out: stint.time_out }));
-        const table = () => supabaseClient.from("game_goalie_periods");
+        const table = () => sheetDb().from("game_goalie_periods");
 
         for (let i = 0; i < wanted.length; i++) {
             const existing = box.dbRows[i];
@@ -1382,7 +1402,7 @@ function queueSheetScoreSync(game, rows) {
         if (game.status === "scheduled" && awayScore + homeScore > 0) updates.status = "live";
         if (!Object.keys(updates).length) return;
 
-        const { error } = await supabaseClient.from("games").update(updates).eq("id", game.id);
+        const { error } = await sheetDb().from("games").update(updates).eq("id", game.id);
         if (error) throw error;
 
         Object.assign(game, updates);
@@ -1652,11 +1672,11 @@ async function onSheetAttendanceChange(checkbox) {
 
     let error;
     if (checked) {
-        ({ error } = await supabaseClient
+        ({ error } = await sheetDb()
             .from("game_attendance")
             .insert({ game_id: game.id, team_id: sheetSideTeamId(game, side), player_id: playerId }));
     } else {
-        ({ error } = await supabaseClient
+        ({ error } = await sheetDb()
             .from("game_attendance")
             .delete()
             .eq("game_id", game.id)
@@ -1689,7 +1709,7 @@ async function setSheetGameStatus(updates, failureMessage) {
     const message = document.getElementById("sheet-signoff-message");
     message.textContent = "Saving…";
 
-    const { error } = await supabaseClient.from("games").update(updates).eq("id", game.id);
+    const { error } = await sheetDb().from("games").update(updates).eq("id", game.id);
 
     if (error) {
         console.error(error);
@@ -1764,7 +1784,9 @@ async function finalizeSheetGame() {
 }
 
 function reopenSheetGame() {
-    if (!confirm("Reopen this game? It comes off the standings until it's marked Final again.")) return;
+    if (!confirm(SHEET_PRACTICE
+        ? "Reopen the practice game?"
+        : "Reopen this game? It comes off the standings until it's marked Final again.")) return;
     return setSheetGameStatus({ status: "live" }, "There was a problem reopening the game.");
 }
 
@@ -1854,8 +1876,15 @@ async function initSheetPage() {
         return;
     }
 
+    setupSheetPractice();
     setupSheetEvents();
     await loadSheetGames();
+
+    // The practice game opens by itself: there's only the one.
+    if (SHEET_PRACTICE && SHEET_GAMES.length) {
+        document.getElementById("sheet-game-select").value = String(SHEET_GAMES[0].id);
+        await onSheetGameChange();
+    }
 }
 
 // Note: js/app.js's own DOMContentLoaded listener already runs

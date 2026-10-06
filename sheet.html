@@ -8,8 +8,8 @@
     <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
     <link rel="icon" href="images/icons/icon-192.png">
     <title>Score Sheet | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=30">
-    <link rel="stylesheet" href="css/sheet.css?v=30">
+    <link rel="stylesheet" href="css/style.css?v=31">
+    <link rel="stylesheet" href="css/sheet.css?v=31">
 </head>
 
 <body>
@@ -32,12 +32,19 @@
         </div>
         <div class="gs-save-status" id="sheet-save-status" aria-live="polite"></div>
         <button type="button" class="gs-tool-button" id="sheet-print-button" hidden>Print sheet</button>
+        <!-- The real sheet shows the way into practice; practice shows the way out. -->
+        <a class="gs-tool-button gs-practice-link" id="sheet-practice-link" href="sheet.html?practice" hidden>Practice game</a>
+        <button type="button" class="gs-tool-button" id="sheet-practice-restart" hidden>Start over</button>
+        <a class="gs-tool-button gs-practice-exit" id="sheet-practice-exit" href="sheet.html" hidden>Leave practice</a>
     </div>
 
     <p class="gs-empty gs-screen-only" id="sheet-empty">Pick a game above to open its score sheet.</p>
 
     <!-- The sheet itself. Everything inside is built by js/sheet.js. -->
     <div class="gs-sheet" id="sheet" hidden></div>
+
+    <!-- Practice only: the step-by-step coach, built by js/sheet-practice.js. -->
+    <aside class="gs-coach gs-screen-only" id="sheet-coach" aria-live="polite" hidden></aside>
 
 </main>
 
@@ -59,13 +66,14 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js?v=30"></script>
-<script src="js/header.js?v=30"></script>
-<script src="js/install.js?v=30"></script>
-<script src="js/db.js?v=30"></script>
-<script src="js/app.js?v=30"></script>
-<script src="js/auth.js?v=30"></script>
-<script src="js/sheet.js?v=30"></script>
+<script src="js/supabase.js?v=31"></script>
+<script src="js/header.js?v=31"></script>
+<script src="js/install.js?v=31"></script>
+<script src="js/db.js?v=31"></script>
+<script src="js/app.js?v=31"></script>
+<script src="js/auth.js?v=31"></script>
+<script src="js/sheet-practice.js?v=31"></script>
+<script src="js/sheet.js?v=31"></script>
 
 </body>
 </html>
