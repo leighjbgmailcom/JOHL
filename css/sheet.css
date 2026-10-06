@@ -382,7 +382,7 @@ input:focus-visible + .gs-tick {
 
 .gs-goalie-row {
     display: grid;
-    grid-template-columns: 46px minmax(0, 1fr) minmax(0, 1.9fr);
+    grid-template-columns: 44px 50px minmax(0, 1fr);
     min-height: 36px;
 }
 
@@ -440,18 +440,14 @@ input:focus-visible + .gs-tick {
 }
 
 .gs-goalie-time {
-    gap: 2px;
     padding: 0 2px;
 }
 
-.gs-goalie-time select.gs-ink {
-    flex: 0 0 46px;
-    width: 46px;
+/* Period first, then the two rolls of the time. */
+.gs-goalie-time select.gs-goalie-period {
+    flex: 0 0 40px;
+    width: 40px;
     font-size: 14px;
-}
-
-.gs-goalie-time:not(.has-time) select.gs-ink {
-    display: none;
 }
 
 .gs-goalie-foot {
@@ -515,11 +511,11 @@ input:focus-visible + .gs-tick {
 }
 
 .gs-box-pen .gs-row {
-    grid-template-columns: 48px 56px minmax(0, 1.5fr) 64px 82px minmax(0, 1.25fr) 26px;
+    grid-template-columns: 48px 56px minmax(0, 1.5fr) 82px 82px minmax(0, 1.25fr) 26px;
 }
 
 .gs-box-goal .gs-row {
-    grid-template-columns: 48px minmax(0, 1.7fr) 70px 62px 62px 62px 26px;
+    grid-template-columns: 48px minmax(0, 1.7fr) 82px 60px 60px 60px 26px;
 }
 
 .gs-row .gs-cell {
@@ -575,6 +571,38 @@ input:focus-visible + .gs-tick {
     outline: 3px solid #f2b705;
     outline-offset: -3px;
     background: #fffbe0;
+}
+
+/* A time: the minutes roll, a colon, the seconds roll. */
+.gs-cell select.gs-roll {
+    flex: 1 1 0;
+    width: auto;
+    padding: 0;
+}
+
+.gs-cell select.gs-roll[data-field="timeMin"],
+.gs-cell select.gs-roll[data-gfield="timeMin"] {
+    text-align: right;
+    text-align-last: right;
+    padding-right: 1px;
+}
+
+.gs-cell select.gs-roll[data-field="timeSec"],
+.gs-cell select.gs-roll[data-gfield="timeSec"] {
+    text-align: left;
+    text-align-last: left;
+    padding-left: 1px;
+}
+
+.gs-colon {
+    color: var(--gs-ink);
+    font-size: 19px;
+    font-weight: bold;
+    visibility: hidden;
+}
+
+.has-time > .gs-colon {
+    visibility: visible;
 }
 
 .gs-name select.gs-ink {
@@ -649,8 +677,7 @@ input:focus-visible + .gs-tick {
     background: var(--gs-highlight);
 }
 
-.gs-row .gs-cell.is-bad,
-.gs-goalie-time.is-bad {
+.gs-row .gs-cell.is-bad {
     background: #fde3e6;
 }
 
@@ -664,11 +691,15 @@ input:focus-visible + .gs-tick {
 @container (max-width: 520px) {
 
     .gs-box-pen .gs-row {
-        grid-template-columns: 38px 42px minmax(0, 1.3fr) 54px 62px minmax(0, 1fr) 22px;
+        grid-template-columns: 34px 38px minmax(0, 1.3fr) 64px 62px minmax(0, 1fr) 22px;
     }
 
     .gs-box-goal .gs-row {
-        grid-template-columns: 38px minmax(0, 1.5fr) 58px 46px 46px 46px 22px;
+        grid-template-columns: 34px minmax(0, 1.5fr) 66px 44px 44px 44px 22px;
+    }
+
+    .gs-colon {
+        font-size: 17px;
     }
 
     .gs-note {
@@ -718,16 +749,20 @@ input:focus-visible + .gs-tick {
     }
 
     .gs-goalie-row {
-        grid-template-columns: 38px minmax(0, 1fr) minmax(0, 2.2fr);
+        grid-template-columns: 36px 40px minmax(0, 1fr);
     }
 
-    .gs-goalie-time select.gs-ink {
-        flex-basis: 40px;
-        width: 40px;
+    .gs-goalie-time select.gs-goalie-period {
+        flex-basis: 36px;
+        width: 36px;
     }
 
     .gs-score-grid .gs-cell {
         font-size: 21px;
+    }
+
+    .gs-score-grid .gs-score-head {
+        font-size: 13px;
     }
 
 }
@@ -750,6 +785,10 @@ input:focus-visible + .gs-tick {
     .gs-score {
         flex: 1 1 0;
         min-width: 0;
+    }
+
+    .gs-goalies {
+        flex-grow: 1.7;
     }
 
 }
@@ -987,11 +1026,15 @@ input:focus-visible + .gs-tick {
     }
 
     .gs-box-pen .gs-row {
-        grid-template-columns: 30px 32px minmax(0, 1.5fr) 44px 50px minmax(0, 1.1fr);
+        grid-template-columns: 30px 32px minmax(0, 1.5fr) 48px 50px minmax(0, 1.1fr);
     }
 
     .gs-box-goal .gs-row {
-        grid-template-columns: 30px minmax(0, 1.6fr) 46px 42px 42px 42px;
+        grid-template-columns: 30px minmax(0, 1.6fr) 48px 40px 40px 40px;
+    }
+
+    .gs-colon {
+        font-size: 13px;
     }
 
     .gs-row.is-pencil .gs-cell,
@@ -1035,7 +1078,7 @@ input:focus-visible + .gs-tick {
     }
 
     .gs-goalie-row {
-        grid-template-columns: 26px minmax(0, 1fr) minmax(0, 1.9fr);
+        grid-template-columns: 26px 34px minmax(0, 1fr);
         min-height: 22px;
     }
 
@@ -1074,14 +1117,14 @@ input:focus-visible + .gs-tick {
 
     .gs-name select.gs-ink,
     .gs-on select.gs-ink,
-    .gs-goalie-time select.gs-ink {
+    .gs-goalie-time select.gs-goalie-period {
         font-size: 11px;
         padding-left: 3px;
     }
 
-    .gs-goalie-time select.gs-ink {
-        flex-basis: 30px;
-        width: 30px;
+    .gs-goalie-time select.gs-goalie-period {
+        flex-basis: 28px;
+        width: 28px;
     }
 
     .gs-box {

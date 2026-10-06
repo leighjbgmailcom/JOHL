@@ -156,29 +156,33 @@ function sheetNumberOf(playerId) {
     return player && player.number != null ? String(player.number) : "";
 }
 
-// Reads a time as it was written. Blank is fine (no time recorded);
-// anything that isn't a clock reading, or is more than a full period,
-// comes back as a problem to show under the line.
-function sheetReadClock(text) {
-    const typed = String(text || "").trim();
-    if (!typed) return { value: null };
+// A time is picked in two rolls, minutes (0-20) and seconds (00-59),
+// so there's nothing to mis-type. These split a saved "9:05" into its
+// two parts and put them back together.
+function sheetSplitClock(text) {
+    const seconds = parseClockToSeconds(text);
+    if (seconds == null || seconds > REGULATION_PERIOD_SECONDS) return { min: null, sec: null };
+    return { min: String(Math.floor(seconds / 60)), sec: String(seconds % 60).padStart(2, "0") };
+}
 
-    // A bare "12" could be 12:00 or 0:12, so it isn't guessed at.
-    if (/^\d{1,2}$/.test(typed)) {
-        const n = parseInt(typed, 10);
-        const asSeconds = `0${String(n).padStart(2, "0")}`;
-        return {
-            bad: n <= 20 && n > 0
-                ? `Is "${typed}" ${n}:00 or 0:${String(n).padStart(2, "0")}? Write ${n}00 or ${asSeconds}`
-                : `Write "${typed}" seconds as ${asSeconds}`
-        };
-    }
+// Sets one roll of a time on a row or goalie line and works out the
+// whole time from the two: null until both are picked. A period only has
+// 20:00 on the clock, so 20 minutes always goes with 00 seconds.
+function sheetSetClockPart(target, timeField, part, value) {
+    target[part] = value === "" ? null : value;
+    if (target.timeMin === "20" && target.timeSec != null) target.timeSec = "00";
+    if (target.timeMin === "20" && part === "timeMin") target.timeSec = "00";
 
-    const seconds = parseClockToSeconds(typed);
-    if (seconds == null || seconds > REGULATION_PERIOD_SECONDS) {
-        return { bad: `Can't read "${typed}" as a time — write it like 948 or 9:48` };
-    }
-    return { value: formatSecondsAsClock(seconds) };
+    target[timeField] = target.timeMin != null && target.timeSec != null
+        ? `${target.timeMin}:${target.timeSec}`
+        : null;
+}
+
+// Which roll of a half-picked time is still to do, or null.
+function sheetClockMissing(target) {
+    if (target.timeMin != null && target.timeSec == null) return "pick the seconds";
+    if (target.timeMin == null && target.timeSec != null) return "pick the minutes";
+    return null;
 }
 
 // "Game 3" on the paper is the third game of the night, not the week
@@ -228,6 +232,8 @@ function sheetNewGoalRow(db) {
         id: db ? db.id : null,
         period: db ? db.period : null,
         time: db ? normalizeClockText(db.game_time) : null,
+        timeMin: db ? sheetSplitClock(db.game_time).min : null,
+        timeSec: db ? sheetSplitClock(db.game_time).sec : null,
         g: db ? sheetNumberOf(db.scorer_id) : "",
         a1: db ? sheetNumberOf(db.assist1_id) : "",
         a2: db ? sheetNumberOf(db.assist2_id) : "",
@@ -246,6 +252,8 @@ function sheetNewPenRow(db) {
         id: db ? db.id : null,
         period: db ? db.period : null,
         time: db ? normalizeClockText(db.game_time) : null,
+        timeMin: db ? sheetSplitClock(db.game_time).min : null,
+        timeSec: db ? sheetSplitClock(db.game_time).sec : null,
         no: db ? sheetNumberOf(db.player_id) : "",
         playerId: db ? db.player_id : null,
         minutes: db ? db.minutes : null,
@@ -261,14 +269,18 @@ const SHEET_NEW_ROW = { goal: sheetNewGoalRow, pen: sheetNewPenRow };
 // Does this line have anything written on it at all?
 function sheetRowHasEntry(kind, row) {
     if (row.id) return true;
-    if (kind === "goal") return !!(row.time || row.g || row.gId || row.a1 || row.a2);
-    return !!(row.time || row.no || row.playerId || row.infraction);
+    if (row.time || row.timeMin != null || row.timeSec != null) return true;
+    if (kind === "goal") return !!(row.g || row.gId || row.a1 || row.a2);
+    return !!(row.no || row.playerId || row.infraction);
 }
 
 // What a line still needs before it can be saved, in the timekeeper's
 // words -- or null if it has everything. The period is never assumed: a
 // goal in the wrong period charges it to the wrong goalie.
 function sheetRowMissing(kind, row) {
+    const clock = sheetClockMissing(row);
+    if (clock) return clock;
+
     if (kind === "goal") {
         if (!row.gId) return "write who scored — his number under Goal, or pick him under Player";
         if (!row.period) return "write the period";
@@ -331,7 +343,7 @@ function sheetPadRows(kind, side) {
    ========================================= */
 
 function sheetNewGoalieLine(goalieId) {
-    return { goalieId, played: false, mark: 0, period: null, timeOut: null, bad: {} };
+    return { goalieId, played: false, mark: 0, period: null, timeOut: null, timeMin: null, timeSec: null };
 }
 
 // The stints, in the order they were played, that one team's goalie
@@ -340,7 +352,7 @@ function sheetGoalieStints(lines, otSeconds) {
     const elapsed = line => gameElapsedSeconds(line.period, parseClockToSeconds(line.timeOut), otSeconds);
 
     const timed = lines
-        .filter(line => line.timeOut && !line.bad.timeOut && line.period)
+        .filter(line => line.timeOut && line.period)
         .sort((a, b) => elapsed(a) - elapsed(b));
     const stillIn = lines
         .filter(line => line.played && !line.timeOut)
@@ -396,6 +408,8 @@ function sheetBuildGoalieBox(side, dbRows, otSeconds) {
         if (stint.time_out) {
             if (line.timeOut) fits = false; // out twice: more than one line can hold
             line.timeOut = stint.time_out;
+            line.timeMin = sheetSplitClock(stint.time_out).min;
+            line.timeSec = sheetSplitClock(stint.time_out).sec;
             line.period = stint.period;
         } else {
             line.played = true;
@@ -563,6 +577,19 @@ function sheetPeriodOptionsHtml(selected) {
     ).join("");
 }
 
+// The two rolls of a time: minutes 0-20, then seconds 00-59.
+function sheetClockHtml(attr, target, label) {
+    const minutes = Array.from({ length: 21 }, (_, i) => String(i));
+    const seconds = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
+    const options = (values, selected) => `<option value=""></option>` +
+        values.map(v => `<option value="${v}" ${v === selected ? "selected" : ""}>${v}</option>`).join("");
+    return `
+        <select class="gs-ink gs-roll" ${attr}="timeMin" aria-label="${label}, minutes">${options(minutes, target.timeMin)}</select>
+        <span class="gs-colon" aria-hidden="true">:</span>
+        <select class="gs-ink gs-roll" ${attr}="timeSec" aria-label="${label}, seconds">${options(seconds, target.timeSec)}</select>
+    `;
+}
+
 function sheetInputHtml(field, value, label, extra = "") {
     return `<input type="text" class="gs-ink" data-field="${field}" value="${sheetEsc(value || "")}" aria-label="${label}" autocomplete="off" autocapitalize="off" spellcheck="false" ${extra}>`;
 }
@@ -571,15 +598,22 @@ function sheetNumberInputHtml(field, value, label) {
     return sheetInputHtml(field, value, label, `inputmode="numeric" maxlength="3"`);
 }
 
-// The team's roster by name, for the Player box. Whoever's already on
-// the line is always listed, even if he's since left the roster.
+// The team's roster for the Player box, number and name together
+// ("9 – Bergeron, Ken") in sweater-number order, since the number is
+// what gets called out. Whoever's already on the line is always listed,
+// even if he's since left the roster.
 function sheetPlayerOptionsHtml(side, selectedId) {
-    const players = sheetRoster(side);
+    const players = sheetRoster(side).sort((a, b) => {
+        if (a.number != null && b.number != null) return a.number - b.number || sheetByName(a, b);
+        if (a.number != null) return -1;
+        if (b.number != null) return 1;
+        return sheetByName(a, b);
+    });
     const selected = sheetPlayer(selectedId);
     if (selected && !players.some(p => String(p.id) === String(selected.id))) players.push(selected);
 
     return `<option value=""></option>` + players.map(p =>
-        `<option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""}>${sheetEsc(p.last)}, ${sheetEsc(p.first)}</option>`
+        `<option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""}>${p.number != null ? p.number + " – " : ""}${sheetEsc(p.last)}, ${sheetEsc(p.first)}</option>`
     ).join("");
 }
 
@@ -600,7 +634,7 @@ function sheetOffenceOptionsHtml(selected) {
 // length of the penalty (run time), carried into the next period if the
 // period ends first.
 function sheetPenaltyOnText(row, minutes) {
-    const off = row.bad.time ? null : parseClockToSeconds(row.time);
+    const off = parseClockToSeconds(row.time);
     if (off == null) return `${minutes} min`;
 
     const on = off - minutes * 60;
@@ -638,7 +672,7 @@ function sheetPenRowHtml(side, row) {
             <span class="gs-cell"><select class="gs-ink" data-field="period" aria-label="Period">${sheetPeriodOptionsHtml(row.period)}</select></span>
             <span class="gs-cell">${sheetNumberInputHtml("no", row.no, "Penalized player, sweater number")}</span>
             <span class="gs-cell gs-name"><select class="gs-ink" data-field="player" aria-label="Penalized player">${sheetPlayerOptionsHtml(side, row.playerId)}</select></span>
-            <span class="gs-cell">${sheetInputHtml("time", row.time, "Time off", `inputmode="numeric"`)}</span>
+            <span class="gs-cell gs-clock">${sheetClockHtml("data-field", row, "Time off")}</span>
             <span class="gs-cell gs-on"><select class="gs-ink" data-field="minutes" aria-label="Time back on (length of penalty)">${sheetOnOptionsHtml(row)}</select></span>
             <span class="gs-cell gs-name"><select class="gs-ink" data-field="infraction" aria-label="Offence">${sheetOffenceOptionsHtml(row.infraction)}</select></span>
             ${sheetEraseHtml()}
@@ -652,7 +686,7 @@ function sheetGoalRowHtml(side, row) {
         <div class="gs-row" data-kind="goal" data-side="${side}" data-key="${row.key}">
             <span class="gs-cell"><select class="gs-ink" data-field="period" aria-label="Period">${sheetPeriodOptionsHtml(row.period)}</select></span>
             <span class="gs-cell gs-name"><select class="gs-ink" data-field="player" aria-label="Goal scored by">${sheetPlayerOptionsHtml(side, row.gId)}</select></span>
-            <span class="gs-cell">${sheetInputHtml("time", row.time, "Time", `inputmode="numeric"`)}</span>
+            <span class="gs-cell gs-clock">${sheetClockHtml("data-field", row, "Time of goal")}</span>
             <span class="gs-cell">${sheetNumberInputHtml("g", row.g, "Goal, sweater number")}</span>
             <span class="gs-cell">${sheetNumberInputHtml("a1", row.a1, "First assist, sweater number")}</span>
             <span class="gs-cell">${sheetNumberInputHtml("a2", row.a2, "Second assist, sweater number")}</span>
@@ -704,11 +738,11 @@ function sheetGoalieBoxHtml(side) {
                 <button type="button" class="gs-goalie-no" data-action="goalie-played" title="${sheetEsc(name)} — tap if he played">${sheetEsc(number)}</button>
                 <span class="gs-cell gs-ga" title="Goals against, worked out from the goal times"></span>
                 <span class="gs-cell gs-goalie-time">
-                    <select class="gs-ink" data-gfield="period" aria-label="Period ${sheetEsc(name)} came out in">
+                    <select class="gs-ink gs-goalie-period" data-gfield="period" aria-label="Period ${sheetEsc(name)} came out in">
                         <option value=""></option>
                         ${GOALIE_CLOCK_PERIODS.map(p => `<option value="${p}">${SHEET_PERIOD_ORDINAL[p]}</option>`).join("")}
                     </select>
-                    <input type="text" class="gs-ink" data-gfield="timeOut" inputmode="numeric" autocomplete="off" aria-label="Time ${sheetEsc(name)} came out">
+                    ${sheetClockHtml("data-gfield", line, `Time ${sheetEsc(name)} came out`)}
                 </span>
             </div>
         `;
@@ -910,8 +944,11 @@ function refreshSheetRow(kind, side, row, justWritten) {
             if (control.value !== value) control.value = value;
         }
 
-        control.closest(".gs-cell").classList.toggle("is-bad", !!row.bad[field]);
+        if (!field.startsWith("time")) control.closest(".gs-cell").classList.toggle("is-bad", !!row.bad[field]);
     });
+
+    const clock = el.querySelector(".gs-clock");
+    if (clock) clock.classList.toggle("has-time", row.timeMin != null || row.timeSec != null);
 
     const note = sheetRowNote(kind, row);
     const noteEl = el.querySelector(".gs-note");
@@ -965,18 +1002,17 @@ function refreshSheetGoalies(side, justWritten) {
             if (control.value !== value) control.value = value;
         });
 
-        rowEl.querySelector(".gs-goalie-time").classList.toggle("is-bad", !!line.bad.timeOut);
-        rowEl.querySelector(".gs-goalie-time").classList.toggle("has-time", !!line.timeOut);
+        rowEl.querySelector(".gs-goalie-time").classList.toggle("has-time", line.timeMin != null || line.timeSec != null);
     });
 
     const foot = document.getElementById(`sheet-goalie-foot-${side}`);
-    const typo = box.lines.map(line => line.bad.timeOut).find(Boolean);
+    const halfPicked = box.lines.map(sheetClockMissing).find(Boolean);
     const stillIn = stints.filter(stint => !stint.time_out).length;
     let message = "";
     let retry = false;
 
     if (box.readOnly) message = "These goalie changes were entered in Admin and don't fit this box — change them there.";
-    else if (typo) message = typo;
+    else if (halfPicked) message = `Not saved yet — ${halfPicked}.`;
     else if (box.failed) { message = "Goalies not saved — tap here to try again"; retry = true; }
     else if (stillIn > 1) message = "Write the time the first goalie came out.";
     else if (stints.length && stillIn === 0) message = "Tap the number of the goalie who went in.";
@@ -1326,17 +1362,6 @@ function sheetSetPlayerPicked(row, field, idField, playerId) {
     row.bad[field] = null;
 }
 
-function sheetSetClockField(row, field, typed) {
-    const read = sheetReadClock(typed);
-    if (read.bad) {
-        row[field] = String(typed).trim();
-        row.bad[field] = read.bad;
-    } else {
-        row[field] = read.value;
-        row.bad[field] = null;
-    }
-}
-
 function onSheetFieldChange(control) {
     const el = control.closest(".gs-row");
     if (!el || !sheetRows) return;
@@ -1350,7 +1375,7 @@ function onSheetFieldChange(control) {
     const value = control.value;
 
     if (field === "period") row.period = value || null;
-    else if (field === "time") sheetSetClockField(row, "time", value);
+    else if (field === "timeMin" || field === "timeSec") sheetSetClockPart(row, "time", field, value);
     else if (kind === "goal") {
         if (field === "player") sheetSetPlayerPicked(row, "g", "gId", value);
         else sheetSetPlayerNumber(side, row, field, field + "Id", value);
@@ -1430,28 +1455,29 @@ function sheetGoalieLineFor(target) {
     return line && !box.readOnly ? { side, box, line } : null;
 }
 
-// A time (or its period) written beside a goalie: when he came out.
+// A period or a time picked beside a goalie: when he came out. The
+// time only counts once both of its rolls are picked.
 function onSheetGoalieFieldChange(control) {
     const found = sheetGoalieLineFor(control);
     if (!found) return;
     const { side, line } = found;
+    const field = control.dataset.gfield;
 
-    if (control.dataset.gfield === "timeOut") {
-        sheetSetClockField(line, "timeOut", control.value);
-        if (line.timeOut && !line.bad.timeOut) {
-            if (!line.period) line.period = SHEET_DEFAULT_GOALIE_OUT_PERIOD;
-        } else if (!line.timeOut) {
-            // No time out: he hasn't come out, so there's no period either.
-            line.period = null;
-        }
-    } else {
-        line.period = line.timeOut ? (control.value || SHEET_DEFAULT_GOALIE_OUT_PERIOD) : null;
+    if (field === "period") line.period = control.value || null;
+    else {
+        sheetSetClockPart(line, "timeOut", field, control.value);
+        // Time rubbed out altogether: he didn't come out, so no period either.
+        if (line.timeMin == null && line.timeSec == null) line.period = null;
     }
+
+    // The paper has no period beside the time: it's the 2nd unless one
+    // was picked.
+    if (line.timeOut && !line.period) line.period = SHEET_DEFAULT_GOALIE_OUT_PERIOD;
 
     refreshSheetGoalies(side, control);
     refreshSheetTotals();
 
-    if (line.bad.timeOut) updateSheetSaveStatus();
+    if (sheetClockMissing(line)) updateSheetSaveStatus();
     else queueSheetGoalieSync(side);
 }
 
@@ -1548,7 +1574,7 @@ function startSheetGame() {
 }
 
 function sheetUnsavedLineCount() {
-    let count = SHEET_SIDES.filter(side => sheetGoalies[side].failed || sheetGoalies[side].lines.some(line => line.bad.timeOut)).length;
+    let count = SHEET_SIDES.filter(side => sheetGoalies[side].failed || sheetGoalies[side].lines.some(sheetClockMissing)).length;
     SHEET_ROW_KINDS.forEach(kind => {
         SHEET_SIDES.forEach(side => {
             sheetRows[kind][side].forEach(row => {
