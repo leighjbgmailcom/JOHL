@@ -1766,6 +1766,7 @@ async function setupAuthNav() {
 
     slot.innerHTML = `
         ${isAdmin ? `<a href="live.html">Live Game</a>` : ""}
+        ${isAdmin ? `<a href="sheet.html">Score Sheet</a>` : ""}
         ${isAdmin ? `<a href="admin.html">Admin</a>` : ""}
         <a href="#" id="nav-logout-link">Logout</a>
     `;

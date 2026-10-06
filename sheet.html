@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#071a2b">
+    <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png">
+    <link rel="icon" href="images/icons/icon-192.png">
+    <title>Score Sheet | Jordan Oldtimers Hockey League</title>
+    <link rel="stylesheet" href="css/style.css?v=24">
+    <link rel="stylesheet" href="css/sheet.css?v=24">
+</head>
+
+<body>
+
+<div id="site-header-placeholder"></div>
+
+
+<main class="container page-content gs-page" id="sheet-page-content" style="display:none;">
+
+    <div class="page-title gs-screen-only">
+        <p class="eyebrow">TIMEKEEPER</p>
+        <h2>Score Sheet</h2>
+        <p>Fill it in the same way as the paper sheet — sweater numbers, period and time. Every line saves itself as soon as it's written.</p>
+    </div>
+
+    <div class="gs-toolbar gs-screen-only">
+        <div class="gs-toolbar-game">
+            <label for="sheet-game-select">Game</label>
+            <select id="sheet-game-select"></select>
+        </div>
+        <div class="gs-save-status" id="sheet-save-status" aria-live="polite"></div>
+        <button type="button" class="gs-tool-button" id="sheet-print-button" hidden>Print sheet</button>
+    </div>
+
+    <p class="gs-empty gs-screen-only" id="sheet-empty">Pick a game above to open its score sheet.</p>
+
+    <!-- The sheet itself. Everything inside is built by js/sheet.js. -->
+    <div class="gs-sheet" id="sheet" hidden></div>
+
+</main>
+
+
+<footer>
+
+    <div class="container footer-inner">
+
+        <div>
+            <strong>Jordan Oldtimers Hockey League</strong>
+            <p>Six teams. One great league.</p>
+        </div>
+
+        <p>© 2026 JOHL</p>
+
+    </div>
+
+</footer>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js?v=24"></script>
+<script src="js/header.js?v=24"></script>
+<script src="js/install.js?v=24"></script>
+<script src="js/db.js?v=24"></script>
+<script src="js/app.js?v=24"></script>
+<script src="js/auth.js?v=24"></script>
+<script src="js/sheet.js?v=24"></script>
+
+</body>
+</html>

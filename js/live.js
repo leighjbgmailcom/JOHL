@@ -99,7 +99,10 @@ function playerLabel(p) {
 // that's already "live" always stays in this list too, however its date
 // compares, so an in-progress game is never dropped mid-entry.
 async function loadLiveGames() {
-    const todayIso = new Date().toISOString().slice(0, 10);
+    // Today by the rink's clock, not UTC: toISOString() rolls over to
+    // tomorrow at 8 PM Eastern (7 PM in winter), which dropped that
+    // night's later games off this list before they'd started.
+    const todayIso = todayISO();
 
     const { data, error } = await supabaseClient
         .from("games")

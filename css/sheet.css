@@ -1,0 +1,977 @@
+/* =========================================
+   JORDAN OLDTIMERS HOCKEY LEAGUE
+   SCORE SHEET (sheet.html) — the timekeeper's paper-style entry screen
+
+   Only sheet.html loads this file, on top of css/style.css. Everything
+   is prefixed .gs- ("game sheet") so nothing here can touch another page.
+
+   The look: a sheet of paper with printed black rules and labels, filled
+   in with blue ink. A line that isn't saved yet is highlighted yellow
+   (still "in pencil"); a box that can't be read is marked red.
+   ========================================= */
+
+.gs-page {
+    --gs-paper: #fdfcf8;
+    --gs-rule: #1c232b;        /* heavy printed rules and box edges */
+    --gs-rule-light: #9aa3ab;  /* the fine rules between lines */
+    --gs-printed: #1c232b;     /* printed labels */
+    --gs-ink: #1638a6;         /* what's written on the sheet */
+    --gs-pencil: #5f6b76;      /* the notes beside a line */
+    --gs-highlight: #fff6c2;   /* a line that isn't saved yet */
+    --gs-red: #c8102e;
+    --gs-line: 40px;           /* height of one ruled line */
+
+    width: min(1400px, 96%);
+    padding-top: 35px;
+}
+
+.gs-page .page-title {
+    margin-bottom: 20px;
+}
+
+
+/* =========================================
+   TOOLBAR (game picker, save status, print)
+   ========================================= */
+
+.gs-toolbar {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 12px 18px;
+    margin-bottom: 18px;
+}
+
+.gs-toolbar-game {
+    flex: 1 1 320px;
+    max-width: 560px;
+}
+
+.gs-toolbar-game label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    color: #45525c;
+    margin-bottom: 6px;
+}
+
+.gs-toolbar-game select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccd3d9;
+    border-radius: 4px;
+    font-size: 16px;
+    background: white;
+}
+
+.gs-save-status {
+    flex: 1 1 auto;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #1f7a45;
+}
+
+.gs-save-status.is-saving {
+    color: #64727e;
+}
+
+.gs-save-status.is-problem {
+    color: var(--gs-red);
+}
+
+.gs-tool-button,
+.gs-retry {
+    font: inherit;
+    font-size: 14px;
+    font-weight: bold;
+    color: #17212b;
+    background: white;
+    border: 1px solid #b4bec7;
+    border-radius: 4px;
+    padding: 11px 16px;
+    cursor: pointer;
+}
+
+.gs-retry {
+    padding: 6px 12px;
+}
+
+.gs-tool-button:hover,
+.gs-retry:hover {
+    background: #eef1f4;
+}
+
+.gs-page button.button {
+    font: inherit;
+    font-weight: bold;
+    border: 0;
+    cursor: pointer;
+}
+
+.gs-empty,
+.gs-loading {
+    color: #64727e;
+    padding: 30px 0;
+}
+
+.gs-loading {
+    padding: 40px 20px;
+    text-align: center;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+
+/* =========================================
+   THE SHEET
+   ========================================= */
+
+.gs-sheet {
+    background: var(--gs-paper);
+    color: var(--gs-printed);
+    border: 2px solid var(--gs-rule);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, .04), 0 10px 28px rgba(7, 26, 43, .16);
+    padding: 16px;
+}
+
+/* Small capitals in black: anything "printed" on the form. */
+.gs-printed,
+.gs-box-title,
+.gs-head .gs-cell {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--gs-printed);
+}
+
+/* Blue ink: anything written on the form. */
+.gs-written,
+.gs-ink {
+    color: var(--gs-ink);
+    font-weight: bold;
+}
+
+
+/* ----- Masthead ----- */
+
+.gs-masthead {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 3px double var(--gs-rule);
+    position: relative;
+}
+
+.gs-masthead-logo {
+    height: 46px;
+    width: auto;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.gs-masthead-title {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.gs-masthead-title strong {
+    font-size: clamp(16px, 2.4vw, 22px);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #071a2b;
+}
+
+.gs-masthead-title span {
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--gs-red);
+}
+
+/* The rubber stamp: LIVE while the game's on, FINAL once it's done. */
+.gs-stamp {
+    margin-left: auto;
+    padding: 3px 12px;
+    border: 3px solid var(--gs-red);
+    border-radius: 6px;
+    color: var(--gs-red);
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    transform: rotate(-5deg);
+    opacity: .85;
+}
+
+.gs-stamp.is-live {
+    border-color: #1f7a45;
+    color: #1f7a45;
+}
+
+
+/* ----- Game No. / Date / Time / Arena ----- */
+
+.gs-fields {
+    display: grid;
+    grid-template-columns: 1fr 2.4fr 1fr 2fr;
+    gap: 10px 18px;
+    padding: 12px 0;
+}
+
+.gs-field {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.gs-field .gs-printed {
+    flex-shrink: 0;
+}
+
+.gs-field .gs-written {
+    flex: 1;
+    min-width: 0;
+    min-height: 26px;
+    padding: 0 4px 1px;
+    border-bottom: 1px solid var(--gs-rule);
+    font-size: 16px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* ----- Score by period ----- */
+
+.gs-scorebox {
+    border: 2px solid var(--gs-rule);
+    margin-bottom: 14px;
+}
+
+.gs-score-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(5, 52px) 76px;
+    min-height: 38px;
+}
+
+.gs-score-row + .gs-score-row {
+    border-top: 1px solid var(--gs-rule-light);
+}
+
+.gs-score-row > span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid var(--gs-rule-light);
+    font-size: 18px;
+}
+
+.gs-score-row > .gs-score-team {
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 0 10px;
+    border-left: 0;
+    font-size: 16px;
+    font-weight: bold;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.gs-score-row > .gs-score-total {
+    border-left: 2px solid var(--gs-rule);
+    font-size: 24px;
+    font-weight: 900;
+}
+
+.gs-score-head {
+    min-height: 26px;
+    background: #eceae2;
+    border-bottom: 1px solid var(--gs-rule);
+}
+
+.gs-score-head > span,
+.gs-score-head > .gs-score-total,
+.gs-score-head > .gs-score-team {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+.gs-score-team .gs-printed {
+    width: 58px;
+    flex-shrink: 0;
+    color: var(--gs-pencil);
+}
+
+
+/* ----- Home | Visitor tabs (phone width only) ----- */
+
+.gs-side-tabs {
+    display: none;
+}
+
+
+/* ----- The two teams ----- */
+
+.gs-teams {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+}
+
+.gs-team {
+    container-type: inline-size;
+    min-width: 0;
+    margin-bottom: 0; /* style.css spaces every <section> out; not on the sheet */
+}
+
+.gs-team-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 46px;
+    padding: 4px 10px;
+    border: 2px solid var(--gs-rule);
+    border-bottom: 0;
+    background: #eceae2;
+}
+
+.gs-team-head .gs-printed {
+    flex-shrink: 0;
+}
+
+.gs-team-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 19px;
+    min-width: 0;
+}
+
+.gs-team-name .team-badge-logo,
+.gs-team-name .team-badge {
+    width: 36px;
+    height: 36px;
+    margin: 0;
+    flex-shrink: 0;
+    font-size: 10px;
+}
+
+.gs-box {
+    border: 2px solid var(--gs-rule);
+    border-bottom: 0;
+}
+
+.gs-team .gs-box:last-child {
+    border-bottom: 2px solid var(--gs-rule);
+}
+
+.gs-box-title {
+    padding: 5px 10px;
+    background: #1c232b;
+    color: white;
+    font-size: 12px;
+}
+
+.gs-box-title small {
+    font-size: 10px;
+    font-weight: normal;
+    letter-spacing: .03em;
+    text-transform: none;
+    opacity: .75;
+    margin-left: 6px;
+}
+
+.gs-box-foot {
+    font-size: 12px;
+    color: var(--gs-red);
+    font-weight: bold;
+}
+
+.gs-box-foot:not(:empty) {
+    padding: 6px 10px;
+    border-top: 1px solid var(--gs-rule-light);
+}
+
+
+/* ----- Line-up ----- */
+
+.gs-lineup {
+    columns: 2;
+    column-gap: 0;
+    column-rule: 1px solid var(--gs-rule);
+}
+
+.gs-lineup-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--gs-rule-light);
+    break-inside: avoid;
+    cursor: pointer;
+    position: relative;
+}
+
+.gs-lineup-row input,
+.gs-ot input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+/* The box that gets the check mark. */
+.gs-check {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border: 1.5px solid var(--gs-rule);
+    background: white;
+    display: grid;
+    place-items: center;
+    color: var(--gs-ink);
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+input:checked + .gs-check::after {
+    content: "✓";
+}
+
+input:focus-visible + .gs-check {
+    outline: 3px solid #f2b705;
+    outline-offset: 1px;
+}
+
+.gs-lineup-no {
+    width: 26px;
+    flex-shrink: 0;
+    text-align: right;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.gs-lineup-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px;
+}
+
+.gs-lineup-goalie {
+    flex-shrink: 0;
+    font-style: normal;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.3;
+    padding: 0 4px;
+    margin-left: -3px;
+    border: 1px solid var(--gs-rule);
+    border-radius: 3px;
+}
+
+.gs-lineup-empty {
+    padding: 12px 10px;
+    color: var(--gs-pencil);
+    font-size: 14px;
+}
+
+
+/* ----- Ruled lines: Scoring, Penalties, Goalkeepers ----- */
+
+.gs-row {
+    display: grid;
+    min-height: var(--gs-line);
+    border-top: 1px solid var(--gs-rule-light);
+}
+
+.gs-box-goal .gs-row {
+    grid-template-columns: 30px 52px 68px 50px 50px 50px minmax(0, 1fr) 32px;
+}
+
+.gs-box-pen .gs-row {
+    grid-template-columns: 52px 50px 48px minmax(110px, 1.1fr) 68px minmax(0, 1fr) 32px;
+}
+
+.gs-box-goalie .gs-row {
+    grid-template-columns: minmax(130px, 1.5fr) 52px 72px 56px minmax(0, 1fr) 32px;
+}
+
+.gs-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    border-right: 1px solid var(--gs-rule-light);
+}
+
+.gs-head {
+    min-height: 26px;
+    background: #eceae2;
+    border-top: 0;
+    border-bottom: 1px solid var(--gs-rule);
+}
+
+.gs-rows .gs-row:first-child {
+    border-top: 0;
+}
+
+.gs-num {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--gs-pencil);
+    font-variant-numeric: tabular-nums;
+}
+
+/* The boxes to write in: no box of their own, just the ruled cell. */
+.gs-cell .gs-ink {
+    width: 100%;
+    height: 100%;
+    min-height: calc(var(--gs-line) - 1px);
+    padding: 0 3px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    text-align-last: center;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: text;
+}
+
+.gs-cell select.gs-ink {
+    cursor: pointer;
+}
+
+.gs-cell .gs-ink:focus {
+    outline: 3px solid #f2b705;
+    outline-offset: -3px;
+    background: #fffbe0;
+}
+
+.gs-offence select.gs-ink,
+.gs-goalie-name select.gs-ink {
+    font-size: 15px;
+    text-align: left;
+    text-align-last: left;
+    padding-left: 8px;
+    text-overflow: ellipsis;
+}
+
+.gs-head .gs-offence,
+.gs-head .gs-goalie-name {
+    justify-content: flex-start;
+    padding-left: 8px;
+}
+
+.gs-ga {
+    color: var(--gs-ink);
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* The pencilled note at the end of a line: who the numbers are, or
+   what's still needed. */
+.gs-note {
+    justify-content: flex-start;
+    padding: 0 8px;
+    border-right: 0;
+    color: var(--gs-pencil);
+    font-size: 13px;
+    font-style: italic;
+    line-height: 1.2;
+    overflow: hidden;
+}
+
+.gs-note.is-problem {
+    color: var(--gs-red);
+    font-style: normal;
+    font-weight: bold;
+}
+
+.gs-note.is-retry {
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.gs-erase-cell {
+    border-right: 0;
+}
+
+.gs-erase {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: #9aa3ab;
+    font-size: 15px;
+    cursor: pointer;
+    visibility: hidden;
+}
+
+.gs-row.is-used .gs-erase {
+    visibility: visible;
+}
+
+.gs-erase:hover,
+.gs-erase:focus-visible {
+    color: var(--gs-red);
+}
+
+/* Written but not saved yet: still in pencil. */
+.gs-row.is-pencil {
+    background: var(--gs-highlight);
+}
+
+.gs-cell.is-bad {
+    background: #fde3e6;
+}
+
+.gs-cell.is-bad .gs-ink {
+    color: var(--gs-red);
+}
+
+
+/* When a team's half of the sheet is narrow (a phone, or two teams side
+   by side on a tablet), the note drops onto its own line under the
+   boxes instead of being squeezed in at the end. */
+@container (max-width: 560px) {
+
+    .gs-box-goal .gs-row {
+        grid-template-columns: 28px 1fr 1.3fr 1fr 1fr 1fr 32px;
+    }
+
+    .gs-box-pen .gs-row {
+        grid-template-columns: 1fr 1fr 1fr 2.6fr 1.3fr 32px;
+    }
+
+    .gs-box-goalie .gs-row {
+        grid-template-columns: 3fr 1fr 1.4fr 1.1fr 32px;
+    }
+
+    .gs-row .gs-note {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        min-height: 24px;
+        padding: 3px 8px 4px;
+        border-top: 1px dashed var(--gs-rule-light);
+    }
+
+    .gs-row .gs-note:empty {
+        display: none;
+    }
+
+    .gs-row .gs-erase-cell {
+        grid-row: 1;
+        grid-column: -2 / -1;
+    }
+
+    .gs-cell .gs-ink {
+        font-size: 17px;
+    }
+
+    .gs-offence select.gs-ink,
+    .gs-goalie-name select.gs-ink {
+        font-size: 14px;
+        padding-left: 5px;
+    }
+
+}
+
+@container (max-width: 400px) {
+
+    .gs-lineup-name {
+        font-size: 14px;
+    }
+
+    .gs-lineup-row {
+        gap: 6px;
+        padding: 0 5px;
+    }
+
+}
+
+
+/* ----- Sign-off: overtime box and the status buttons ----- */
+
+.gs-signoff {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px 20px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 3px double var(--gs-rule);
+}
+
+.gs-ot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    position: relative;
+}
+
+.gs-ot small {
+    font-weight: normal;
+    color: var(--gs-pencil);
+}
+
+.gs-signoff-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.gs-signoff-message {
+    font-size: 13px;
+    color: var(--gs-pencil);
+}
+
+
+/* =========================================
+   PHONE WIDTH — one team at a time
+   ========================================= */
+
+@media (max-width: 760px) {
+
+    .gs-page {
+        --gs-line: 44px;
+        width: 100%;
+        padding-top: 20px;
+    }
+
+    .gs-page > .gs-screen-only,
+    .gs-page > .gs-toolbar {
+        padding-left: 4%;
+        padding-right: 4%;
+    }
+
+    .gs-sheet {
+        border-left: 0;
+        border-right: 0;
+        padding: 12px 8px;
+    }
+
+    .gs-fields {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .gs-score-row {
+        grid-template-columns: minmax(0, 1fr) repeat(5, 34px) 48px;
+    }
+
+    .gs-score-team .gs-printed {
+        display: none;
+    }
+
+    .gs-side-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: var(--gs-paper);
+        border: 2px solid var(--gs-rule);
+        margin-bottom: 10px;
+    }
+
+    .gs-side-tabs button {
+        font: inherit;
+        font-size: 15px;
+        font-weight: bold;
+        padding: 11px 6px;
+        border: 0;
+        background: transparent;
+        color: var(--gs-pencil);
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .gs-side-tabs button + button {
+        border-left: 1px solid var(--gs-rule);
+    }
+
+    .gs-side-tabs button .gs-printed {
+        display: block;
+        color: inherit;
+        font-size: 10px;
+    }
+
+    .gs-side-tabs button.active {
+        background: #1c232b;
+        color: white;
+    }
+
+    .gs-teams {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .gs-sheet[data-active-side="home"] .gs-team[data-side="away"],
+    .gs-sheet[data-active-side="away"] .gs-team[data-side="home"] {
+        display: none;
+    }
+
+    .gs-signoff-actions,
+    .gs-signoff-actions button {
+        width: 100%;
+    }
+
+}
+
+
+/* =========================================
+   PRINT — the filled-in sheet on one letter page
+   ========================================= */
+
+@media print {
+
+    @page {
+        size: letter portrait;
+        margin: 8mm;
+    }
+
+    body {
+        background: white;
+    }
+
+    .site-header,
+    footer,
+    .gs-screen-only,
+    .gs-side-tabs,
+    .gs-erase,
+    .gs-note {
+        display: none !important;
+    }
+
+    .gs-page {
+        --gs-line: 18px;
+        width: 100%;
+        padding: 0;
+    }
+
+    /* Tightened up so both teams and all four boxes fit one page. */
+    .gs-masthead {
+        padding-bottom: 6px;
+    }
+
+    .gs-masthead-logo {
+        height: 34px;
+    }
+
+    .gs-fields {
+        padding: 4px 0;
+    }
+
+    .gs-scorebox {
+        margin-bottom: 6px;
+    }
+
+    .gs-score-row {
+        min-height: 22px;
+    }
+
+    .gs-score-head,
+    .gs-head {
+        min-height: 18px;
+    }
+
+    .gs-team-head {
+        min-height: 32px;
+        padding: 2px 8px;
+    }
+
+    .gs-team-name .team-badge-logo,
+    .gs-team-name .team-badge {
+        width: 26px;
+        height: 26px;
+    }
+
+    .gs-box-title {
+        padding: 2px 8px;
+    }
+
+    .gs-signoff {
+        margin-top: 5px;
+        padding-top: 3px;
+        border-top-width: 1px;
+        border-top-style: solid;
+        font-size: 12px;
+    }
+
+    .gs-sheet {
+        border: 0;
+        box-shadow: none;
+        padding: 0;
+    }
+
+    .gs-teams {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px;
+    }
+
+    .gs-team {
+        display: block !important;
+    }
+
+    .gs-row.is-pencil,
+    .gs-cell.is-bad {
+        background: transparent;
+    }
+
+    .gs-box-title,
+    .gs-head,
+    .gs-score-head,
+    .gs-team-head {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .gs-lineup-row {
+        min-height: 17px;
+    }
+
+    .gs-check {
+        width: 14px;
+        height: 14px;
+        font-size: 14px;
+    }
+
+    .gs-cell .gs-ink,
+    .gs-ga {
+        font-size: 13px;
+    }
+
+    .gs-offence select.gs-ink,
+    .gs-goalie-name select.gs-ink,
+    .gs-lineup-name {
+        font-size: 11px;
+    }
+
+}
