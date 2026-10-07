@@ -1591,7 +1591,9 @@ body.printing-schedule #schedule-print-sheet {
     text-transform: uppercase;
 }
 
-/* The latest recap, on the home page. */
+/* The Rinkside Report for the latest game day, on the home page: a strip
+   sitting right on top of that night's results. */
+#home-results[hidden],
 #home-recap[hidden] {
     display: none;
 }
@@ -1599,37 +1601,21 @@ body.printing-schedule #schedule-print-sheet {
 .home-recap-card {
     display: flex;
     align-items: center;
-    gap: 18px;
-    padding: 18px 22px;
+    gap: 14px 22px;
+    margin-bottom: 14px;
+    padding: 16px 22px;
     background: #071a2b;
     border-left: 5px solid #c8102e;
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,.08);
     color: white;
-    text-decoration: none;
-}
-
-.home-recap-card:hover {
-    background: #0c2740;
-}
-
-.home-recap-play {
-    flex: 0 0 auto;
-    display: grid;
-    place-items: center;
-    width: 52px;
-    height: 52px;
-    padding-left: 4px;
-    border-radius: 50%;
-    background: #c8102e;
-    font-size: 20px;
 }
 
 .home-recap-words {
-    flex: 1 1 auto;
+    flex: 1 1 260px;
     min-width: 0;
     display: grid;
-    gap: 3px;
+    gap: 4px;
 }
 
 .home-recap-date {
@@ -1641,20 +1627,20 @@ body.printing-schedule #schedule-print-sheet {
 }
 
 .home-recap-words strong {
-    font-size: 20px;
+    font-size: 19px;
     line-height: 1.25;
 }
 
-.home-recap-by {
-    font-size: 14px;
-    color: #c6d4e0;
+.home-recap-audio {
+    flex: 1 1 300px;
+    min-width: 0;
+    max-width: 420px;
+    height: 44px;
 }
 
 .home-recap-go {
     flex: 0 0 auto;
-    padding: 10px 16px;
-    border: 1px solid rgba(255,255,255,.5);
-    border-radius: 4px;
+    color: white;
     font-size: 14px;
     font-weight: bold;
     white-space: nowrap;
@@ -1664,21 +1650,17 @@ body.printing-schedule #schedule-print-sheet {
 
     .home-recap-card {
         flex-wrap: wrap;
-        gap: 12px 14px;
         padding: 16px;
     }
 
-    .home-recap-words {
-        flex-basis: 0;
+    .home-recap-words,
+    .home-recap-audio {
+        flex-basis: 100%;
+        max-width: none;
     }
 
     .home-recap-words strong {
         font-size: 18px;
-    }
-
-    .home-recap-go {
-        flex-basis: 100%;
-        text-align: center;
     }
 }
 

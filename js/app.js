@@ -200,11 +200,37 @@ function groupScheduleByDate(entries) {
    HOME PAGE — NEXT GAME DAY
    ========================================= */
 
-function getNextGameDay() {
+// The game day the home page leads with: the latest one that has got
+// going (at least one game live or final). On a game night that is
+// tonight, from the first puck drop on; the rest of the week it's the
+// last game day's results.
+function getLatestPlayedDay() {
     const today = todayISO();
 
+    const playedDates = SCHEDULE
+        .filter(entry => !entry.noGames && entry.date <= today && (entry.status === "live" || entry.status === "final"))
+        .map(entry => entry.date);
+
+    if (playedDates.length === 0) {
+        return null;
+    }
+
+    const lastDate = playedDates.sort()[playedDates.length - 1];
+
+    return SCHEDULE.filter(
+        entry => !entry.noGames && entry.date === lastDate
+    );
+}
+
+// The next game day still to come -- not counting one that's already
+// under way and showing up top.
+function getNextGameDay() {
+    const today = todayISO();
+    const played = getLatestPlayedDay();
+    const playedDate = played ? played[0].date : null;
+
     const upcomingDates = SCHEDULE
-        .filter(entry => !entry.noGames && entry.date >= today)
+        .filter(entry => !entry.noGames && entry.date >= today && entry.date !== playedDate)
         .map(entry => entry.date);
 
     if (upcomingDates.length === 0) {
@@ -218,30 +244,15 @@ function getNextGameDay() {
     );
 }
 
-function renderNextGame() {
-    const element = document.getElementById("next-game");
-    if (!element) return;
-
-    const games = getNextGameDay();
-
-    if (!games || games.length === 0) {
-        element.innerHTML = `
-            <div class="info-banner">
-                <strong>That's a wrap.</strong>
-                No more games left on the 2026-27 schedule.
-                Check the <a href="schedule.html">full schedule</a> for final results.
-            </div>
-        `;
-        return;
-    }
-
-    const gameDate = formatDateISO(games[0].date);
-
-    element.innerHTML = `
+// One game day's box on the home page: the date, then a line per game.
+// A game that's live or final shows its score and a "Watch live" /
+// "Recap" link that opens its details right there.
+function homeGameDayHtml(games) {
+    return `
         <div class="next-game-day">
 
             <div class="next-game-date">
-                <h3>${gameDate}</h3>
+                <h3>${formatDateISO(games[0].date)}</h3>
             </div>
 
             <div class="homepage-games">
@@ -283,8 +294,57 @@ function renderNextGame() {
 
         </div>
     `;
+}
 
-    // The box is redrawn every time a score changes, so anything that
+// The top of the home page: the latest game day's games (tap one for
+// its details), with that night's Rinkside Report just above them.
+function renderLatestResults() {
+    const section = document.getElementById("home-results");
+    const element = document.getElementById("last-game");
+    if (!section || !element) return;
+
+    const games = getLatestPlayedDay();
+
+    if (!games || games.length === 0) {
+        section.hidden = true;
+        element.innerHTML = "";
+        renderHomeRecap(null);
+        return;
+    }
+
+    // Tonight's games, while any of them is still to finish.
+    const tonight = games[0].date === todayISO() && games.some(game => game.status !== "final");
+
+    document.getElementById("home-results-eyebrow").textContent = tonight ? "GAME NIGHT" : "LAST GAME DAY";
+    document.getElementById("home-results-title").textContent = tonight ? "Tonight's Games" : "Latest Results";
+
+    element.innerHTML = homeGameDayHtml(games);
+    section.hidden = false;
+
+    renderHomeRecap(games[0].date);
+}
+
+function renderNextGame() {
+    renderLatestResults();
+
+    const element = document.getElementById("next-game");
+    if (!element) return;
+
+    const games = getNextGameDay();
+
+    if (!games || games.length === 0) {
+        element.innerHTML = `
+            <div class="info-banner">
+                <strong>That's a wrap.</strong>
+                No more games left on the 2026-27 schedule.
+                Check the <a href="schedule.html">full schedule</a> for final results.
+            </div>
+        `;
+    } else {
+        element.innerHTML = homeGameDayHtml(games);
+    }
+
+    // The boxes are redrawn every time a score changes, so anything that
     // was open is brought up to date rather than closed.
     refreshOpenGameDetails("home");
 }
@@ -296,7 +356,7 @@ function renderNextGame() {
    A game that's under way or finished can be opened up to show what
    happened in it: who's in net, who scored, who took a penalty.
      - Home page: the "Watch live" / "Recap" link beside a game's time
-       in the Next Game Day box.
+       in the Latest Results / Next Game Day boxes.
      - Schedule: tapping a live or finished game.
    Both draw the same thing (renderScheduleGameDetail) and share the code
    below; only where the panel sits on the page differs.
@@ -2264,55 +2324,72 @@ function setupMobileNav() {
 
 
 /* =========================================
-   HOME PAGE: THE LATEST RINKSIDE REPORT
+   HOME PAGE: THE RINKSIDE REPORT FOR THE LATEST GAME DAY
 
-   A strip under the next game day pointing at the newest recap on the
-   Recaps page (recaps/recaps.json -- see js/recaps.js). A recap still
-   marked "draft" isn't public yet, so it's passed over. If there are no
-   recaps, or the file can't be read, the strip just stays hidden.
+   A strip just above the latest results with that night's recap
+   (recaps/recaps.json -- see js/recaps.js): press play right there, or
+   go and read along. It only shows when there IS a recap for the game
+   day on screen and it's been published (a "draft" is passed over), so
+   it never sits on top of a different night's scores.
+
+   The results box is redrawn whenever a score changes; the strip is only
+   redrawn when the recap it shows changes, so a recap that's playing
+   isn't cut off.
    ========================================= */
 
-async function renderHomeRecap() {
-    const element = document.getElementById("home-recap");
-    if (!element) return;
+let HOME_RECAPS = null;        // recaps.json, once it's been read
+let HOME_RECAP_WANTED = null;  // the game date the strip is for
 
-    let data;
+async function loadHomeRecaps() {
     try {
         const response = await fetch("recaps/recaps.json", { cache: "no-store" });
         if (!response.ok) throw new Error("HTTP " + response.status);
-        data = await response.json();
+        HOME_RECAPS = await response.json();
     } catch (error) {
         console.error("Could not load the recaps:", error);
+        HOME_RECAPS = { recaps: [] };
+    }
+
+    renderHomeRecap(HOME_RECAP_WANTED);
+}
+
+function renderHomeRecap(date) {
+    const element = document.getElementById("home-recap");
+    if (!element) return;
+
+    HOME_RECAP_WANTED = date;
+    if (!HOME_RECAPS) return;   // still on its way; loadHomeRecaps() calls back
+
+    const recap = date
+        ? (HOME_RECAPS.recaps || []).find(entry => entry.date === date && !entry.draft)
+        : null;
+
+    const key = recap ? `${recap.date}|${recap.audio}|${recap.title}` : "";
+    if (element.dataset.recap === key) return;
+    element.dataset.recap = key;
+
+    if (!recap) {
+        element.hidden = true;
+        element.innerHTML = "";
         return;
     }
 
-    const latest = (data.recaps || [])
-        .filter(recap => !recap.draft)
-        .sort((a, b) => b.date.localeCompare(a.date))[0];
-    if (!latest) return;
-
     const esc = value => String(value == null ? "" : value)
         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const show = HOME_RECAPS.show || "Rinkside Report";
+    const host = HOME_RECAPS.host || "Arnie Jordan";
 
     element.innerHTML = `
-        <div class="section-heading">
-            <div>
-                <p class="eyebrow">${esc(data.show || "Rinkside Report").toUpperCase()}</p>
-                <h2>Game Recap</h2>
+        <div class="home-recap-card">
+            <div class="home-recap-words">
+                <span class="home-recap-date">${esc(show)} · ${esc(host)}'s notes from row three</span>
+                <strong>${esc(recap.title)}</strong>
             </div>
-
-            <a href="recaps.html">All Recaps →</a>
+            <audio class="home-recap-audio" controls preload="none" src="${esc(recap.audio)}">
+                Your browser can't play this here.
+            </audio>
+            <a class="home-recap-go" href="recaps.html?date=${esc(recap.date)}">Read along →</a>
         </div>
-
-        <a class="home-recap-card" href="recaps.html?date=${esc(latest.date)}">
-            <span class="home-recap-play" aria-hidden="true">▶</span>
-            <span class="home-recap-words">
-                <span class="home-recap-date">${esc(formatDateISO(latest.date))}</span>
-                <strong>${esc(latest.title)}</strong>
-                <span class="home-recap-by">${esc(data.host || "Arnie Jordan")}'s notes from row three. Press play, or read along.</span>
-            </span>
-            <span class="home-recap-go">Hear the recap</span>
-        </a>
     `;
     element.hidden = false;
 }
@@ -2329,8 +2406,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // header partial -- calling them here would be a no-op anyway
     // since the header elements wouldn't exist in the DOM yet.
 
-    // Doesn't need the league data, so it doesn't wait for it.
-    renderHomeRecap();
+    // The recaps file doesn't need the league data, so it's fetched alongside it.
+    if (document.getElementById("home-recap")) loadHomeRecaps();
 
     const loaded = await loadLeagueData();
 
