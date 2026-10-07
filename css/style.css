@@ -139,6 +139,25 @@ nav a.active {
     background: #c8102e;
 }
 
+/* Login / Score Sheet / Admin / Logout sit in the menu as links of their
+   own, not as one block that drops to a second line all together. */
+#nav-auth-slot {
+    display: contents;
+}
+
+/* A signed-in admin has eleven links; they sit a little closer together
+   so they stay on one line on a laptop. */
+@media (min-width: 801px) {
+
+    nav {
+        gap: 2px;
+    }
+
+    nav a {
+        padding: 10px 9px;
+    }
+}
+
 
 /* =========================================
    HERO
@@ -1548,6 +1567,119 @@ body.printing-schedule #schedule-print-sheet {
     color: #687681;
     font-size: 13px;
     margin-top: 28px;
+}
+
+/* A recap waiting for the league's OK, seen through its preview link. */
+.recap.is-draft {
+    border-top-color: #f5b800;
+}
+
+.recap-draft-note {
+    margin: 0 0 16px;
+    padding: 9px 12px;
+    background: #fff8e1;
+    border: 1px solid #e3b23c;
+    border-radius: 4px;
+    color: #4a3800;
+    font-size: 14px;
+}
+
+.recap-draft-note strong {
+    margin-right: 6px;
+    font-size: 12px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+/* The latest recap, on the home page. */
+#home-recap[hidden] {
+    display: none;
+}
+
+.home-recap-card {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 18px 22px;
+    background: #071a2b;
+    border-left: 5px solid #c8102e;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    color: white;
+    text-decoration: none;
+}
+
+.home-recap-card:hover {
+    background: #0c2740;
+}
+
+.home-recap-play {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    padding-left: 4px;
+    border-radius: 50%;
+    background: #c8102e;
+    font-size: 20px;
+}
+
+.home-recap-words {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+}
+
+.home-recap-date {
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #9fb6cc;
+}
+
+.home-recap-words strong {
+    font-size: 20px;
+    line-height: 1.25;
+}
+
+.home-recap-by {
+    font-size: 14px;
+    color: #c6d4e0;
+}
+
+.home-recap-go {
+    flex: 0 0 auto;
+    padding: 10px 16px;
+    border: 1px solid rgba(255,255,255,.5);
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+@media (max-width: 800px) {
+
+    .home-recap-card {
+        flex-wrap: wrap;
+        gap: 12px 14px;
+        padding: 16px;
+    }
+
+    .home-recap-words {
+        flex-basis: 0;
+    }
+
+    .home-recap-words strong {
+        font-size: 18px;
+    }
+
+    .home-recap-go {
+        flex-basis: 100%;
+        text-align: center;
+    }
 }
 
 @media (max-width: 800px) {

@@ -2264,6 +2264,61 @@ function setupMobileNav() {
 
 
 /* =========================================
+   HOME PAGE: THE LATEST RINKSIDE REPORT
+
+   A strip under the next game day pointing at the newest recap on the
+   Recaps page (recaps/recaps.json -- see js/recaps.js). A recap still
+   marked "draft" isn't public yet, so it's passed over. If there are no
+   recaps, or the file can't be read, the strip just stays hidden.
+   ========================================= */
+
+async function renderHomeRecap() {
+    const element = document.getElementById("home-recap");
+    if (!element) return;
+
+    let data;
+    try {
+        const response = await fetch("recaps/recaps.json", { cache: "no-store" });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        data = await response.json();
+    } catch (error) {
+        console.error("Could not load the recaps:", error);
+        return;
+    }
+
+    const latest = (data.recaps || [])
+        .filter(recap => !recap.draft)
+        .sort((a, b) => b.date.localeCompare(a.date))[0];
+    if (!latest) return;
+
+    const esc = value => String(value == null ? "" : value)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+    element.innerHTML = `
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">${esc(data.show || "Rinkside Report").toUpperCase()}</p>
+                <h2>Game Recap</h2>
+            </div>
+
+            <a href="recaps.html">All Recaps →</a>
+        </div>
+
+        <a class="home-recap-card" href="recaps.html?date=${esc(latest.date)}">
+            <span class="home-recap-play" aria-hidden="true">▶</span>
+            <span class="home-recap-words">
+                <span class="home-recap-date">${esc(formatDateISO(latest.date))}</span>
+                <strong>${esc(latest.title)}</strong>
+                <span class="home-recap-by">${esc(data.host || "Arnie Jordan")}'s notes from row three. Press play, or read along.</span>
+            </span>
+            <span class="home-recap-go">Hear the recap</span>
+        </a>
+    `;
+    element.hidden = false;
+}
+
+
+/* =========================================
    START WEBSITE
    ========================================= */
 
@@ -2273,6 +2328,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // js/header.js once it has fetched and injected the shared
     // header partial -- calling them here would be a no-op anyway
     // since the header elements wouldn't exist in the DOM yet.
+
+    // Doesn't need the league data, so it doesn't wait for it.
+    renderHomeRecap();
 
     const loaded = await loadLeagueData();
 

@@ -64,37 +64,69 @@ Listen for (or at least check the length of) the result — about three
 minutes. If the voice trips on a name, respell it the way it sounds in
 the script file only.
 
-## 4. Put it on the site
+## 4. Put it on the site as a draft
 
 Add an entry to the top of `recaps` in `recaps/recaps.json`:
 
     {
       "date": "YYYY-MM-DD",
+      "draft": true,
       "title": "A one-line headline",
       "audio": "recaps/audio/YYYY-MM-DD.mp3",
       "text": ["first paragraph", "second paragraph", "…"]
     }
 
 `text` is the script with names spelled properly (the page shows it under
-"Read the recap"). Commit, merge to `main`, push, and wait a couple of
-minutes for `https://jordanohl.ca/recaps.html?date=YYYY-MM-DD` to show it.
-The email reads the recap from the live site, so it can't go out before
-the page is up.
+"Read the recap"). `"draft": true` keeps it off the Recaps page and the
+home page: only the preview link shows it,
 
-## 5. Email the link
+    https://jordanohl.ca/recaps.html?date=YYYY-MM-DD&preview
+
+Commit, merge to `main`, push, and wait a couple of minutes for that link
+to show it. The emails read the recap from the live site, so nothing can
+go out before the page is up. (If the audio is ever re-recorded after
+it's been heard, add `?v=2` to the `audio` path so nobody gets the old
+one from their browser's cache.)
+
+## 5. Send the league admin a preview
 
 The email is sent by the `send-recap-email` Edge Function, which only the
-database can call (`supabase-migrations/005_recap_email.sql`). Run these
-as SQL:
+database can call (`supabase-migrations/005_recap_email.sql` and
+`007_recap_league_send.sql`). Run these as SQL:
 
-    select private.send_recap_email('info');                                   -- sends nothing; checks the setup
+    select private.send_recap_email('info');                                    -- sends nothing; checks the setup
     select private.send_recap_email('test', 'YYYY-MM-DD', 'admin@example.com'); -- one admin's own address
-    select private.send_recap_email('all',  'YYYY-MM-DD');                     -- every player on the active season
 
-- Send the `test` first and have a league admin look at it.
-- `all` is refused until `app_config.recap_email_all_enabled` is `'true'`,
-  and refused a second time for the same date. **Don't send `all` without
-  the league's say-so for that week** until they've said to stop asking.
-- People who've asked off the list go in `recap_email_optouts`.
+The test email is the real email with `[TEST]` on the subject, and for a
+draft its button opens the preview link. **Stop here** and wait for a
+league admin to say the recap is good. If they want something changed,
+change the script, make the audio again, push, and send another test.
+
+## 6. After the league says go: publish, then email everybody
+
+1. Take the `"draft": true` line off the entry in `recaps/recaps.json`,
+   commit, merge to `main`, push, and wait until
+   `https://jordanohl.ca/recaps.html?date=YYYY-MM-DD` shows it (the home
+   page picks it up too).
+2. Send it, naming whoever approved it:
+
+       select private.send_recap_to_league('YYYY-MM-DD', 'Their Name');
+
+Things to know about that send:
+
+- **Never run it without that week's go-ahead from a league admin.** It
+  refuses a recap that's still a draft, and it refuses if
+  `app_config.recap_email_all_enabled` isn't `'true'`.
+- It goes to every player on the active season with an email on file,
+  one email each, except anyone in `recap_email_optouts`.
+- It writes down everyone it reached. If it stops part way — the reply
+  has `"remaining"` above zero, usually because the email service's
+  allowance for the day ran out — run the same line again later and it
+  only sends to the ones who were missed. Run again when everyone's had
+  it and it says so and sends nothing.
+- When somebody replies asking to be taken off the list:
+
+       insert into public.recap_email_optouts (email) values ('someone@example.com');
+
 - The Resend key is the Edge Function secret `RESEND_API_KEY`. It never
   goes in this repo, in a chat, or in the database.

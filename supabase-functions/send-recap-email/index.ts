@@ -16,9 +16,18 @@
 //           sending domains Resend has verified.
 //   test  - sends the recap email to ONE address, and only if that address
 //           belongs to a league admin's login.
-//   all   - sends it to every player with an email on file. Refused until
-//           app_config.recap_email_all_enabled is 'true', and refused a
-//           second time for the same recap unless force is set.
+//   all   - sends it to every player on the active season with an email
+//           on file. It has to say who in the league approved it
+//           (approved_by), the recap has to be published (not a draft),
+//           and app_config.recap_email_all_enabled has to be 'true'.
+//           Everyone it reaches is written down, so running it again for
+//           the same recap only sends to whoever was missed (say, because
+//           the day's email allowance ran out) -- nobody gets it twice
+//           unless force is set.
+//
+// A recap marked "draft": true in recaps.json isn't on the public Recaps
+// page yet. A test email for a draft links to its preview
+// (recaps.html?date=...&preview).
 //
 // Needs the Edge Function secret RESEND_API_KEY.
 
@@ -99,7 +108,7 @@ async function loadScores(admin: any, date: string) {
 }
 
 function buildEmail(show: string, host: string, recap: any, scores: any[]) {
-  const link = `${SITE}/recaps.html?date=${recap.date}`;
+  const link = `${SITE}/recaps.html?date=${recap.date}${recap.draft ? "&preview" : ""}`;
   const dateText = longDate(recap.date);
   const teaser = Array.isArray(recap.text) && recap.text.length ? String(recap.text[0]) : "";
 
@@ -238,6 +247,8 @@ Deno.serve(async (req: Request) => {
 
     // --- Who gets it? ---
     let recipients: string[] = [];
+    let approvedBy = "";
+    const alreadySent = new Set<string>();
 
     if (mode === "test") {
       const to = String(body.to || "").trim().toLowerCase();
@@ -256,15 +267,22 @@ Deno.serve(async (req: Request) => {
         return json({ error: "Sending to the whole league is switched off (app_config.recap_email_all_enabled)" }, 403);
       }
 
+      approvedBy = String(body.approved_by || "").trim();
+      if (!approvedBy) {
+        return json({ error: "A whole-league send has to say who in the league approved it (approved_by)" }, 403);
+      }
+
+      // Everybody an earlier run for this recap already reached.
       if (body.force !== true) {
-        const { data: earlier } = await admin
+        const { data: earlier, error: earlierError } = await admin
           .from("recap_email_sends")
-          .select("id")
+          .select("detail")
           .eq("recap_date", date)
-          .eq("mode", "all")
-          .eq("ok", true)
-          .limit(1);
-        if (earlier && earlier.length) return json({ error: `The ${date} recap has already been emailed to the league` }, 409);
+          .eq("mode", "all");
+        if (earlierError) throw earlierError;
+        for (const row of earlier || []) {
+          for (const email of row.detail?.sent_to || []) alreadySent.add(String(email).toLowerCase());
+        }
       }
 
       const { data: optOuts } = await admin.from("recap_email_optouts").select("email");
@@ -282,13 +300,19 @@ Deno.serve(async (req: Request) => {
         const email = String(player.email || "").trim().toLowerCase();
         if (!email || !email.includes("@") || seen.has(email) || skip.has(email)) continue;
         seen.add(email);
-        recipients.push(email);
+        if (!alreadySent.has(email)) recipients.push(email);
       }
-      if (!recipients.length) return json({ error: "No player emails to send to" }, 500);
+      if (!seen.size) return json({ error: "No player emails to send to" }, 500);
+      if (!recipients.length) {
+        return json({ error: `The ${date} recap has already been emailed to the league (${alreadySent.size} players)` }, 409);
+      }
     }
 
     // --- What do they get? ---
     const { show, host, recap } = await loadRecap(date);
+    if (mode === "all" && recap.draft) {
+      return json({ error: `The ${date} recap is still a draft. Publish it (take "draft" off it in recaps.json) before emailing the league` }, 409);
+    }
     const scores = await loadScores(admin, date);
     const email = buildEmail(show, host, recap, scores);
     const subject = mode === "test" ? `[TEST] ${email.subject}` : email.subject;
@@ -296,19 +320,28 @@ Deno.serve(async (req: Request) => {
     const message = (to: string) => ({
       from: config.recap_email_from,
       to: [to],
-      ...(config.recap_email_reply_to ? { reply_to: config.recap_email_reply_to } : {}),
+      ...(config.recap_email_reply_to
+        ? {
+          reply_to: config.recap_email_reply_to,
+          // Lets a mail app show its own "unsubscribe" button, which writes to the league.
+          headers: { "List-Unsubscribe": `<mailto:${config.recap_email_reply_to}?subject=Unsubscribe%20from%20the%20Rinkside%20Report>` },
+        }
+        : {}),
       subject,
       html: email.html,
       text: email.text,
     });
 
     // One email per person (nobody sees anybody else's address), sent in
-    // batches of 100.
-    let sent = 0;
+    // batches of 50. It stops at the first batch that's turned down, so
+    // what's left can be picked up by running it again.
+    const sentTo: string[] = [];
     const errors: unknown[] = [];
 
-    for (let start = 0; start < recipients.length; start += 100) {
-      const chunk = recipients.slice(start, start + 100);
+    for (let start = 0; start < recipients.length; start += 50) {
+      if (start > 0) await new Promise((resolve) => setTimeout(resolve, 700));
+
+      const chunk = recipients.slice(start, start + 50);
       const response = await fetch(`${RESEND}/emails/batch`, {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -316,24 +349,43 @@ Deno.serve(async (req: Request) => {
       });
       const payload = await response.json().catch(() => ({}));
 
-      if (response.ok) {
-        sent += chunk.length;
-      } else {
+      if (!response.ok) {
         errors.push({ status: response.status, message: payload.message || payload.name || "send failed", recipients: chunk.length });
+        break;
       }
+      sentTo.push(...chunk);
     }
 
     const ok = errors.length === 0;
+    const sent = sentTo.length;
+    const remaining = recipients.length - sent;
 
-    await admin.from("recap_email_sends").insert({
+    const { error: logError } = await admin.from("recap_email_sends").insert({
       recap_date: date,
       mode,
       recipient_count: sent,
       ok,
-      detail: { subject, intended: recipients.length, errors },
+      detail: {
+        subject,
+        intended: recipients.length,
+        errors,
+        ...(mode === "all" ? { approved_by: approvedBy, sent_to: sentTo } : {}),
+      },
     });
+    if (logError) console.error("Couldn't write the send log:", logError.message);
 
-    return json({ ok, mode, date, subject, from: config.recap_email_from, sent, intended: recipients.length, errors }, ok ? 200 : 502);
+    return json({
+      ok,
+      mode,
+      date,
+      subject,
+      from: config.recap_email_from,
+      sent,
+      remaining,
+      already_sent_before: alreadySent.size,
+      log_saved: !logError,
+      errors,
+    }, ok ? 200 : 502);
   } catch (err) {
     return json({ error: String((err as any)?.message || err) }, 500);
   }

@@ -10,6 +10,10 @@
 
    recaps.html?date=2026-10-04 opens straight to that night's recap,
    which is what the email to the players links to.
+
+   A recap marked "draft": true is waiting for the league's OK. It stays
+   off this page (and the home page) for everyone except whoever opens
+   the preview link, recaps.html?date=...&preview.
    ========================================= */
 
 function recapEsc(value) {
@@ -43,7 +47,8 @@ function recapScoresHtml(date) {
 
 function recapHtml(recap, show, host, isFeatured) {
     return `
-        <article class="recap ${isFeatured ? "is-featured" : ""}" id="recap-${recapEsc(recap.date)}">
+        <article class="recap ${isFeatured ? "is-featured" : ""} ${recap.draft ? "is-draft" : ""}" id="recap-${recapEsc(recap.date)}">
+            ${recap.draft ? `<p class="recap-draft-note"><strong>Draft</strong> Only people with this preview link can see it. It isn't on the Recaps page or in anyone's inbox yet.</p>` : ""}
             <p class="eyebrow">${recapEsc(formatDateISO(recap.date))}</p>
             <h3>${recapEsc(recap.title)}</h3>
 
@@ -81,7 +86,12 @@ async function renderRecaps() {
     // Scores come from the schedule; the recaps still show without them.
     await loadLeagueData();
 
-    const recaps = (data.recaps || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+    const params = new URLSearchParams(window.location.search);
+    const showDrafts = params.has("preview");
+
+    const recaps = (data.recaps || [])
+        .filter(recap => showDrafts || !recap.draft)
+        .sort((a, b) => b.date.localeCompare(a.date));
 
     if (!recaps.length) {
         element.innerHTML = `<p class="recap-empty">No recaps yet. The first one lands the day after the next game night.</p>`;
@@ -90,7 +100,7 @@ async function renderRecaps() {
 
     // The one asked for in the link, or else the latest, is the one up top
     // and ready to play.
-    const wanted = new URLSearchParams(window.location.search).get("date");
+    const wanted = params.get("date");
     const featured = recaps.find(recap => recap.date === wanted) || recaps[0];
 
     element.innerHTML = recaps
