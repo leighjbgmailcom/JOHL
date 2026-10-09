@@ -19,7 +19,7 @@ From Supabase (project `wjsxpywxwjordtzzjrue`), for the game date:
 - `game_goals` — period, time, scorer and assists
 - `game_penalties` — who, what for, how long
 - `game_goalie_periods` — who was in net and when they came out
-- `players` / `teams` — names
+- `players` / `teams` — names, and each player's `nickname` if he has one
 
 If a game from that night isn't `final` yet, stop and say so rather than
 writing around it.
@@ -38,9 +38,25 @@ between paragraphs. About 600–750 words (three to four minutes).
   his tiny audience — and don't repeat last week's jokes word for word.
 - A paragraph or two a game: the score, who drove it, the turning point,
   a goalie note, the penalty box. Finish with the night as a whole.
+- **Call them what the room calls them.** A player with a `nickname` in
+  the `players` table is called by it, every time: "Craigy", "HoundDog",
+  "The Plug". Everybody else goes by his last name alone ("McPherson had
+  six points"). Use a first name as well only to tell apart two players
+  with the same last name and no nickname. Never make a nickname up.
+- **The goofier the better.** The league asked for it. Arnie should be
+  having more fun than anybody in the building: tall comparisons, bits
+  that build and come back later in the report, a notebook that can't
+  keep up. If a line would get a laugh in the dressing room, it's in.
 - **The hockey is real.** Every name, score, goal, assist, penalty and
   time has to come from the data, and nothing a named player is said to
   have done can be invented.
+- **Bust their chops, on the record.** Chirp players by name for what the
+  score sheet says they really did that night, the way the fellas on the
+  next bench would: the trip to the penalty box, the goalie who let in
+  ten, the team that blew a three-goal lead, the fella with six points
+  who wouldn't pass. Wins get it as much as losses, and a big night gets
+  ribbed as much as a rough one. Spread it around; don't pile on the same
+  man or the same team every week.
 - **The bloopers are made up, and nobody owns them.** Two or three a
   week for colour: a pass that missed everybody, a shot that went so wide
   it hit the glass in front of him, his own spilled coffee. They never
@@ -50,9 +66,10 @@ between paragraphs. About 600–750 words (three to four minutes).
   injuries, fights or history.
 - End with his standing excuse: if he got a name or a goal wrong, take it
   up with the refs, the timekeeper, and how fast they all move out there.
-- Good-natured. Tease a team, never a man: nothing about anyone's age,
-  body, health, family or job, and a player with a penalty gets a wink,
-  not a roasting. These are neighbours reading about themselves.
+- Ball busting, not bullying. The chirp is about the hockey and nothing
+  else: never anyone's age, body, health, family or job, and never
+  anything that would sting once the laugh is over. These are neighbours
+  reading about themselves, and the whole league gets the email.
 - Write it the way it is **said**: numbers as words ("ten to five",
   "forty seconds in"), full sentences, no symbols or web addresses.
 
@@ -61,8 +78,8 @@ between paragraphs. About 600–750 words (three to four minutes).
     tools/recap/make_audio.sh recaps/scripts/YYYY-MM-DD.txt recaps/audio/YYYY-MM-DD.mp3
 
 Listen for (or at least check the length of) the result — about three
-minutes. If the voice trips on a name, respell it the way it sounds in
-the script file only.
+minutes. If the voice trips on a name or a nickname, respell it the way
+it sounds in the script file only.
 
 ## 4. Put it on the site as a draft
 

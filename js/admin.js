@@ -591,7 +591,7 @@ async function deleteSponsor(id) {
 async function loadAdminPlayers() {
     const { data, error } = await supabaseClient
         .from("players")
-        .select("id, first_name, last_name, position, team_id, email, jersey_number")
+        .select("id, first_name, last_name, nickname, position, team_id, email, jersey_number")
         .order("last_name");
 
     if (error) {
@@ -612,7 +612,7 @@ function renderAdminPlayersTable() {
 
     const filtered = ADMIN_PLAYERS
         .filter(player => {
-            const fullName = `${player.first_name} ${player.last_name}`.toLowerCase();
+            const fullName = `${player.first_name} ${player.last_name} ${player.nickname || ""}`.toLowerCase();
             const matchesSearch = fullName.includes(search);
             const matchesTeam = teamFilter === "ALL" || String(player.team_id) === String(teamFilter);
             return matchesSearch && matchesTeam;
@@ -632,7 +632,7 @@ function renderAdminPlayersTable() {
     element.innerHTML = filtered.map(player => `
         <tr>
             <td>${player.jersey_number != null ? `#${player.jersey_number}` : "—"}</td>
-            <td>${player.last_name}, ${player.first_name}</td>
+            <td>${player.last_name}, ${player.first_name}${player.nickname ? ` <span style="opacity:.7;">&ldquo;${nicknameHtml(player.nickname)}&rdquo;</span>` : ""}</td>
             <td>${teamNameById(player.team_id)}</td>
             <td>${player.position || "Skater"}</td>
             <td>${player.email || `<span style="color:#c8102e;">missing</span>`}</td>
@@ -643,6 +643,14 @@ function renderAdminPlayersTable() {
             </td>
         </tr>
     `).join("");
+}
+
+/* A nickname is typed in by an admin and shown in the table, so make
+   sure it can only ever be shown as text. */
+function nicknameHtml(value) {
+    return String(value).replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
 }
 
 function resetPlayerForm() {
@@ -662,6 +670,7 @@ function editPlayer(id) {
     document.getElementById("player-id").value = player.id;
     document.getElementById("player-first-name").value = player.first_name;
     document.getElementById("player-last-name").value = player.last_name;
+    document.getElementById("player-nickname").value = player.nickname || "";
     document.getElementById("player-email").value = player.email || "";
     document.getElementById("player-jersey-number").value = player.jersey_number ?? "";
     document.getElementById("player-team-select").innerHTML = teamOptionsHtml(player.team_id);
@@ -682,6 +691,7 @@ async function savePlayer(event) {
         season_id: ADMIN_SEASON_ID,
         first_name: document.getElementById("player-first-name").value.trim(),
         last_name: document.getElementById("player-last-name").value.trim(),
+        nickname: document.getElementById("player-nickname").value.trim() || null,
         email: document.getElementById("player-email").value.trim() || null,
         team_id: document.getElementById("player-team-select").value || null,
         position: document.getElementById("player-position-select").value,
