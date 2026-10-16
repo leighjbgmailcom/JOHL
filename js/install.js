@@ -18,7 +18,7 @@
 
     const DISMISS_KEY = "johl-install-dismissed";
     const DISMISS_DAYS = 21;
-    const ICON = "images/icons/icon-192.png";
+    const ICON = "images/icons/icon-192.png?v=35";
 
     let deferredPrompt = null;
 
