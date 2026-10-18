@@ -76,26 +76,27 @@ function formatSecondsAsClock(totalSeconds) {
    the list.
    ========================================= */
 
+// In alphabetical order, the way the timekeeper looks one up.
 const INFRACTION_TYPES = [
-    { code: "RO", name: "Roughing" },
-    { code: "TR", name: "Tripping" },
-    { code: "SL", name: "Slashing" },
-    { code: "HKG/HO", name: "Hooking / Holding" },
-    { code: "INT", name: "Interference" },
-    { code: "HS/HISTK", name: "High-Sticking" },
-    { code: "CC/CROSS", name: "Cross-Checking" },
+    { code: "BM", name: "Bench Minor (e.g., Too Many Men)" },
     { code: "BDG/BOARD", name: "Boarding" },
+    { code: "BUTT", name: "Butt-Ending" },
     { code: "CHG", name: "Charging" },
+    { code: "CFB", name: "Checking from Behind" },
+    { code: "CC/CROSS", name: "Cross-Checking" },
+    { code: "DG/DELAY", name: "Delay of Game" },
     { code: "ELB", name: "Elbowing" },
     { code: "FI/FGT", name: "Fighting" },
-    { code: "DG/DELAY", name: "Delay of Game" },
-    { code: "KNE", name: "Kneeing" },
-    { code: "BM", name: "Bench Minor (e.g., Too Many Men)" },
-    { code: "CFB", name: "Checking from Behind" },
     { code: "HC", name: "Head Contact" },
-    { code: "USC/ABS", name: "Unsportsmanlike Conduct / Abuse of Officials" },
-    { code: "BUTT", name: "Butt-Ending" },
-    { code: "SP", name: "Spearing" }
+    { code: "HS/HISTK", name: "High-Sticking" },
+    { code: "HKG/HO", name: "Hooking / Holding" },
+    { code: "INT", name: "Interference" },
+    { code: "KNE", name: "Kneeing" },
+    { code: "RO", name: "Roughing" },
+    { code: "SL", name: "Slashing" },
+    { code: "SP", name: "Spearing" },
+    { code: "TR", name: "Tripping" },
+    { code: "USC/ABS", name: "Unsportsmanlike Conduct / Abuse of Officials" }
 ];
 
 function isKnownInfraction(name) {

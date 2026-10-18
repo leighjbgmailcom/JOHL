@@ -988,7 +988,8 @@ async function onResultGameChange() {
             infraction: penalty.infraction,
             minutes: penalty.minutes,
             period: penalty.period,
-            game_time: penalty.game_time
+            game_time: penalty.game_time,
+            time_on: penalty.time_on || null
         });
     });
 
@@ -1351,7 +1352,9 @@ async function saveGameResults() {
                 infraction: row.infraction || null,
                 minutes: row.minutes || 2,
                 period: row.period,
-                game_time: normalizeClockText(row.game_time)
+                game_time: normalizeClockText(row.game_time),
+                // Kept as the timekeeper wrote it on the Score Sheet.
+                time_on: row.time_on || null
             });
         });
     });

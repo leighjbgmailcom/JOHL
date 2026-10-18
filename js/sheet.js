@@ -273,6 +273,9 @@ function sheetNewPenRow(db) {
         timeSec: db ? sheetSplitClock(db.game_time).sec : null,
         playerId: db ? db.player_id : null,
         minutes: db ? db.minutes : null,
+        // When he came back on, if the timekeeper wrote it in (back early
+        // on a power-play goal, say). Empty means OFF plus the penalty length.
+        timeOn: db ? normalizeClockText(db.time_on) : null,
         infraction: db ? (db.infraction || "").trim() || null : null,
         touched: false,
         bad: {},
@@ -683,6 +686,24 @@ function sheetPenaltyOnText(row, minutes) {
 
 // The ON box is where the length of the penalty is chosen: it shows the
 // time he's back on for a minor, and opens to offer the major instead.
+// A time back on that the timekeeper wrote in. The clock counts down and
+// no penalty is longer than a period, so a time higher on the clock than
+// the time he went off can only be in the next period.
+function sheetPenaltyWrittenOnText(row) {
+    const on = parseClockToSeconds(row.timeOn);
+    if (on == null) return row.timeOn || "";
+
+    const off = parseClockToSeconds(row.time);
+    if (off == null || on <= off) return formatSecondsAsClock(on);
+
+    const index = ["1", "2"].indexOf(row.period);
+    return index === -1 ? formatSecondsAsClock(on) : `P${index + 2} ${formatSecondsAsClock(on)}`;
+}
+
+// The ON box: back on after a minor or a major (worked out from the OFF
+// time), or a time written in by hand -- "Other time…" -- for a player who
+// came back early or whenever it didn't go by the book. Picking a minor
+// or a major again goes back to the worked-out time.
 function sheetOnOptionsHtml(row) {
     if (row.minutes == null) return `<option value=""></option>`;
 
@@ -691,11 +712,29 @@ function sheetOnOptionsHtml(row) {
         lengths.unshift({ minutes: row.minutes, label: `${row.minutes} min` });
     }
 
-    return lengths.map(l => `
+    const written = row.timeOn
+        ? `<optgroup label="Written in"><option value="__on_keep__" selected>${sheetEsc(sheetPenaltyWrittenOnText(row))}</option></optgroup>`
+        : "";
+
+    return written + lengths.map(l => `
         <optgroup label="${sheetEsc(l.label)}">
-            <option value="${l.minutes}" ${l.minutes === row.minutes ? "selected" : ""}>${sheetEsc(sheetPenaltyOnText(row, l.minutes))}</option>
+            <option value="${l.minutes}" ${!row.timeOn && l.minutes === row.minutes ? "selected" : ""}>${sheetEsc(sheetPenaltyOnText(row, l.minutes))}</option>
         </optgroup>
-    `).join("");
+    `).join("") + `<option value="__on_other__">Other time…</option>`;
+}
+
+// "Other time…" in the ON box: asks for the time on the clock he came back on.
+function sheetAskTimeOn(row) {
+    const typed = prompt("What time was on the clock when he came back on? (like 4:32)", row.timeOn || "");
+    if (typed == null || !typed.trim()) return;
+
+    const seconds = parseClockToSeconds(typed);
+    if (seconds == null || seconds > REGULATION_PERIOD_SECONDS) {
+        alert(`Can't read "${typed.trim()}" as a time on the clock. Write minutes and seconds, like 4:32.`);
+        return;
+    }
+
+    row.timeOn = formatSecondsAsClock(seconds);
 }
 
 function sheetEraseHtml() {
@@ -1241,6 +1280,7 @@ function sheetRowPayload(kind, row) {
         game_time: row.time || null,
         player_id: row.playerId,
         minutes: row.minutes || SHEET_DEFAULT_PENALTY_MINUTES,
+        time_on: row.timeOn || null,
         infraction: row.infraction || null
     };
 }
@@ -1467,7 +1507,15 @@ function onSheetFieldChange(control) {
         row.bad.a1 = row.a1Id && String(row.a1Id) === String(row.gId) ? "Same player as the goal scorer" : null;
         row.bad.a2 = row.a2Id && (String(row.a2Id) === String(row.gId) || String(row.a2Id) === String(row.a1Id)) ? "Same player twice on one goal" : null;
     } else if (field === "player") row.playerId = picked();
-    else if (field === "minutes") row.minutes = parseInt(value, 10) || SHEET_DEFAULT_PENALTY_MINUTES;
+    else if (field === "minutes") {
+        if (value === "__on_other__") {
+            if (row.minutes == null) row.minutes = SHEET_DEFAULT_PENALTY_MINUTES;
+            sheetAskTimeOn(row);
+        } else if (value !== "__on_keep__") {
+            row.minutes = parseInt(value, 10) || SHEET_DEFAULT_PENALTY_MINUTES;
+            row.timeOn = null;
+        }
+    }
     else if (field === "infraction") {
         if (value === "__other__") {
             const written = (prompt("Write the offence:") || "").trim();
@@ -1485,6 +1533,7 @@ function onSheetFieldChange(control) {
             if (row.minutes == null) row.minutes = SHEET_DEFAULT_PENALTY_MINUTES;
         } else {
             row.minutes = null;
+            row.timeOn = null;
         }
     }
 
