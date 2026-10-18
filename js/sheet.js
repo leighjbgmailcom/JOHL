@@ -669,72 +669,72 @@ function sheetOffenceOptionsHtml(selected) {
         `<option value="__other__">Other…</option>`;
 }
 
-// When the penalized player comes back ON: the time he went OFF less the
+// When the penalized player comes back ON, as a time on the clock.
+//
+// Unless the timekeeper has changed it, it's the time he went OFF less the
 // length of the penalty (run time), carried into the next period if the
-// period ends first.
-function sheetPenaltyOnText(row, minutes) {
-    const off = parseClockToSeconds(row.time);
-    if (off == null) return `${minutes} min`;
-
-    const on = off - minutes * 60;
-    if (on >= 0) return formatSecondsAsClock(on);
-
-    const index = ["1", "2"].indexOf(row.period);
-    if (index === -1) return row.period ? "end" : "next per.";
-    return `P${index + 2} ${formatSecondsAsClock(REGULATION_PERIOD_SECONDS + on)}`;
-}
-
-// The ON box is where the length of the penalty is chosen: it shows the
-// time he's back on for a minor, and opens to offer the major instead.
-// A time back on that the timekeeper wrote in. The clock counts down and
-// no penalty is longer than a period, so a time higher on the clock than
-// the time he went off can only be in the next period.
-function sheetPenaltyWrittenOnText(row) {
-    const on = parseClockToSeconds(row.timeOn);
-    if (on == null) return row.timeOn || "";
+// period ends first. The clock counts down and no penalty is longer than a
+// period, so an ON time higher on the clock than OFF is in the next period.
+function sheetPenaltyOnSeconds(row) {
+    const written = parseClockToSeconds(row.timeOn);
+    if (written != null) return written;
 
     const off = parseClockToSeconds(row.time);
-    if (off == null || on <= off) return formatSecondsAsClock(on);
+    if (off == null || row.minutes == null) return null;
 
-    const index = ["1", "2"].indexOf(row.period);
-    return index === -1 ? formatSecondsAsClock(on) : `P${index + 2} ${formatSecondsAsClock(on)}`;
+    const on = off - row.minutes * 60;
+    return on >= 0 ? on : REGULATION_PERIOD_SECONDS + on;
 }
 
-// The ON box: back on after a minor or a major (worked out from the OFF
-// time), or a time written in by hand -- "Other time…" -- for a player who
-// came back early or whenever it didn't go by the book. Picking a minor
-// or a major again goes back to the worked-out time.
-function sheetOnOptionsHtml(row) {
-    if (row.minutes == null) return `<option value=""></option>`;
-
-    const lengths = SHEET_PENALTY_LENGTHS.slice();
-    if (!lengths.some(l => l.minutes === row.minutes)) {
-        lengths.unshift({ minutes: row.minutes, label: `${row.minutes} min` });
-    }
-
-    const written = row.timeOn
-        ? `<optgroup label="Written in"><option value="__on_keep__" selected>${sheetEsc(sheetPenaltyWrittenOnText(row))}</option></optgroup>`
-        : "";
-
-    return written + lengths.map(l => `
-        <optgroup label="${sheetEsc(l.label)}">
-            <option value="${l.minutes}" ${!row.timeOn && l.minutes === row.minutes ? "selected" : ""}>${sheetEsc(sheetPenaltyOnText(row, l.minutes))}</option>
-        </optgroup>
-    `).join("") + `<option value="__on_other__">Other time…</option>`;
+// How long he sat, in seconds, for an ON time picked on the rolls.
+function sheetPenaltyServedSeconds(row, onSeconds) {
+    const off = parseClockToSeconds(row.time);
+    if (off == null || onSeconds == null) return null;
+    return onSeconds <= off ? off - onSeconds : off + (REGULATION_PERIOD_SECONDS - onSeconds);
 }
 
-// "Other time…" in the ON box: asks for the time on the clock he came back on.
-function sheetAskTimeOn(row) {
-    const typed = prompt("What time was on the clock when he came back on? (like 4:32)", row.timeOn || "");
-    if (typed == null || !typed.trim()) return;
+// The ON box: minutes and seconds rolls, like OFF. It fills itself in
+// (grey) and the timekeeper can change it (then it's blue, written in).
+function sheetOnClockHtml(row) {
+    const seconds = sheetPenaltyOnSeconds(row);
+    const parts = seconds == null ? { timeMin: null, timeSec: null } : {
+        timeMin: String(Math.floor(seconds / 60)),
+        timeSec: String(seconds % 60).padStart(2, "0")
+    };
+    return sheetClockHtml("data-field", parts, "Time back on").replace(/data-field="time(Min|Sec)"/g, 'data-field="on$1"');
+}
 
-    const seconds = parseClockToSeconds(typed);
-    if (seconds == null || seconds > REGULATION_PERIOD_SECONDS) {
-        alert(`Can't read "${typed.trim()}" as a time on the clock. Write minutes and seconds, like 4:32.`);
+// Something picked on the ON rolls. Back on exactly 3 or 7 minutes after
+// OFF is a minor or a major, worked out as usual; any other time is kept
+// as written in (back early on a power-play goal, say). Clearing the
+// rolls goes back to the worked-out time.
+function sheetSetPenaltyOn(row, el, field, value) {
+    const minEl = el.querySelector('[data-field="onMin"]');
+    const secEl = el.querySelector('[data-field="onSec"]');
+    let min = minEl.value;
+    let sec = secEl.value;
+
+    if (value === "") {
+        row.timeOn = null;
         return;
     }
 
-    row.timeOn = formatSecondsAsClock(seconds);
+    // Minutes picked first: the seconds start at :00.
+    if (field === "onMin" && sec === "") sec = "00";
+    if (min === "20") sec = "00";
+    if (min === "") return;   // seconds picked before minutes: wait for the minutes
+
+    const onSeconds = parseInt(min, 10) * 60 + parseInt(sec, 10);
+    const served = sheetPenaltyServedSeconds(row, onSeconds);
+
+    const length = SHEET_PENALTY_LENGTHS.find(l => l.minutes * 60 === served);
+    if (length) {
+        row.minutes = length.minutes;
+        row.timeOn = null;
+    } else {
+        if (row.minutes == null) row.minutes = SHEET_DEFAULT_PENALTY_MINUTES;
+        row.timeOn = formatSecondsAsClock(onSeconds);
+    }
 }
 
 function sheetEraseHtml() {
@@ -747,7 +747,7 @@ function sheetPenRowHtml(side, row) {
             <span class="gs-cell"><select class="gs-ink" data-field="period" aria-label="Period">${sheetPeriodOptionsHtml(row.period)}</select></span>
             <span class="gs-cell gs-name"><select class="gs-ink" data-field="player" aria-label="Penalized player">${sheetPlayerOptionsHtml(side, row.playerId)}</select></span>
             <span class="gs-cell gs-clock">${sheetClockHtml("data-field", row, "Time off")}</span>
-            <span class="gs-cell gs-on"><select class="gs-ink" data-field="minutes" aria-label="Time back on (length of penalty)">${sheetOnOptionsHtml(row)}</select></span>
+            <span class="gs-cell gs-clock gs-on ${row.timeOn ? "is-written" : ""}">${sheetOnClockHtml(row)}</span>
             <span class="gs-cell gs-name"><select class="gs-ink" data-field="infraction" aria-label="Offence">${sheetOffenceOptionsHtml(row.infraction)}</select></span>
             ${sheetEraseHtml()}
             <span class="gs-note"></span>
@@ -1061,9 +1061,8 @@ function refreshSheetRow(kind, side, row, justWritten) {
         // the one that was just written in.
         const busy = document.activeElement === control && control !== justWritten;
 
-        if (field === "minutes") {
-            // The ON times depend on the OFF time, so this list is rebuilt.
-            if (!busy) control.innerHTML = sheetOnOptionsHtml(row);
+        if (field === "onMin" || field === "onSec") {
+            // ON follows OFF until it's written in, so it's redrawn below.
         } else if (!busy) {
             const raw = sheetRowFieldValue(kind, row, field);
             const value = raw == null ? "" : String(raw);
@@ -1078,8 +1077,16 @@ function refreshSheetRow(kind, side, row, justWritten) {
         if (!field.startsWith("time")) control.closest(".gs-cell").classList.toggle("is-bad", !!row.bad[field]);
     });
 
-    const clock = el.querySelector(".gs-clock");
+    const clock = el.querySelector(".gs-clock:not(.gs-on)");
     if (clock) clock.classList.toggle("has-time", row.timeMin != null || row.timeSec != null);
+
+    const on = el.querySelector(".gs-on");
+    if (on) {
+        const busy = [...on.querySelectorAll("select")].some(control => document.activeElement === control && control !== justWritten);
+        if (!busy) on.innerHTML = sheetOnClockHtml(row);
+        on.classList.toggle("is-written", !!row.timeOn);
+        on.classList.toggle("has-time", sheetPenaltyOnSeconds(row) != null);
+    }
 
     const note = sheetRowNote(kind, row);
     const noteEl = el.querySelector(".gs-note");
@@ -1507,15 +1514,7 @@ function onSheetFieldChange(control) {
         row.bad.a1 = row.a1Id && String(row.a1Id) === String(row.gId) ? "Same player as the goal scorer" : null;
         row.bad.a2 = row.a2Id && (String(row.a2Id) === String(row.gId) || String(row.a2Id) === String(row.a1Id)) ? "Same player twice on one goal" : null;
     } else if (field === "player") row.playerId = picked();
-    else if (field === "minutes") {
-        if (value === "__on_other__") {
-            if (row.minutes == null) row.minutes = SHEET_DEFAULT_PENALTY_MINUTES;
-            sheetAskTimeOn(row);
-        } else if (value !== "__on_keep__") {
-            row.minutes = parseInt(value, 10) || SHEET_DEFAULT_PENALTY_MINUTES;
-            row.timeOn = null;
-        }
-    }
+    else if (field === "onMin" || field === "onSec") sheetSetPenaltyOn(row, control.closest(".gs-row"), field, value);
     else if (field === "infraction") {
         if (value === "__other__") {
             const written = (prompt("Write the offence:") || "").trim();

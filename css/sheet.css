@@ -684,6 +684,7 @@ span.gs-goalie-no {
 }
 
 .gs-cell select.gs-roll[data-field="timeMin"],
+.gs-cell select.gs-roll[data-field="onMin"],
 .gs-cell select.gs-roll[data-gfield="timeMin"] {
     text-align: right;
     text-align-last: right;
@@ -691,6 +692,7 @@ span.gs-goalie-no {
 }
 
 .gs-cell select.gs-roll[data-field="timeSec"],
+.gs-cell select.gs-roll[data-field="onSec"],
 .gs-cell select.gs-roll[data-gfield="timeSec"] {
     text-align: left;
     text-align-last: left;
@@ -800,12 +802,22 @@ span.gs-goalie-no {
     color: var(--gs-auto-ink);
 }
 
-/* ON works itself out, but opens to switch a minor to a major. */
+/* ON works itself out (grey) from OFF and the length of the penalty. The
+   timekeeper can change it on its rolls; then it's written in (blue). */
+.gs-rows .gs-row .gs-cell.gs-on.is-written {
+    background: var(--gs-input);
+}
+
+.gs-on.is-written select.gs-ink {
+    color: var(--gs-ink);
+}
+
 .gs-on {
     position: relative;
 }
 
 .gs-row.is-used .gs-on::after {
+    display: none;
     content: "▾";
     position: absolute;
     right: 3px;
@@ -1241,6 +1253,7 @@ span.gs-goalie-no {
     .gs-row .gs-cell.is-bad,
     .gs-rows .gs-row .gs-cell,
     .gs-rows .gs-row .gs-cell.gs-on,
+    .gs-rows .gs-row .gs-cell.gs-on.is-written,
     .gs-goalie-row .gs-goalie-time,
     .gs-goalie-row .gs-goalie-no,
     .gs-goalie-row .gs-ga,

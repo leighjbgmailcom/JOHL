@@ -272,7 +272,7 @@ const SHEET_COACH_STEPS = [
     {
         id: "penalty",
         title: "Write down a penalty",
-        text: "Under Penalties, pick the period, the player, the time he went OFF, and the S/W — what it was for. ON (when he's allowed back) works itself out. If he comes back early, pick “Other time…” in the ON box and write in the time.",
+        text: "Under Penalties, pick the period, the player, the time he went OFF, and the S/W — what it was for. ON (when he's allowed back) fills itself in. If he comes back early, change the ON minutes and seconds to the time he came back.",
         target: ".gs-box-pen",
         praise: "He's in the box.",
         done: () => SHEET_SIDES.some(side => sheetRows.pen[side].some(row => row.id))
