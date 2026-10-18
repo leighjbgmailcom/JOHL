@@ -145,10 +145,20 @@ function sheetByName(a, b) {
 
 // One team's roster the way it's printed on the sheet: alphabetical by
 // last name.
+// Sweater-number order, the way the timekeeper looks a player up: lowest
+// number first, anyone without a number at the end by name. (The printed
+// roster still puts the goalies below the skaters.)
+function sheetByNumber(a, b) {
+    if (a.number != null && b.number != null) return a.number - b.number || sheetByName(a, b);
+    if (a.number != null) return -1;
+    if (b.number != null) return 1;
+    return sheetByName(a, b);
+}
+
 function sheetRoster(side) {
     const team = sheetTeam(side);
     if (!team) return [];
-    return PLAYERS.filter(p => p.team === team.code).sort(sheetByName);
+    return PLAYERS.filter(p => p.team === team.code).sort(sheetByNumber);
 }
 
 function sheetPlayer(id) {
@@ -634,12 +644,7 @@ function sheetPickHtml(field, side, selectedId, label) {
 // what gets called out. Whoever's already on the line is always listed,
 // even if he's since left the roster.
 function sheetPlayerOptionsHtml(side, selectedId) {
-    const players = sheetRoster(side).sort((a, b) => {
-        if (a.number != null && b.number != null) return a.number - b.number || sheetByName(a, b);
-        if (a.number != null) return -1;
-        if (b.number != null) return 1;
-        return sheetByName(a, b);
-    });
+    const players = sheetRoster(side);
     const selected = sheetPlayer(selectedId);
     if (selected && !players.some(p => String(p.id) === String(selected.id))) players.push(selected);
 
@@ -732,8 +737,8 @@ function sheetRowsHtml(kind, side) {
     return sheetRows[kind][side].map(row => SHEET_ROW_HTML[kind](side, row)).join("");
 }
 
-// The printed roster: # / last name / first name, skaters first and the
-// goalies below a gap. The tick goes in the margin beside the name.
+// The printed roster: # / last name / first name in sweater-number order,
+// skaters first and the goalies below a gap. The tick goes in the margin beside the name.
 function sheetRosterHtml(side) {
     const roster = sheetRoster(side);
     if (!roster.length) return `<p class="gs-roster-empty">No players on this roster yet.</p>`;
