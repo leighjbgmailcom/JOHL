@@ -2686,3 +2686,82 @@ footer {
     }
 
 }
+
+
+/* =========================================
+   SKATER GAME LOG -- Leaders row expansion + player page
+   ========================================= */
+
+.leader-chevron {
+    display: inline-block;
+    color: #97a3ac;
+    font-size: 11px;
+    width: 10px;
+    transition: transform .15s ease;
+}
+
+.leader-row.expanded .leader-chevron {
+    transform: rotate(90deg);
+    color: #c8102e;
+}
+
+.leader-row.expanded {
+    background: #f1f4f6;
+}
+
+.leader-row:focus-visible {
+    outline: 2px solid #c8102e;
+    outline-offset: -2px;
+}
+
+.leader-detail-row > td {
+    background: #f7f8f9;
+    padding: 12px 14px 16px !important;
+    text-align: left;
+}
+
+.leader-detail .table-wrapper {
+    margin-bottom: 10px;
+}
+
+.game-log-table td,
+.game-log-table th {
+    white-space: nowrap;
+}
+
+.game-log-table td.game-log-plays {
+    white-space: normal;
+    text-align: left;
+    min-width: 220px;
+}
+
+.game-log-quiet td {
+    color: #97a3ac;
+}
+
+.game-log-none {
+    color: #c3cbd1;
+}
+
+.play-chip {
+    display: inline-block;
+    font-size: 12px;
+    line-height: 1.3;
+    padding: 3px 8px;
+    margin: 2px 4px 2px 0;
+    border-radius: 999px;
+    background: #eef2f5;
+    color: #071a2b;
+}
+
+.play-chip.play-goal {
+    background: #fde8eb;
+}
+
+.play-chip.play-goal strong {
+    color: #c8102e;
+}
+
+.play-chip .play-meta {
+    color: #687681;
+}

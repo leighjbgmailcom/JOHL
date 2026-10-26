@@ -1303,10 +1303,9 @@ function renderPlayers() {
 
 // A player, clicked from this table, the Teams roster, or the Leaders
 // board (players.html?player=ID) gets a focused view instead of the
-// full roster: their season line plus a per-game log. Games only show
-// up here if the player has a recorded goal, assist, penalty, or (for a
-// goalie) a goalie-period stint in them -- there's no separate "who
-// dressed" record to fall back on for a scoreless, penalty-free game.
+// full roster: their season line plus a per-game log. A skater's log
+// lists every game he dressed for (score sheet attendance); a goalie's
+// lists the games he has a goalie-period stint in.
 async function renderPlayerDetail(playerId) {
     const detail = document.getElementById("player-detail");
     if (!detail) return false;
@@ -1336,7 +1335,7 @@ async function renderPlayerDetail(playerId) {
         return `${game.date} ${game.time || ""}`;
     }
 
-    let summaryHtml, columnsHtml, rowsHtml;
+    let summaryHtml, columnsHtml, rowsHtml, logHtml;
 
     if (isGoalie) {
         const stats = await computeGoalieStats();
@@ -1390,22 +1389,9 @@ async function renderPlayerDetail(playerId) {
             </div>
         `;
 
-        columnsHtml = `<th>Date</th><th>Opponent</th><th>G</th><th>A</th><th>PTS</th>`;
-
-        const games = s
-            ? Object.keys(s.perGame).map(id => ({ game: gameLookup[id], line: s.perGame[id] })).filter(r => r.game)
-            : [];
-        games.sort((a, b) => gameSortKey(a.game).localeCompare(gameSortKey(b.game)));
-
-        rowsHtml = games.map(row => `
-            <tr>
-                <td>${formatDateISO(row.game.date)}</td>
-                <td>${opponentLabel(row.game)}</td>
-                <td>${row.line.goals}</td>
-                <td>${row.line.assists}</td>
-                <td><strong>${row.line.goals + row.line.assists}</strong></td>
-            </tr>
-        `).join("");
+        // Skaters get the shared game-by-game table (every game dressed,
+        // plus the scoring plays behind each point).
+        logHtml = skaterGameLogTableHtml(player, skaterGameLog(s));
     }
 
     detail.innerHTML = `
@@ -1422,7 +1408,7 @@ async function renderPlayerDetail(playerId) {
         ${summaryHtml}
 
         <h4>Game Log</h4>
-        ${rowsHtml ? `
+        ${logHtml ? logHtml : rowsHtml ? `
             <div class="table-wrapper">
                 <table class="standings-table">
                     <thead><tr>${columnsHtml}</tr></thead>
@@ -1573,23 +1559,36 @@ function renderStandings() {
 
 // Skater stats (goals, assists, games played), keyed by player id --
 // shared by the Leaders page, the Teams page roster, and a player's own
-// game log. GP counts any game the player recorded a goal, an assist, or
-// a penalty in; a game with none of those for a given skater won't show
-// up, since the site has no separate "who dressed" record to fall back
-// on. Cached for the life of the page since these pages don't need it
+// game log.
+//
+// GP is every game the player DRESSED for: the attendance the timekeeper
+// checks off on the score sheet (game_attendance). A goal, assist or
+// penalty also counts as an appearance, so a player the timekeeper forgot
+// to check in still gets the game.
+//
+// perGame[gameId] = { goals, assists, plays: [...] } for every game
+// played (including pointless ones), where each play is one goal the
+// player figured in -- { role: "G" | "A", period, time, scorerId,
+// assistIds } -- so a game log can show exactly where the points came
+// from. Cached for the life of the page since these pages don't need it
 // to update live.
 let SKATER_STATS_CACHE = null;
 
 async function computeSkaterStats() {
     if (SKATER_STATS_CACHE) return SKATER_STATS_CACHE;
 
-    const [{ data: goals, error: goalsError }, { data: penalties, error: penaltiesError }] = await Promise.all([
-        supabaseClient.from("game_goals").select("game_id, scorer_id, assist1_id, assist2_id"),
-        supabaseClient.from("game_penalties").select("game_id, player_id")
+    const [
+        { data: goals, error: goalsError },
+        { data: penalties, error: penaltiesError },
+        { data: attendance, error: attendanceError }
+    ] = await Promise.all([
+        supabaseClient.from("game_goals").select("id, game_id, period, game_time, scorer_id, assist1_id, assist2_id").order("id"),
+        supabaseClient.from("game_penalties").select("game_id, player_id"),
+        supabaseClient.from("game_attendance").select("game_id, player_id")
     ]);
 
-    if (goalsError || penaltiesError) {
-        console.error("Error loading skater stats:", goalsError || penaltiesError);
+    if (goalsError || penaltiesError || attendanceError) {
+        console.error("Error loading skater stats:", goalsError || penaltiesError || attendanceError);
         return null;
     }
 
@@ -1600,27 +1599,118 @@ async function computeSkaterStats() {
         }
         return stats[playerId];
     }
-    function bump(gameId, playerId, field) {
-        if (!playerId) return;
+    // Marks a game as played and returns that game's line for the player.
+    function appear(gameId, playerId) {
+        if (!playerId) return null;
         const s = statsFor(playerId);
-        s.games.add(gameId);
-        if (!s.perGame[gameId]) s.perGame[gameId] = { goals: 0, assists: 0 };
-        if (field) {
-            s[field]++;
-            s.perGame[gameId][field]++;
-        }
+        const key = String(gameId);
+        s.games.add(key);
+        if (!s.perGame[key]) s.perGame[key] = { goals: 0, assists: 0, plays: [] };
+        return s.perGame[key];
     }
 
+    (attendance || []).forEach(a => appear(a.game_id, a.player_id));
+
     (goals || []).forEach(g => {
-        bump(g.game_id, g.scorer_id, "goals");
-        bump(g.game_id, g.assist1_id, "assists");
-        bump(g.game_id, g.assist2_id, "assists");
+        const assistIds = [g.assist1_id, g.assist2_id].filter(Boolean);
+        const play = role => ({ role, period: g.period, time: g.game_time, scorerId: g.scorer_id, assistIds });
+
+        const scorerLine = appear(g.game_id, g.scorer_id);
+        if (scorerLine) {
+            stats[g.scorer_id].goals++;
+            scorerLine.goals++;
+            scorerLine.plays.push(play("G"));
+        }
+        assistIds.forEach(id => {
+            const line = appear(g.game_id, id);
+            stats[id].assists++;
+            line.assists++;
+            line.plays.push(play("A"));
+        });
     });
+
     // A penalty with no points still counts as a game appearance.
-    (penalties || []).forEach(p => bump(p.game_id, p.player_id, null));
+    (penalties || []).forEach(p => appear(p.game_id, p.player_id));
 
     SKATER_STATS_CACHE = stats;
     return stats;
+}
+
+// "1" -> "1st", "OT" -> "OT", etc. for a scoring play.
+function periodShortLabel(period) {
+    const labels = { "1": "1st", "2": "2nd", "3": "3rd" };
+    return labels[period] || period || "";
+}
+
+// "Oct 25" -- compact date for game-log tables.
+function formatDateShort(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("en-CA", { month: "short", day: "numeric" });
+}
+
+function playerLastName(playerId) {
+    const p = PLAYERS.find(pl => String(pl.id) === String(playerId));
+    return p ? p.last : "?";
+}
+
+// One skater's season, game by game: every game he played (oldest first),
+// with that game's G/A and the scoring plays behind them.
+function skaterGameLog(s) {
+    if (!s) return [];
+    const gameLookup = {};
+    SCHEDULE.forEach(g => { gameLookup[String(g.id)] = g; });
+
+    return Object.keys(s.perGame)
+        .map(id => ({ game: gameLookup[id], line: s.perGame[id] }))
+        .filter(row => row.game)
+        .sort((a, b) => `${a.game.date} ${a.game.time || ""}`.localeCompare(`${b.game.date} ${b.game.time || ""}`));
+}
+
+// The scoring plays behind one game's points, as small chips:
+// "Goal · 2nd 5:10 (Smith, Jones)" / "Assist · 1st 12:40 on Brown".
+function scoringPlaysHtml(plays) {
+    if (!plays || !plays.length) return `<span class="game-log-none">—</span>`;
+    return plays.map(play => {
+        const when = `${periodShortLabel(play.period)}${play.time ? " " + play.time : ""}`;
+        if (play.role === "G") {
+            const helpers = play.assistIds.length
+                ? ` <span class="play-meta">(${play.assistIds.map(playerLastName).join(", ")})</span>`
+                : ` <span class="play-meta">(unassisted)</span>`;
+            return `<span class="play-chip play-goal"><strong>Goal</strong> · ${when}${helpers}</span>`;
+        }
+        return `<span class="play-chip play-assist"><strong>Assist</strong> · ${when} <span class="play-meta">on ${playerLastName(play.scorerId)}</span></span>`;
+    }).join("");
+}
+
+// Game-by-game table for a skater, shared by the Leaders expansion and
+// the player page.
+function skaterGameLogTableHtml(player, log) {
+    if (!log.length) return `<p class="roster-empty">No games recorded yet this season.</p>`;
+
+    const rows = log.map(({ game, line }) => {
+        const home = game.home === player.team;
+        const opponent = `${home ? "vs" : "@"} ${teamName(home ? game.away : game.home)}`;
+        const pts = line.goals + line.assists;
+        return `
+            <tr class="${pts ? "" : "game-log-quiet"}">
+                <td>${formatDateShort(game.date)}</td>
+                <td>${opponent}</td>
+                <td>${line.goals}</td>
+                <td>${line.assists}</td>
+                <td><strong>${pts}</strong></td>
+                <td class="game-log-plays">${scoringPlaysHtml(line.plays)}</td>
+            </tr>
+        `;
+    }).join("");
+
+    return `
+        <div class="table-wrapper">
+            <table class="standings-table game-log-table">
+                <thead><tr><th>Date</th><th>Opponent</th><th>G</th><th>A</th><th>PTS</th><th>Scoring plays</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
 }
 
 // Turns the raw computeSkaterStats() map into display-ready rows, sorted
@@ -1660,18 +1750,52 @@ async function renderLeaders() {
         return;
     }
 
+    // Each player row toggles a detail row right under it with his game
+    // log -- every game played, and where each point came from.
     table.innerHTML = rows.map((row, index) => `
-        <tr>
+        <tr class="clickable-row leader-row" data-player="${row.player.id}" tabindex="0" aria-expanded="false">
             <td>${index + 1}</td>
             <td>${row.player.number != null ? "#" + row.player.number : "—"}</td>
-            <td>${row.player.last}, ${row.player.first}</td>
+            <td><span class="leader-chevron">▸</span> ${row.player.last}, ${row.player.first}</td>
             <td>${row.team ? row.team.name : ""}</td>
             <td>${row.gp}</td>
             <td>${row.goals}</td>
             <td>${row.assists}</td>
             <td><strong>${row.points}</strong></td>
         </tr>
+        <tr class="leader-detail-row" data-detail-for="${row.player.id}" hidden>
+            <td colspan="8"></td>
+        </tr>
     `).join("");
+
+    function toggle(rowEl) {
+        const playerId = rowEl.dataset.player;
+        const detail = table.querySelector(`tr[data-detail-for="${playerId}"]`);
+        if (!detail) return;
+        const opening = detail.hidden;
+
+        if (opening && !detail.dataset.built) {
+            const player = PLAYERS.find(p => String(p.id) === String(playerId));
+            detail.firstElementChild.innerHTML = `
+                <div class="leader-detail">
+                    ${skaterGameLogTableHtml(player, skaterGameLog(stats[playerId]))}
+                    <a class="link-button" href="players.html?player=${playerId}">Full player page →</a>
+                </div>
+            `;
+            detail.dataset.built = "1";
+        }
+
+        detail.hidden = !opening;
+        rowEl.setAttribute("aria-expanded", String(opening));
+        rowEl.classList.toggle("expanded", opening);
+    }
+
+    table.querySelectorAll(".leader-row").forEach(rowEl => {
+        rowEl.addEventListener("click", () => toggle(rowEl));
+        rowEl.addEventListener("keydown", e => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(rowEl); }
+        });
+    });
 }
 
 
