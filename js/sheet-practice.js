@@ -282,7 +282,7 @@ const SHEET_COACH_STEPS = [
     {
         id: "goalie-change",
         title: "A goalie change",
-        text: "When a team swaps goalies, pick the period and the time beside the goalie who came OUT. Each goalie's goals against are worked out for you. If he goes back in later, “+ Goalie change” gives you another line.",
+        text: "When a team swaps goalies, tap “+ Goalie change” under that team's goalie box. Pick who came OFF, who went IN, and the period and time on the clock, then Save. The line under the box says who was in net when — check it reads right. Goals against are worked out for you.",
         target: ".gs-goalies",
         praise: "Goalie change noted.",
         done: () => SHEET_SIDES.some(side => sheetGoalies[side].lines.some(line => line.timeMin != null || line.timeSec != null))

@@ -853,10 +853,11 @@ function sheetGoalieBoxHtml(side) {
             <div class="gs-goalie-row gs-goalie-head">
                 <span></span>
                 <span class="gs-cell">Goals</span>
-                <span class="gs-cell">Time</span>
+                <span class="gs-cell">Time off</span>
             </div>
             ${lines || `<p class="gs-roster-empty">No goalies on this roster.</p>`}
-            ${box.readOnly || !lines ? "" : `<button type="button" class="gs-add gs-goalie-add" data-action="goalie-add" title="Add a line for another goalie change">+ Goalie change</button>`}
+            <p class="gs-goalie-story" id="sheet-goalie-story-${side}"></p>
+            ${box.readOnly || !lines ? "" : box.change ? sheetGoalieChangeHtml(side, box) : `<button type="button" class="gs-add gs-goalie-add" data-action="goalie-add">+ Goalie change</button>`}
             <p class="gs-goalie-foot" id="sheet-goalie-foot-${side}"></p>
         </div>
     `;
@@ -1155,6 +1156,9 @@ function refreshSheetGoalies(side, justWritten) {
         rowEl.querySelector(".gs-goalie-time").classList.toggle("has-time", line.timeMin != null || line.timeSec != null);
     });
 
+    const story = document.getElementById(`sheet-goalie-story-${side}`);
+    if (story) story.textContent = sheetGoalieStoryText(stints);
+
     const foot = document.getElementById(`sheet-goalie-foot-${side}`);
     const halfPicked = box.lines.map(sheetClockMissing).find(Boolean);
     const stillIn = stints.filter(stint => !stint.time_out).length;
@@ -1166,7 +1170,7 @@ function refreshSheetGoalies(side, justWritten) {
     else if (box.failed) { message = "Goalies not saved — tap here to try again"; retry = true; }
     else if (stillIn > 1) message = "Write the time the first goalie came out.";
     else if (box.lines.some(line => line.extra && !line.goalieId && (line.timeMin != null || line.timeSec != null))) message = "Pick which goalie came out on the added line.";
-    else if (stints.length && stillIn === 0) message = "Tap the number of the goalie who went in.";
+    else if (stints.length && stillIn === 0) message = "Who went in? Tap his number.";
 
     foot.textContent = message;
     foot.classList.toggle("is-retry", retry);
@@ -1679,8 +1683,74 @@ function onSheetGoaliePlayed(button) {
     queueSheetGoalieSync(side);
 }
 
-// "+ Goalie change": another line, for a goalie who comes out again. It
-// starts on whoever's in net now, since he's the one who'd come out next.
+/* ----- "+ Goalie change": a short form, filled in the way it's said
+   out loud -- who came OFF, who went IN, and when. ----- */
+
+// The goalies this box can pick from: the roster's, plus anyone already
+// on a line.
+function sheetGoalieChoices(side, box) {
+    const goalies = sheetRoster(side).filter(p => isGoaliePosition(p.position));
+    box.lines.forEach(line => {
+        const player = sheetPlayer(line.goalieId);
+        if (player && !goalies.some(p => String(p.id) === String(player.id))) goalies.push(player);
+    });
+    return goalies;
+}
+
+function sheetGoalieLabel(goalieId) {
+    const player = sheetPlayer(goalieId);
+    if (!player) return "?";
+    return `${player.number != null ? "#" + player.number + " " : ""}${player.last}`;
+}
+
+// Who's in net right now, going by the box: the last stint, if nobody
+// has written a time for him yet.
+function sheetGoalieInNet(box) {
+    const stints = sheetGoalieStints(box.lines, sheetOvertimeSeconds(sheetRows, sheetGoalies));
+    const last = stints[stints.length - 1];
+    return last && !last.time_out ? last.goalie_id : null;
+}
+
+function sheetGoalieChangeHtml(side, box) {
+    const change = box.change;
+    const goalies = sheetGoalieChoices(side, box);
+    const options = selected => `<option value="">— pick —</option>` + goalies.map(p =>
+        `<option value="${p.id}" ${String(p.id) === String(selected) ? "selected" : ""}>${p.number != null ? p.number + " – " : ""}${sheetEsc(p.last)}, ${sheetEsc(p.first)}</option>`
+    ).join("");
+
+    return `
+        <div class="gs-change" role="group" aria-label="Goalie change">
+            <div class="gs-change-title">Goalie change</div>
+            <label class="gs-change-field">
+                <span class="gs-change-label is-off">Came OFF</span>
+                <select class="gs-change-select" data-chg="offId">${options(change.offId)}</select>
+            </label>
+            <label class="gs-change-field">
+                <span class="gs-change-label is-in">Went IN</span>
+                <select class="gs-change-select" data-chg="inId">${options(change.inId)}</select>
+            </label>
+            <div class="gs-change-field is-when">
+                <span class="gs-change-label">When <small>(time left on the clock)</small></span>
+                <span class="gs-change-when">
+                    <select class="gs-change-period" data-chg="period" aria-label="Period of the change">
+                        <option value=""></option>
+                        ${GOALIE_CLOCK_PERIODS.map(p => `<option value="${p}" ${p === change.period ? "selected" : ""}>${SHEET_PERIOD_ORDINAL[p]}</option>`).join("")}
+                    </select>
+                    ${sheetClockHtml("data-chg", change, "Clock time of the change")}
+                </span>
+            </div>
+            <p class="gs-change-error">${sheetEsc(change.error || "")}</p>
+            <div class="gs-change-actions">
+                <button type="button" class="gs-tool-button" data-action="change-cancel">Cancel</button>
+                <button type="button" class="button gs-change-save" data-action="change-save">Save change</button>
+            </div>
+        </div>
+    `;
+}
+
+// Opens the form, filled in as far as the box already knows: the goalie
+// in net is the one coming off, and with two goalies the other one is
+// going in.
 function onSheetGoalieAdd(button) {
     const boxEl = button.closest(".gs-goalies");
     if (!boxEl || !sheetGoalies) return;
@@ -1689,15 +1759,144 @@ function onSheetGoalieAdd(button) {
     const box = sheetGoalies[side];
     if (box.readOnly) return;
 
-    const stints = sheetGoalieStints(box.lines, sheetOvertimeSeconds(sheetRows, sheetGoalies));
-    const inNet = stints.length && !stints[stints.length - 1].time_out ? stints[stints.length - 1].goalie_id : null;
+    const offId = sheetGoalieInNet(box);
+    const others = sheetGoalieChoices(side, box).filter(p => String(p.id) !== String(offId));
+    const inId = offId && others.length === 1 ? others[0].id : null;
 
-    const line = sheetNewGoalieLine(inNet, true);
-    box.lines.push(line);
+    box.change = {
+        offId, inId,
+        period: sheetDefaultGoalieOutPeriod(box, null),
+        timeMin: null, timeSec: null, time: null,
+        error: ""
+    };
     redrawSheetGoalieBox(side);
 
-    const first = document.querySelector(`.gs-goalie-row[data-line="${line.key}"] select`);
+    const first = document.querySelector(`.gs-goalies[data-side="${side}"] .gs-change select[data-chg="${offId ? (inId ? "timeMin" : "inId") : "offId"}"]`);
     if (first) first.focus();
+}
+
+function onSheetChangeField(control) {
+    const boxEl = control.closest(".gs-goalies");
+    if (!boxEl || !sheetGoalies) return;
+    const side = boxEl.dataset.side;
+    const box = sheetGoalies[side];
+    const change = box.change;
+    if (!change) return;
+
+    const field = control.dataset.chg;
+    if (field === "offId" || field === "inId") {
+        change[field] = control.value || null;
+        // The same goalie can't come off and go in: with two goalies,
+        // picking one for one side puts the other on the other side.
+        const other = field === "offId" ? "inId" : "offId";
+        if (change[field] && (!change[other] || String(change[other]) === String(change[field]))) {
+            const rest = sheetGoalieChoices(side, box).filter(p => String(p.id) !== String(change[field]));
+            change[other] = rest.length === 1 ? rest[0].id : null;
+            const otherEl = boxEl.querySelector(`.gs-change [data-chg="${other}"]`);
+            if (otherEl) otherEl.value = change[other] == null ? "" : String(change[other]);
+        }
+    } else if (field === "period") {
+        change.period = control.value || null;
+    } else {
+        sheetSetClockPart(change, "time", field, control.value);
+        const secEl = boxEl.querySelector('.gs-change [data-chg="timeSec"]');
+        if (secEl && change.timeSec != null && secEl.value !== change.timeSec) secEl.value = change.timeSec;
+    }
+
+    change.error = "";
+    const errorEl = boxEl.querySelector(".gs-change-error");
+    if (errorEl) errorEl.textContent = "";
+}
+
+function onSheetChangeCancel(button) {
+    const boxEl = button.closest(".gs-goalies");
+    if (!boxEl || !sheetGoalies) return;
+    const side = boxEl.dataset.side;
+    sheetGoalies[side].change = null;
+    redrawSheetGoalieBox(side);
+}
+
+// Writes the change onto the box the way the paper has it: the time goes
+// beside the goalie who came OFF, and the goalie who went IN is circled.
+function onSheetChangeSave(button) {
+    const boxEl = button.closest(".gs-goalies");
+    if (!boxEl || !sheetGoalies) return;
+    const side = boxEl.dataset.side;
+    const box = sheetGoalies[side];
+    const change = box.change;
+    if (!change || box.readOnly) return;
+
+    const fail = message => {
+        change.error = message;
+        const el = boxEl.querySelector(".gs-change-error");
+        if (el) el.textContent = message;
+    };
+
+    if (!change.offId) return fail("Pick the goalie who came OFF.");
+    if (!change.inId) return fail("Pick the goalie who went IN.");
+    if (String(change.offId) === String(change.inId)) return fail("The goalie coming off and going in can't be the same.");
+    if (!change.period) return fail("Pick the period.");
+    if (!change.time) return fail(sheetClockMissing(change) ? `Finish the time — ${sheetClockMissing(change)}.` : "Pick the time left on the clock.");
+
+    const otSeconds = sheetOvertimeSeconds(sheetRows, sheetGoalies);
+    const at = gameElapsedSeconds(change.period, parseClockToSeconds(change.time), otSeconds);
+    const earlier = sheetGoalieStints(box.lines, otSeconds).filter(stint => stint.time_out);
+    const last = earlier[earlier.length - 1];
+    if (last && at <= gameElapsedSeconds(last.period, parseClockToSeconds(last.time_out), otSeconds)) {
+        return fail(`That's before the last change (${normalizeClockText(last.time_out)} of the ${SHEET_PERIOD_ORDINAL[last.period]}). Check the period and time.`);
+    }
+
+    const nextMark = () => Math.max(0, ...box.lines.map(l => l.mark)) + 1;
+    const untimed = line => line.timeMin == null && line.timeSec == null;
+    const same = (line, id) => String(line.goalieId) === String(id);
+
+    // OFF: the line he's playing on now, else his own printed line if it's
+    // still blank, else a new line (he's coming off a second time).
+    let offLine = box.lines.find(l => same(l, change.offId) && l.played && untimed(l))
+        || box.lines.find(l => same(l, change.offId) && !l.extra && untimed(l));
+    if (!offLine) {
+        offLine = sheetNewGoalieLine(change.offId, true);
+        box.lines.push(offLine);
+    }
+    Object.assign(offLine, {
+        period: change.period,
+        timeOut: change.time,
+        timeMin: change.timeMin,
+        timeSec: change.timeSec
+    });
+
+    // IN: circle his own printed line if it's still blank; if he's already
+    // used it (he's going back in), he gets a new circled line.
+    const inPlaying = box.lines.find(l => same(l, change.inId) && l.played && untimed(l));
+    if (!inPlaying) {
+        let inLine = box.lines.find(l => same(l, change.inId) && !l.extra && untimed(l));
+        if (!inLine) {
+            inLine = sheetNewGoalieLine(change.inId, true);
+            box.lines.push(inLine);
+        }
+        inLine.played = true;
+        inLine.mark = nextMark();
+    }
+
+    box.change = null;
+    redrawSheetGoalieBox(side);
+    refreshSheetTotals();
+    queueSheetGoalieSync(side);
+}
+
+// One plain line under the box saying how the box reads, so a goalie
+// change written the wrong way round is obvious straight away:
+// "In net: #30 McKay until 10:45 of the 2nd, then #1 Rolston".
+function sheetGoalieStoryText(stints) {
+    if (!stints.some(stint => stint.time_out)) return "";
+    const parts = stints.map(stint => {
+        const who = sheetGoalieLabel(stint.goalie_id);
+        return stint.time_out
+            ? `${who} until ${normalizeClockText(stint.time_out)} of the ${SHEET_PERIOD_ORDINAL[stint.period] || stint.period}`
+            : who;
+    });
+    if (stints[stints.length - 1].time_out) parts.push("?");
+    return "In net: " + parts.join(", then ");
 }
 
 function onSheetGoalieRemove(button) {
@@ -2018,6 +2217,7 @@ function setupSheetEvents() {
         else if (target.dataset.action === "attendance") onSheetAttendanceChange(target);
         else if (target.id === "sheet-went-ot") onSheetOvertimeChange();
         else if (target.dataset.ref) onSheetRefereeChange(target);
+        else if (target.dataset.chg) onSheetChangeField(target);
     });
 
     sheet.addEventListener("click", event => {
@@ -2044,6 +2244,8 @@ function setupSheetEvents() {
         else if (action === "goalie-played") onSheetGoaliePlayed(button);
         else if (action === "goalie-add") onSheetGoalieAdd(button);
         else if (action === "goalie-remove") onSheetGoalieRemove(button);
+        else if (action === "change-save") onSheetChangeSave(button);
+        else if (action === "change-cancel") onSheetChangeCancel(button);
         else if (action === "show-side") setSheetActiveSide(button.dataset.side);
         else if (action === "start") startSheetGame();
         else if (action === "final") finalizeSheetGame();
