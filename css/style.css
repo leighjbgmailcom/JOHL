@@ -2859,3 +2859,9 @@ footer {
     color: #97a3ac;
     margin: 0 0 8px;
 }
+
+.player-nickname {
+    font-weight: normal;
+    font-style: italic;
+    color: #687681;
+}

@@ -49,6 +49,7 @@ async function loadPlayers() {
             id,
             first_name,
             last_name,
+            nickname,
             position,
             team_id,
             jersey_number,
@@ -67,6 +68,7 @@ async function loadPlayers() {
         id: player.id,
         first: player.first_name,
         last: player.last_name,
+        nickname: player.nickname || "",
         position: player.position,
         team: player.teams ? player.teams.code : null,
         number: player.jersey_number

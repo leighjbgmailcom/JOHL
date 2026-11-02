@@ -885,12 +885,18 @@ function goaliesForTeam(teamId) {
     });
 }
 
+// "#12 Bob Smith "Boomer"" -- how a player reads in the admin pickers.
+function adminPlayerLabel(p) {
+    const name = `${p.first} ${p.last}${p.nickname ? ` \u201C${nicknameHtml(p.nickname)}\u201D` : ""}`;
+    return p.number != null ? `#${p.number} ${name}` : name;
+}
+
 function goalieOptionsHtml(teamId, selectedId) {
     const goalies = [...goaliesForTeam(teamId)].sort((a, b) => a.last.localeCompare(b.last));
 
     return `<option value="">— No goalie assigned —</option>` +
         goalies.map(p => {
-            const label = p.number != null ? `#${p.number} ${p.first} ${p.last}` : `${p.first} ${p.last}`;
+            const label = adminPlayerLabel(p);
             return `<option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""}>${label}</option>`;
         }).join("");
 }
@@ -905,7 +911,7 @@ function playerOptionsHtml(teamId, selectedId) {
 
     return `<option value="">—</option>` +
         players.map(p => {
-            const label = p.number != null ? `#${p.number} ${p.first} ${p.last}` : `${p.first} ${p.last}`;
+            const label = adminPlayerLabel(p);
             return `<option value="${p.id}" ${String(p.id) === String(selectedId) ? "selected" : ""}>${label}</option>`;
         }).join("");
 }
@@ -1019,7 +1025,7 @@ function renderResultAttendance() {
                 <input type="checkbox"
                     ${resultAttendance[side].has(String(p.id)) ? "checked" : ""}
                     onchange="toggleResultAttendance('${side}', '${p.id}', this.checked)">
-                <span>${p.number != null ? "#" + p.number + " " : ""}${p.first} ${p.last}</span>
+                <span>${p.number != null ? "#" + p.number + " " : ""}${p.first} ${p.last}${p.nickname ? ` <span style="opacity:.7;">&ldquo;${nicknameHtml(p.nickname)}&rdquo;</span>` : ""}</span>
             </label>
         `).join("") || `<p style="color:#97a3ac; font-size:13px;">No players on this roster yet.</p>`;
     });

@@ -542,11 +542,19 @@ function goalieStatsForPlayer(stats, playerId) {
     };
 }
 
+// A player's nickname, if he has one, shown after his name in quotes:
+// Smith, Bob "Boomer". Escaped, since admins type it in.
+function playerNicknameHtml(player) {
+    if (!player || !player.nickname) return "";
+    const safe = String(player.nickname).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    return ` <span class="player-nickname">&ldquo;${safe}&rdquo;</span>`;
+}
+
 function rosterRowHtml(player, cells) {
     return `
         <tr class="clickable-row" onclick="window.location.href='players.html?player=${player.id}'">
             <td>${player.number != null ? "#" + player.number : "—"}</td>
-            <td><strong>${player.last}, ${player.first}</strong></td>
+            <td><strong>${player.last}, ${player.first}</strong>${playerNicknameHtml(player)}</td>
             ${cells}
         </tr>
     `;
@@ -1258,7 +1266,7 @@ function renderPlayers() {
 
     const filtered = PLAYERS
         .filter(player => {
-            const fullName = `${player.first} ${player.last}`.toLowerCase();
+            const fullName = `${player.first} ${player.last} ${player.nickname || ""}`.toLowerCase();
             const matchesSearch = fullName.includes(search);
             const matchesTeam = selectedTeam === "ALL" || player.team === selectedTeam;
             return matchesSearch && matchesTeam;
@@ -1281,7 +1289,7 @@ function renderPlayers() {
     element.innerHTML = filtered.map(player => `
         <tr class="clickable-row" onclick="window.location.href='players.html?player=${player.id}'">
             <td>${player.number != null ? `#${player.number}` : "—"}</td>
-            <td><strong>${player.last}, ${player.first}</strong></td>
+            <td><strong>${player.last}, ${player.first}</strong>${playerNicknameHtml(player)}</td>
             <td>
                 <div class="roster-team">
                     ${teamBadge(player.team)}
@@ -1401,7 +1409,7 @@ async function renderPlayerDetail(playerId) {
         <div class="player-detail-card">
             ${teamBadge(player.team)}
             <div>
-                <h2>${player.first} ${player.last} ${player.number != null ? `<span class="player-detail-number">#${player.number}</span>` : ""}</h2>
+                <h2>${player.first} ${player.last}${playerNicknameHtml(player)} ${player.number != null ? `<span class="player-detail-number">#${player.number}</span>` : ""}</h2>
                 <p>${teamName(player.team)} &middot; ${isGoalie ? "Goalie" : "Skater"}</p>
             </div>
         </div>
@@ -1921,7 +1929,7 @@ async function renderLeaders() {
         <tr class="clickable-row leader-row" data-player="${row.player.id}" tabindex="0" aria-expanded="false">
             <td>${index + 1}</td>
             <td>${row.player.number != null ? "#" + row.player.number : "—"}</td>
-            <td><span class="leader-chevron">▸</span> ${row.player.last}, ${row.player.first}</td>
+            <td><span class="leader-chevron">▸</span> ${row.player.last}, ${row.player.first}${playerNicknameHtml(row.player)}</td>
             <td>${row.team ? row.team.name : ""}</td>
             <td>${row.gp}</td>
             <td>${row.goals}</td>
@@ -2282,7 +2290,7 @@ async function renderGoalieStats() {
     table.innerHTML = rows.map(row => `
         <tr>
             <td>${row.player.number != null ? "#" + row.player.number : "—"}</td>
-            <td>${row.player.last}, ${row.player.first}</td>
+            <td>${row.player.last}, ${row.player.first}${playerNicknameHtml(row.player)}</td>
             <td>${row.team ? row.team.name : ""}</td>
             <td>${row.gp}</td>
             <td>${row.minutesPlayed.toFixed(1)}</td>
