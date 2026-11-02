@@ -445,7 +445,8 @@ function openGameDetailPanels(gameId) {
     return Object.keys(GAME_DETAIL_OPEN)
         .filter(where => GAME_DETAIL_OPEN[where].has(String(gameId)))
         .map(where => document.getElementById(`${where}-detail-${gameId}`))
-        .filter(Boolean);
+        .filter(Boolean)
+        .concat([...document.querySelectorAll(`tr.standings-game-detail:not([hidden]) [data-game-detail="${gameId}"]`)]);
 }
 
 // Reads one game's goals, goalies and penalties and (re)draws its panel.
@@ -1526,19 +1527,149 @@ function computeStandings() {
         });
 }
 
+// Teams whose game list is open on the Standings page -- kept across the
+// live redraws so an open team doesn't snap shut when a score comes in.
+const STANDINGS_OPEN_TEAMS = new Set();
+const STANDINGS_OPEN_GAMES = new Set();   // "CODE|gameId"
+
+// One team's finished games, oldest first, each from that team's side:
+// result (W / L / OTL / T), opponent, home or away, and the score with
+// the team's goals first.
+function teamGameResults(code) {
+    return SCHEDULE
+        .filter(game => !game.noGames && game.status === "final" && (game.home === code || game.away === code))
+        .slice()
+        .sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")))
+        .map(game => {
+            const isHome = game.home === code;
+            const gf = (isHome ? game.homeScore : game.awayScore) ?? 0;
+            const ga = (isHome ? game.awayScore : game.homeScore) ?? 0;
+            let result;
+            if (gf === ga) result = "T";
+            else if (gf > ga) result = "W";
+            else result = game.wentOT ? "OTL" : "L";
+            return { game, isHome, opponent: isHome ? game.away : game.home, gf, ga, result };
+        });
+}
+
+// "W3" style current streak, counting back from the latest game.
+function teamStreak(results) {
+    if (!results.length) return "";
+    const last = results[results.length - 1].result;
+    let count = 0;
+    for (let i = results.length - 1; i >= 0 && results[i].result === last; i--) count++;
+    return `${last}${count}`;
+}
+
+const RESULT_LABELS = { W: "Win", L: "Loss", OTL: "OT loss", T: "Tie" };
+
+function standingsTeamGamesHtml(code) {
+    const results = teamGameResults(code);
+
+    if (!results.length) {
+        return `
+            <div class="leader-detail">
+                <p class="roster-empty">No games played yet.</p>
+                <a class="link-button" href="teams.html?team=${code}">Team page →</a>
+            </div>
+        `;
+    }
+
+    const lastFive = results.slice(-5).map(r => `<span class="result-pill result-${r.result.toLowerCase()}" title="${RESULT_LABELS[r.result]}">${r.result}</span>`).join("");
+    const rows = results.map(r => {
+        const key = `${code}|${r.game.id}`;
+        const isOpen = STANDINGS_OPEN_GAMES.has(key);
+        return `
+            <tr class="clickable-row standings-game-row ${isOpen ? "expanded" : ""}" data-game-key="${key}" tabindex="0" aria-expanded="${isOpen}">
+                <td><span class="leader-chevron">▸</span> ${formatDateShort(r.game.date)}</td>
+                <td>
+                    <div class="standings-team standings-opponent">
+                        <span class="home-away">${r.isHome ? "vs" : "@"}</span>
+                        ${teamBadge(r.opponent)}
+                        <span>${teamName(r.opponent)}</span>
+                    </div>
+                </td>
+                <td><span class="result-pill result-${r.result.toLowerCase()}">${r.result}</span></td>
+                <td><strong>${r.gf}–${r.ga}</strong>${r.game.wentOT && r.result !== "T" ? ` <span class="game-ot-tag">OT</span>` : ""}</td>
+            </tr>
+            <tr class="standings-game-detail" data-detail-for-game="${key}" ${isOpen ? "" : "hidden"}>
+                <td colspan="4"><div data-game-detail="${r.game.id}">${isOpen ? (gameDetailCachedHtml(r.game.id) || `<p class="schedule-detail-loading">Loading game details…</p>`) : ""}</div></td>
+            </tr>
+        `;
+    }).join("");
+
+    return `
+        <div class="leader-detail">
+            <div class="standings-form">
+                <span>Last ${Math.min(5, results.length)}:</span> ${lastFive}
+                <span class="standings-streak">Streak: <strong>${teamStreak(results)}</strong></span>
+            </div>
+            <div class="table-wrapper">
+                <table class="standings-table game-log-table standings-games-table">
+                    <thead><tr><th>Date</th><th>Opponent</th><th>Result</th><th>Score</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+            <p class="standings-hint">Tap a game for goals, goalies and penalties.</p>
+            <a class="link-button" href="teams.html?team=${code}">Team page →</a>
+        </div>
+    `;
+}
+
+function toggleStandingsTeam(code) {
+    const open = !STANDINGS_OPEN_TEAMS.has(code);
+    if (open) STANDINGS_OPEN_TEAMS.add(code); else STANDINGS_OPEN_TEAMS.delete(code);
+
+    const row = document.querySelector(`tr.standings-row[data-team="${code}"]`);
+    const detail = document.querySelector(`tr.standings-detail-row[data-detail-for="${code}"]`);
+    if (!row || !detail) return;
+
+    if (open) detail.firstElementChild.innerHTML = standingsTeamGamesHtml(code);
+    detail.hidden = !open;
+    row.classList.toggle("expanded", open);
+    row.setAttribute("aria-expanded", String(open));
+}
+
+function toggleStandingsGame(key) {
+    const open = !STANDINGS_OPEN_GAMES.has(key);
+    if (open) STANDINGS_OPEN_GAMES.add(key); else STANDINGS_OPEN_GAMES.delete(key);
+
+    const row = document.querySelector(`tr.standings-game-row[data-game-key="${key}"]`);
+    const detail = document.querySelector(`tr.standings-game-detail[data-detail-for-game="${key}"]`);
+    if (!row || !detail) return;
+
+    detail.hidden = !open;
+    row.classList.toggle("expanded", open);
+    row.setAttribute("aria-expanded", String(open));
+
+    if (open) {
+        const gameId = key.split("|")[1];
+        const game = SCHEDULE.find(g => String(g.id) === gameId);
+        const panel = detail.querySelector("[data-game-detail]");
+        panel.innerHTML = gameDetailCachedHtml(gameId) || `<p class="schedule-detail-loading">Loading game details…</p>`;
+        if (game && gameDetailIsStale(game)) loadGameDetail(gameId);
+    }
+}
+
 function renderStandings() {
     const element = document.getElementById("standings-table");
     if (!element) return;
 
     const standings = computeStandings();
 
-    element.innerHTML = standings.map(s => `
-        <tr>
+    // Each team row toggles a row under it listing every game the team
+    // has played -- win, loss, OT loss or tie -- and each of those games
+    // opens up the same goals / goalies / penalties panel as the Schedule.
+    element.innerHTML = standings.map(s => {
+        const isOpen = STANDINGS_OPEN_TEAMS.has(s.code);
+        return `
+        <tr class="clickable-row standings-row ${isOpen ? "expanded" : ""}" data-team="${s.code}" tabindex="0" aria-expanded="${isOpen}">
             <td class="team-name-cell">
-                <a class="standings-team" href="teams.html?team=${s.code}">
+                <div class="standings-team">
+                    <span class="leader-chevron">▸</span>
                     ${teamBadge(s.code)}
                     <span>${teamName(s.code)}</span>
-                </a>
+                </div>
             </td>
             <td>${s.gp}</td>
             <td>${s.w}</td>
@@ -1549,7 +1680,41 @@ function renderStandings() {
             <td>${s.ga}</td>
             <td><strong>${s.pts}</strong></td>
         </tr>
-    `).join("");
+        <tr class="leader-detail-row standings-detail-row" data-detail-for="${s.code}" ${isOpen ? "" : "hidden"}>
+            <td colspan="9">${isOpen ? standingsTeamGamesHtml(s.code) : ""}</td>
+        </tr>
+    `;
+    }).join("");
+
+    // Re-read any open game panels that are out of date after a redraw.
+    STANDINGS_OPEN_GAMES.forEach(key => {
+        const gameId = key.split("|")[1];
+        const game = SCHEDULE.find(g => String(g.id) === gameId);
+        if (game && gameDetailIsStale(game) && document.querySelector(`[data-detail-for-game="${key}"] [data-game-detail]`)) {
+            loadGameDetail(gameId);
+        }
+    });
+
+    // One set of listeners on the table body, so redraws don't stack them.
+    if (element.dataset.bound) return;
+    element.dataset.bound = "1";
+
+    function handle(target) {
+        if (target.closest("a")) return false;
+        const gameRow = target.closest("tr.standings-game-row");
+        if (gameRow) { toggleStandingsGame(gameRow.dataset.gameKey); return true; }
+        const teamRow = target.closest("tr.standings-row");
+        if (teamRow) { toggleStandingsTeam(teamRow.dataset.team); return true; }
+        return false;
+    }
+
+    element.addEventListener("click", e => handle(e.target));
+    element.addEventListener("keydown", e => {
+        if ((e.key === "Enter" || e.key === " ") && e.target.matches("tr.standings-row, tr.standings-game-row")) {
+            e.preventDefault();
+            handle(e.target);
+        }
+    });
 }
 
 
