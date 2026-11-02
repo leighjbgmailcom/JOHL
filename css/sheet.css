@@ -185,6 +185,85 @@
     font-size: 16px;
 }
 
+/* ----- Under the band: the two refs who worked the game ----- */
+
+.gs-refs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0;
+    border: 1px solid var(--gs-rule);
+    border-top: 0;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.gs-ref {
+    display: flex;
+    align-items: stretch;
+    flex: 1 1 260px;
+    min-height: var(--gs-line);
+    border-right: 1px solid var(--gs-rule);
+}
+
+.gs-ref-label {
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    background: var(--gs-auto);
+    border-right: 1px solid var(--gs-rule);
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.gs-ref select.gs-ref-select {
+    flex: 1;
+    min-width: 0;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 0;
+    background: var(--gs-input);
+    color: var(--gs-ink);
+    font-size: 17px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.gs-ref select.gs-ref-select:focus {
+    outline: 3px solid #f2b705;
+    outline-offset: -3px;
+    background: #fffbe0;
+}
+
+.gs-ref-message {
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 13px;
+    color: #45525c;
+}
+
+.gs-ref-message:empty {
+    display: none;
+}
+
+@media print {
+    .gs-ref {
+        min-height: 0;
+        flex-basis: 0;
+    }
+
+    .gs-ref select.gs-ref-select {
+        background: white;
+        font-size: 12px;
+        appearance: none;
+        -webkit-appearance: none;
+    }
+}
+
 /* LIVE while the game's on, FINAL once it's done. */
 .gs-stamp {
     padding: 1px 9px;

@@ -162,7 +162,9 @@ async function sheetPracticeBuildGame() {
         home_score: null,
         status: "scheduled",
         went_ot: false,
-        no_games: false
+        no_games: false,
+        referee_1_id: null,
+        referee_2_id: null
     });
 
     return true;

@@ -57,6 +57,7 @@ const SHEET_DEFAULT_GOALIE_OUT_PERIOD = "2";
 const SHEET_PERIOD_ORDINAL = { "1": "1st", "2": "2nd", "3": "3rd", "OT": "OT" };
 
 let SHEET_GAMES = [];
+let SHEET_REFEREES = [];     // the league's refs, for the two ref drop-downs
 let sheetGame = null;
 let sheetRows = null;        // { goal: { home: [], away: [] }, pen: {...} }
 let sheetGoalies = null;     // { home: { lines, dbRows, ... }, away: {...} }
@@ -477,7 +478,7 @@ async function loadSheetGames() {
 
     const { data, error } = await sheetDb()
         .from("games")
-        .select("id, game_no, game_date, game_time, location, away_team_id, home_team_id, away_score, home_score, status, went_ot, no_games")
+        .select("id, game_no, game_date, game_time, location, away_team_id, home_team_id, away_score, home_score, status, went_ot, no_games, referee_1_id, referee_2_id")
         .eq("no_games", false)
         .order("game_date", { ascending: true })
         .order("game_time", { ascending: true });
@@ -932,6 +933,8 @@ function renderSheet() {
                 <span class="gs-stamp" id="sheet-stamp" hidden></span>
             </span>
         </div>
+
+        ${sheetRefsHtml()}
 
         <div class="gs-topbar gs-screen-only">
             <div class="gs-legend">
@@ -1754,6 +1757,152 @@ async function onSheetAttendanceChange(checkbox) {
 
 
 /* =========================================
+   REFEREES
+   ========================================= */
+
+// The two refs who worked the game, picked from the league's list. A ref
+// who isn't on the list yet is added from the bottom of the drop-down.
+// See supabase-migrations/010_game_referees.sql.
+const SHEET_REF_SLOTS = ["referee_1_id", "referee_2_id"];
+const SHEET_REF_NEW = "__new";
+
+// Always read from the real list (practice too) -- it's only read here.
+async function loadSheetReferees() {
+    const { data, error } = await supabaseClient
+        .from("referees")
+        .select("id, name, active")
+        .order("name", { ascending: true });
+
+    if (error) {
+        console.error("Couldn't load the referees:", error);
+        return;
+    }
+    SHEET_REFEREES = data || [];
+}
+
+function sheetRefereeOptionsHtml(selectedId, otherId) {
+    const refs = SHEET_REFEREES
+        .filter(ref => ref.active || String(ref.id) === String(selectedId))
+        .filter(ref => String(ref.id) !== String(otherId) || !otherId)
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    return `<option value=""></option>` +
+        refs.map(ref => `<option value="${ref.id}" ${String(ref.id) === String(selectedId) ? "selected" : ""}>${sheetEsc(ref.name)}</option>`).join("") +
+        `<option value="${SHEET_REF_NEW}">+ Add a new ref…</option>`;
+}
+
+function sheetRefsHtml() {
+    const game = sheetGame;
+    return `
+        <div class="gs-refs" id="sheet-refs">
+            ${SHEET_REF_SLOTS.map((slot, i) => {
+                const other = game[SHEET_REF_SLOTS[1 - i]];
+                return `
+                    <label class="gs-ref">
+                        <span class="gs-ref-label">Referee</span>
+                        <select class="gs-ink gs-ref-select" data-ref="${slot}" aria-label="Referee ${i + 1}">${sheetRefereeOptionsHtml(game[slot], other)}</select>
+                    </label>
+                `;
+            }).join("")}
+            <span class="gs-ref-message gs-screen-only" id="sheet-ref-message"></span>
+        </div>
+    `;
+}
+
+function redrawSheetRefs() {
+    const el = document.getElementById("sheet-refs");
+    if (!el) return;
+    const message = document.getElementById("sheet-ref-message").textContent;
+    el.outerHTML = sheetRefsHtml();
+    document.getElementById("sheet-ref-message").textContent = message;
+}
+
+// Adds a ref to the league's list (or finds him if he's on it already).
+// In practice he's only kept on this page.
+async function sheetAddReferee(name) {
+    const existing = SHEET_REFEREES.find(ref => ref.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+        if (!existing.active) existing.active = true;
+        return existing;
+    }
+
+    if (SHEET_PRACTICE) {
+        const ref = { id: `practice-${SHEET_REFEREES.length + 1}`, name, active: true };
+        SHEET_REFEREES.push(ref);
+        return ref;
+    }
+
+    const { data, error } = await supabaseClient
+        .from("referees")
+        .insert({ name })
+        .select("id, name, active")
+        .single();
+
+    if (error) {
+        console.error("Couldn't add the referee:", error);
+        // Somebody else just added him: reload the list and use that one.
+        await loadSheetReferees();
+        return SHEET_REFEREES.find(ref => ref.name.toLowerCase() === name.toLowerCase()) || null;
+    }
+
+    if (!SHEET_REFEREES.some(ref => String(ref.id) === String(data.id))) SHEET_REFEREES.push(data);
+    return data;
+}
+
+async function onSheetRefereeChange(select) {
+    const game = sheetGame;
+    const slot = select.dataset.ref;
+    const message = document.getElementById("sheet-ref-message");
+    let value = select.value;
+
+    if (value === SHEET_REF_NEW) {
+        const typed = (window.prompt("New referee's name:") || "").trim().replace(/\s+/g, " ");
+        if (!typed) {
+            redrawSheetRefs();
+            return;
+        }
+        message.textContent = "Adding…";
+        const ref = await sheetAddReferee(typed);
+        if (game !== sheetGame) return;
+        if (!ref) {
+            message.textContent = "Couldn't add that ref. Check the connection and try again.";
+            redrawSheetRefs();
+            return;
+        }
+        value = String(ref.id);
+    }
+
+    const other = SHEET_REF_SLOTS.find(s => s !== slot);
+    if (value && String(game[other]) === value) {
+        message.textContent = "That ref is already picked.";
+        redrawSheetRefs();
+        return;
+    }
+
+    message.textContent = "Saving…";
+    const refId = value ? (SHEET_PRACTICE ? value : Number(value)) : null;
+    const { error } = await sheetDb().from("games").update({ [slot]: refId }).eq("id", game.id);
+
+    if (game !== sheetGame) return;
+    if (error) {
+        console.error(error);
+        message.textContent = "Couldn't save the ref. Pick him again.";
+        redrawSheetRefs();
+        return;
+    }
+
+    game[slot] = refId;
+    message.textContent = "Saved";
+    redrawSheetRefs();
+    setTimeout(() => {
+        const el = document.getElementById("sheet-ref-message");
+        if (el && el.textContent === "Saved") el.textContent = "";
+    }, 2000);
+}
+
+
+/* =========================================
    GAME STATUS (start / final / reopen / overtime)
    ========================================= */
 
@@ -1868,6 +2017,7 @@ function setupSheetEvents() {
         else if (target.dataset.gfield) onSheetGoalieFieldChange(target);
         else if (target.dataset.action === "attendance") onSheetAttendanceChange(target);
         else if (target.id === "sheet-went-ot") onSheetOvertimeChange();
+        else if (target.dataset.ref) onSheetRefereeChange(target);
     });
 
     sheet.addEventListener("click", event => {
@@ -1931,6 +2081,7 @@ async function initSheetPage() {
 
     setupSheetPractice();
     setupSheetEvents();
+    await loadSheetReferees();
     await loadSheetGames();
 
     // The practice game opens by itself: there's only the one.
