@@ -90,6 +90,7 @@ const INFRACTION_TYPES = [
     { code: "HKG/HO", name: "Hooking / Holding" },
     { code: "INT", name: "Interference" },
     { code: "RO", name: "Roughing" },
+    { code: "SLAP", name: "Slap Shot" }, // JOHL league rule: slap shots are a penalty
     { code: "SL", name: "Slashing" },
     { code: "SP", name: "Spearing" },
     { code: "TR", name: "Tripping" },
