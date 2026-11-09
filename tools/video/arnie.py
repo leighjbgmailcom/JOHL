@@ -31,10 +31,10 @@ SKIN = (244, 218, 200)
 SKIN_S = (228, 190, 168)
 SKIN_D = (205, 160, 138)
 CHEEK = (238, 160, 150)
-HAIR = (128, 112, 98)
-HAIR_L = (165, 150, 136)
-STACHE = (118, 100, 86)
-STACHE_L = (150, 133, 118)
+HAIR = (150, 146, 142)
+HAIR_L = (196, 194, 190)
+STACHE = (138, 130, 124)
+STACHE_L = (190, 186, 182)
 WOOL = (138, 140, 146)
 WOOL_D = (104, 106, 112)
 WOOL_L = (170, 172, 178)
@@ -96,66 +96,102 @@ HEAD_CY = 660     # centre of his face
 
 # ---------------------------------------------------------------- background
 def arena(img, board=None):
-    board = board or ("HOME", "00", "GUEST", "00", "20:00", "PERIOD 3")
+    """Jordan Arena as it looks from row three (from Leigh's photos): low
+    white ceiling with cream arched beams and hanging lights, a white end
+    wall with the flag, the red clock and the scoreboard, white boards with
+    a red cap, glass on silver posts, grey bleachers with yellow steps."""
+    board = board or ("HOME", "0", "VISITOR", "0", "20:00", "PERIOD 3")
     d = ImageDraw.Draw(img)
-    # rafters / back wall
-    for y in range(SCENE_TOP, SCENE_BOT):
-        t = (y - SCENE_TOP) / (SCENE_BOT - SCENE_TOP)
-        c = (int(26 + 20 * t), int(36 + 24 * t), int(52 + 26 * t))
-        d.line([(0, y * S), (W * S, y * S)], fill=c, width=S)
-    # roof trusses
-    for x in range(-60, W + 60, 180):
-        line(d, [(x, SCENE_TOP), (x + 90, SCENE_TOP + 70), (x + 180, SCENE_TOP)], 6, fill=(44, 56, 74))
-    line(d, [(0, SCENE_TOP + 70), (W, SCENE_TOP + 70)], 5, fill=(44, 56, 74))
-    # lights
-    for x in (120, 400, 680, 960):
-        ell(d, (x - 34, SCENE_TOP + 74, x + 34, SCENE_TOP + 96), fill=(255, 246, 214))
-    # far-side stands with fans
-    poly(d, [(0, 470), (W, 470), (W, 610), (0, 610)], fill=(58, 66, 82))
-    rnd = random.Random(7)
-    fan_cols = [(200, 16, 46), (11, 34, 57), (230, 230, 230), (70, 110, 160), (90, 90, 96), (180, 140, 60), (40, 120, 80)]
-    for row, y in enumerate(range(486, 600, 26)):
-        for x in range(8 + (row % 2) * 13, W, 26):
-            if rnd.random() < 0.33:
-                c = rnd.choice(fan_cols)
-                ell(d, (x - 8, y - 9, x + 8, y + 7), fill=c)
-                ell(d, (x - 5, y - 19, x + 5, y - 9), fill=(222, 196, 176))
-    # scoreboard hanging, off to the side
-    bx = 860
-    line(d, [(bx - 90, SCENE_TOP), (bx - 90, 290)], 3, fill=(30, 30, 30))
-    line(d, [(bx + 90, SCENE_TOP), (bx + 90, 290)], 3, fill=(30, 30, 30))
-    rr(d, (bx - 150, 290, bx + 150, 420), 10, fill=(18, 18, 20), outline=(70, 70, 76), width=s(4))
-    f = font("Bold", 18 * S)
-    d.text(((bx - 95) * S, 306 * S), board[0], font=f, fill=(240, 240, 240), anchor="mt")
-    d.text(((bx + 95) * S, 306 * S), board[2], font=f, fill=(240, 240, 240), anchor="mt")
-    fd = font("Black", 44 * S)
-    d.text(((bx - 95) * S, 334 * S), board[1], font=fd, fill=(255, 70, 50), anchor="mt")
-    d.text(((bx + 95) * S, 334 * S), board[3], font=fd, fill=(255, 70, 50), anchor="mt")
-    d.text((bx * S, 338 * S), board[4], font=font("Bold", 26 * S), fill=(255, 200, 60), anchor="mt")
-    d.text((bx * S, 382 * S), board[5], font=font("SemiBold", 15 * S), fill=(200, 200, 200), anchor="mt")
-    # glass
-    poly(d, [(0, 610), (W, 610), (W, 690), (0, 690)], fill=(150, 185, 205))
-    for x in range(0, W, 150):
-        line(d, [(x, 610), (x, 690)], 3, fill=(120, 150, 170))
-    # boards and ice
-    poly(d, [(0, 690), (W, 690), (W, 760), (0, 760)], fill=(245, 245, 242))
-    poly(d, [(0, 744), (W, 744), (W, 760), (0, 760)], fill=(250, 200, 40))
-    for i, (x0, txt) in enumerate([(30, "COLDBREAK"), (300, "THE KEG"), (560, "DAWSON'S"), (820, "TIMBIT")]):
-        rr(d, (x0, 698, x0 + 220, 738), 4, fill=[RED, NAVY, (40, 90, 60), (120, 70, 30)][i])
-        d.text(((x0 + 110) * S, 718 * S), txt, font=font("ExtraBold", 22 * S), fill=(255, 255, 255), anchor="mm")
-    poly(d, [(0, 760), (W, 760), (W, 980), (0, 980)], fill=(226, 238, 246))
-    poly(d, [(0, 850), (W, 850), (W, 866), (0, 866)], fill=(200, 30, 50))
-    poly(d, [(0, 930), (W, 930), (W, 944), (0, 944)], fill=(40, 80, 170))
-    # near boards & glass (row three is just above them)
-    poly(d, [(0, 980), (W, 980), (W, 1040), (0, 1040)], fill=(160, 195, 214))
-    poly(d, [(0, 1040), (W, 1040), (W, 1110), (0, 1110)], fill=(242, 242, 238))
-    # bleacher rows (Arnie's)
+    # ceiling: off-white panels
+    poly(d, [(0, SCENE_TOP), (W, SCENE_TOP), (W, 520), (0, 520)], fill=(232, 232, 226))
+    for x in range(-40, W + 80, 120):
+        line(d, [(x, SCENE_TOP), (x + 60, 520)], 2, fill=(214, 214, 206))
+    # cream arched beams, getting smaller toward the far wall
+    for i, (y, th) in enumerate([(300, 34), (372, 26), (428, 20), (470, 15), (500, 11)]):
+        line(d, bez((-20, y + 10), (W / 2, y - 26 + i * 4), (W + 20, y + 10)), th, fill=(222, 214, 186))
+        line(d, bez((-20, y + 10 + th * 0.4), (W / 2, y - 26 + i * 4 + th * 0.4), (W + 20, y + 10 + th * 0.4)), max(2, th * 0.25), fill=(196, 188, 160))
+        # hanging high-bay lights
+        n = [3, 4, 5, 6, 7][i]
+        for k in range(n):
+            lx = (k + 0.5) * W / n
+            ly = y + 10 + th
+            r = [26, 20, 15, 11, 8][i]
+            line(d, [(lx, y + 4), (lx, ly)], 2, fill=(150, 150, 150))
+            poly(d, [(lx - r * 0.5, ly), (lx + r * 0.5, ly), (lx + r, ly + r * 0.8), (lx - r, ly + r * 0.8)], fill=(200, 202, 206))
+            ell(d, (lx - r * 1.4, ly + r * 0.6, lx + r * 1.4, ly + r * 1.2), fill=(255, 252, 236))
+    # far end wall: white corrugated metal
+    poly(d, [(0, 520), (W, 520), (W, 676), (0, 676)], fill=(236, 236, 232))
+    for x in range(0, W, 14):
+        line(d, [(x, 520), (x, 676)], 1, fill=(218, 218, 214))
+    poly(d, [(0, 516), (W, 516), (W, 526), (0, 526)], fill=(120, 120, 124))
+    # skating club banner and window at the left
+    rr(d, (14, 600, 300, 640), 4, fill=(36, 80, 140))
+    d.text((157 * S, 620 * S), "Jordan Skating Club", font=font("Bold", 22 * S), fill=(255, 255, 255), anchor="mm")
+    # Canadian flag
+    fx, fy, fw, fh = 70, 532, 120, 60
+    poly(d, [(fx, fy), (fx + fw, fy), (fx + fw, fy + fh), (fx, fy + fh)], fill=(255, 255, 255))
+    poly(d, [(fx, fy), (fx + fw / 4, fy), (fx + fw / 4, fy + fh), (fx, fy + fh)], fill=(214, 30, 40))
+    poly(d, [(fx + fw * 3 / 4, fy), (fx + fw, fy), (fx + fw, fy + fh), (fx + fw * 3 / 4, fy + fh)], fill=(214, 30, 40))
+    mx, my = fx + fw / 2, fy + fh / 2
+    leaf = [(0, -22), (5, -12), (12, -14), (10, -4), (18, -7), (16, 0), (20, 2), (8, 10), (9, 16), (2, 13), (1, 22),
+            (-1, 22), (-2, 13), (-9, 16), (-8, 10), (-20, 2), (-16, 0), (-18, -7), (-10, -4), (-12, -14), (-5, -12)]
+    poly(d, [(mx + a, my + b) for a, b in leaf], fill=(214, 30, 40))
+    # red LED game clock box
+    rr(d, (204, 536, 320, 572), 3, fill=(22, 20, 20))
+    d.text((262 * S, 554 * S), board[4] if ":" in board[4] else "0:00", font=font("Bold", 26 * S), fill=(255, 40, 30), anchor="mm")
+    # scoreboard (right): black, red LED digits, HOME / VISITOR
+    bx0, by0, bx1, by1 = 742, 526, 1060, 644
+    rr(d, (bx0, by0, bx1, by1), 6, fill=(20, 20, 22), outline=(60, 60, 64), width=s(3))
+    rr(d, (bx0 + 8, by0 + 8, bx0 + 86, by0 + 70), 4, fill=(240, 240, 236))
+    d.text(((bx0 + 47) * S, (by0 + 30) * S), "JORDAN", font=font("Black", 15 * S), fill=(20, 40, 110), anchor="mm")
+    d.text(((bx0 + 47) * S, (by0 + 50) * S), "ARENA", font=font("Bold", 13 * S), fill=(20, 40, 110), anchor="mm")
+    rr(d, (bx1 - 86, by0 + 8, bx1 - 8, by0 + 70), 4, fill=(240, 240, 236))
+    d.text(((bx1 - 47) * S, (by0 + 30) * S), "JOHL", font=font("Black", 18 * S), fill=(200, 16, 46), anchor="mm")
+    d.text(((bx1 - 47) * S, (by0 + 50) * S), "SUNDAYS", font=font("Bold", 11 * S), fill=(60, 60, 60), anchor="mm")
+    cxs = (bx0 + bx1) / 2
+    clock = board[4] if ":" in board[4] else "0:00"
+    d.text((cxs * S, (by0 + 34) * S), clock, font=font("Bold", 34 * S), fill=(255, 40, 30), anchor="mm")
+    lab = board[5] if ":" in board[4] else board[4] + "  " + board[5]
+    d.text((cxs * S, (by0 + 62) * S), lab, font=font("SemiBold", 11 * S), fill=(220, 220, 220), anchor="mm")
+    d.text(((cxs - 44) * S, (by0 + 78) * S), board[0], font=font("Bold", 13 * S), fill=(230, 230, 230), anchor="mm")
+    d.text(((cxs + 44) * S, (by0 + 78) * S), board[2], font=font("Bold", 13 * S), fill=(230, 230, 230), anchor="mm")
+    d.text(((cxs - 44) * S, (by0 + 101) * S), board[1], font=font("Bold", 28 * S), fill=(255, 40, 30), anchor="mm")
+    d.text(((cxs + 44) * S, (by0 + 101) * S), board[3], font=font("Bold", 28 * S), fill=(255, 40, 30), anchor="mm")
+    # far boards: glass, white board, red cap, orange kick plate
+    poly(d, [(0, 646), (W, 646), (W, 690), (0, 690)], fill=(214, 226, 230))
+    for x in range(30, W, 110):
+        line(d, [(x, 646), (x, 690)], 2, fill=(170, 176, 180))
+    poly(d, [(0, 690), (W, 690), (W, 734), (0, 734)], fill=(248, 248, 246))
+    poly(d, [(0, 688), (W, 688), (W, 694), (0, 694)], fill=(200, 30, 40))
+    poly(d, [(0, 728), (W, 728), (W, 736), (0, 736)], fill=(230, 150, 50))
+    # ice
+    poly(d, [(0, 736), (W, 736), (W, 980), (0, 980)], fill=(240, 244, 248))
+    poly(d, [(0, 790), (W, 790), (W, 796), (0, 796)], fill=(120, 140, 200))
+    poly(d, [(0, 872), (W, 872), (W, 880), (0, 880)], fill=(214, 70, 80))
+    ell(d, (CX - 160, 850, CX + 160, 902), outline=(214, 70, 80), width=s(3))
+    # near glass on silver posts, netting above
+    poly(d, [(0, 930), (W, 930), (W, 1040), (0, 1040)], fill=(222, 234, 238, 255))
+    for x in range(0, W, 220):
+        rr(d, (x + 96, 920, x + 112, 1044), 6, fill=(184, 188, 194))
+        line(d, [(x + 100, 924), (x + 100, 1040)], 2, fill=(230, 232, 236))
+    # near boards: white with red cap
+    poly(d, [(0, 1040), (W, 1040), (W, 1110), (0, 1110)], fill=(246, 244, 242))
+    poly(d, [(0, 1036), (W, 1036), (W, 1048), (0, 1048)], fill=(204, 36, 44))
+    for x in range(40, W, 90):
+        ell(d, (x - 2, 1076, x + 2, 1080), fill=(170, 170, 170))
+    # grey bleachers with yellow step ends, red wall behind
     for i, y in enumerate((1110, 1200, 1290)):
-        poly(d, [(0, y), (W, y), (W, y + 90), (0, y + 90)], fill=(70 - i * 8, 74 - i * 8, 86 - i * 8))
-        poly(d, [(0, y), (W, y), (W, y + 20), (0, y + 20)], fill=(176, 182, 192))
-        poly(d, [(0, y + 20), (W, y + 20), (W, y + 26), (0, y + 26)], fill=(110, 116, 128))
-    d.text((40 * S, 1232 * S), "ROW 3", font=font("Bold", 22 * S), fill=(230, 230, 230))
-    # soft vignette darkening the far stuff a touch
+        poly(d, [(0, y), (W, y), (W, y + 90), (0, y + 90)], fill=(150 - i * 10, 152 - i * 10, 158 - i * 10))
+        poly(d, [(0, y), (W, y), (W, y + 14), (0, y + 14)], fill=(176, 178, 184))
+        poly(d, [(0, y + 84), (W, y + 84), (W, y + 90), (0, y + 90)], fill=(110, 112, 118))
+        for x0 in (0, W - 70):
+            poly(d, [(x0, y), (x0 + 70, y), (x0 + 70, y + 90), (x0, y + 90)], fill=(236, 196, 30))
+            poly(d, [(x0, y), (x0 + 70, y), (x0 + 70, y + 12), (x0, y + 12)], fill=(250, 214, 50))
+            line(d, [(x0 + 4, y + 30), (x0 + 66, y + 30)], 2, fill=(60, 60, 60))
+    d.text(((W - 36) * S, 1152 * S), "ROW 3", font=font("Black", 17 * S), fill=(40, 40, 46), anchor="mm")
+    # red hand rail at the step edge
+    line(d, [(78, 1120), (78, 1390)], 6, fill=(190, 30, 40))
+    line(d, [(W - 78, 1120), (W - 78, 1390)], 6, fill=(190, 30, 40))
     return img
 
 
@@ -203,8 +239,8 @@ def body(img):
     ell(d, (CX + 120, 980, CX + 220, 1080), fill=NAVY, outline=(255, 255, 255), width=s(4))
     d.text(((CX + 170) * S, 1030 * S), "JOHL", font=font("Black", 26 * S), fill=(255, 255, 255), anchor="mm")
     # sleeves: shoulder -> elbow (out at his sides) -> wrist (up at the gloves)
-    for side, wx in ((-1, CX - 210), (1, CX + 210)):
-        sh, el, wr = (CX + side * 290, 960), (CX + side * 340, 1250), (wx, 1215)
+    for side, el, wr in ((-1, (CX - 350, 1200), (CX - 400, 1078)), (1, (CX + 340, 1250), (CX + 210, 1215))):
+        sh = (CX + side * 290, 960)
         line(d, [sh, el, wr], 150, fill=RED_D)
         line(d, [sh, el, wr], 120, fill=RED)
         for k in range(1, 5):  # quilting across the sleeve
@@ -252,9 +288,15 @@ def head(mouth=0, eyes_open=True, look=0):
         for k in range(4):
             line(d, [(cx + side * (132 + k * 5), cy - 60 + k * 8), (cx + side * (132 + k * 5), cy + 40)], 2, fill=HAIR_L)
 
-    # brow lines (he's about 55)
-    for k in range(2):
-        line(d, bez((cx - 60, cy - 112 + k * 14), (cx, cy - 120 + k * 14), (cx + 60, cy - 112 + k * 14)), 3, fill=SKIN_D)
+    # he's about 55: forehead lines, bags under the eyes, smile lines, a soft second chin
+    for k in range(3):
+        line(d, bez((cx - 64 + k * 6, cy - 100 + k * 13), (cx, cy - 110 + k * 13), (cx + 64 - k * 6, cy - 100 + k * 13)), 3, fill=SKIN_D)
+    for side in (-1, 1):
+        ex = cx + side * 58
+        line(d, bez((ex - 22, cy - 2), (ex, cy + 10), (ex + 22, cy - 2)), 3, fill=SKIN_D)
+        line(d, bez((ex - 16, cy + 8), (ex, cy + 16), (ex + 16, cy + 8)), 2, fill=SKIN_S)
+        line(d, bez((cx + side * 40, cy + 54), (cx + side * 74, cy + 84), (cx + side * 88, cy + 120)), 4, fill=SKIN_D)
+    line(d, bez((cx - 50, cy + 204 + jaw), (cx, cy + 216 + jaw), (cx + 50, cy + 204 + jaw)), 4, fill=SKIN_S)
 
     # eyes
     ey = cy - 30
@@ -393,7 +435,16 @@ def front(img):
     # steam
     for k, off in enumerate((-18, 4, 24)):
         line(d, bez((cx + off, cy - 150), (cx + off - 16, cy - 186), (cx + off + 10, cy - 216)), 4, fill=(255, 255, 255, 120))
-    glove(d, cx, cy + 10, -1, True)
+    # his hand wraps around the side of the cup: the glove is drawn upright
+    # on its own, turned a quarter turn clockwise so the fingers lie across
+    # the front of the cup, and laid on top
+    tmp = canvas()
+    gx, gy = 200, 200
+    glove(ImageDraw.Draw(tmp), gx, gy, -1, True)
+    g = tmp.crop(s((gx - 100, gy - 105, gx + 100, gy + 95))).rotate(-90, resample=Image.BICUBIC, expand=True)
+    hx, hy = cx - 52, cy - 52           # where the middle of the hand goes
+    img.alpha_composite(g, (int((hx - 100) * S), int((hy - 100) * S)))
+    d = ImageDraw.Draw(img)
 
     # notebook in his left hand (our right), with a pencil
     nx, ny = CX + 200, 1100
