@@ -988,11 +988,14 @@ function renderScheduleGameDetail(game, goals, periods, penalties, options = {})
         return a.key[2] - b.key[2];
     });
 
-    // Goals are numbered in the order they went in: "1st Goal", "2nd Goal"...
-    // (a shootout goal isn't counted as one of the game's goals).
-    let goalCount = 0;
+    // Goals are numbered per team, in the order they went in: the Oilers'
+    // "1st Goal", then the Habs' own "1st Goal", and so on (a shootout goal
+    // isn't counted as one of the game's goals).
+    const goalCounts = {};
     events.forEach(event => {
-        if (event.isGoal) event.label = `${ordinalNumber(++goalCount)} Goal`;
+        if (!event.isGoal) return;
+        goalCounts[event.teamCode] = (goalCounts[event.teamCode] || 0) + 1;
+        event.label = `${ordinalNumber(goalCounts[event.teamCode])} Goal`;
     });
 
     const eventRowHtml = event => `

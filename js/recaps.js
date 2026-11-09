@@ -67,7 +67,8 @@ function recapOrdinal(n) {
     return n + ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th");
 }
 
-// One game's goals in the order they went in: 1st goal, 2nd goal, ...
+// One game's goals in the order they went in, numbered per team (each
+// team's 1st goal, 2nd goal, ...),
 // with who scored and who assisted. The game clock counts down, so a
 // higher time in the same period came first. A shootout winner is shown
 // after the list, since it isn't counted as a goal in the game.
@@ -92,15 +93,19 @@ function recapGoalsHtml(game) {
     const inGame = sorted.filter(goal => String(goal.period) !== "SO");
     const shootout = sorted.filter(goal => String(goal.period) === "SO");
 
-    const rows = inGame.map((goal, i) => {
+    // Numbered per team: each team's first goal is its "1st goal".
+    const goalCounts = {};
+    const rows = inGame.map(goal => {
+        const code = teamCode(goal.team_id);
+        goalCounts[code] = (goalCounts[code] || 0) + 1;
         const assists = [goal.assist1_id, goal.assist2_id].map(recapPlayerTag).filter(Boolean);
         const time = normalizeClockText(goal.game_time);
         const when = [periodLabel[goal.period] || goal.period, time].filter(Boolean).join(" ");
         return `
             <li class="recap-goal">
-                <span class="recap-goal-team">${teamBadge(teamCode(goal.team_id))}</span>
+                <span class="recap-goal-team">${teamBadge(code)}</span>
                 <span class="recap-goal-main">
-                    <span class="recap-goal-by"><strong>${recapOrdinal(i + 1)} goal</strong> by ${recapEsc(recapPlayerTag(goal.scorer_id) || "?")}</span>
+                    <span class="recap-goal-by"><strong>${recapOrdinal(goalCounts[code])} goal</strong> by ${recapEsc(recapPlayerTag(goal.scorer_id) || "?")}</span>
                     <span class="recap-goal-assist">${assists.length ? `Assist: ${recapEsc(assists.join(", "))}` : "Unassisted"}</span>
                 </span>
                 <span class="recap-goal-time">${recapEsc(when)}</span>
