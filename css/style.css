@@ -1596,6 +1596,10 @@ body.printing-schedule #schedule-print-sheet {
     margin-bottom: 18px;
 }
 
+.recap-words {
+    margin-bottom: 18px;
+}
+
 .recap-words summary {
     display: inline-block;
     color: #c8102e;

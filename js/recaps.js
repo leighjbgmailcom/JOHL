@@ -4,8 +4,8 @@
 
    Each recap is an entry in recaps/recaps.json: the game date, a title,
    the audio file, and the words as paragraphs. This page lists them
-   newest first: the player at the top, then that night's final scores
-   (from the schedule) with every goal underneath. Adding a week is adding an entry and an MP3 -- see
+   newest first: the player at the top, the words just under it, then
+   that night's final scores (from the schedule) with every goal. Adding a week is adding an entry and an MP3 -- see
    tools/recap/README.md.
 
    recaps.html?date=2026-10-04 opens straight to that night's recap,
@@ -162,13 +162,14 @@ function recapHtml(recap, show, host, isFeatured) {
                 Your browser can't play this here. <a href="${recapEsc(recap.audio)}">Download the recap</a>.
             </audio>
 
-            ${recapScoresHtml(recap.date)}
-
             <details class="recap-words">
                 <summary>Read the recap</summary>
                 ${(recap.text || []).map(paragraph => `<p>${recapEsc(paragraph)}</p>`).join("")}
                 <p class="recap-signoff">— ${recapEsc(host)}, ${recapEsc(show)}</p>
             </details>
+
+            ${recapScoresHtml(recap.date)}
+
         </article>
     `;
 }
