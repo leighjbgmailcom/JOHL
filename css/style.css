@@ -1486,7 +1486,7 @@ body.printing-schedule #schedule-print-sheet {
 
 .recap-scores {
     display: grid;
-    gap: 6px;
+    gap: 12px;
     max-width: 560px;
     margin-bottom: 18px;
 }
@@ -1526,6 +1526,67 @@ body.printing-schedule #schedule-print-sheet {
     font-weight: 900;
     color: #071a2b;
     white-space: nowrap;
+}
+
+.recap-game {
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e3e9ef;
+}
+
+.recap-game:last-child {
+    border-bottom: 0;
+}
+
+.recap-goals {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.recap-goal {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.3;
+    color: #2b3b4d;
+}
+
+.recap-goal-team .team-badge,
+.recap-goal-team .team-badge-logo {
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    border-width: 1px;
+    font-size: 8px;
+}
+
+.recap-goal-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.recap-goal-by strong {
+    color: #071a2b;
+}
+
+.recap-goal-assist {
+    font-size: 13px;
+    color: #6b7a8a;
+}
+
+.recap-goal-time {
+    font-size: 12px;
+    color: #6b7a8a;
+    white-space: nowrap;
+}
+
+.recap-goal.is-shootout .recap-goal-by strong {
+    color: #c8102e;
 }
 
 .recap-audio {
