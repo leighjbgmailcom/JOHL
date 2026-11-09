@@ -24,6 +24,11 @@ From Supabase (project `wjsxpywxwjordtzzjrue`), for the game date:
 If a game from that night isn't `final` yet, stop and say so rather than
 writing around it.
 
+Then check `recaps/notes/YYYY-MM-DD.md`. If it's there, it's what a
+league admin saw from the bench that night (things the score sheet
+doesn't show, like a pulled goalie). Work those moments into the recap;
+they count as real, the same as the score sheet.
+
 ## 2. Write Arnie's script
 
 Save it as `recaps/scripts/YYYY-MM-DD.txt`, plain text, a blank line
