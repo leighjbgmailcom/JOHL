@@ -4,8 +4,8 @@
 
    Each recap is an entry in recaps/recaps.json: the game date, a title,
    the audio file, and the words as paragraphs. This page lists them
-   newest first, with that night's final scores (from the schedule)
-   beside the player. Adding a week is adding an entry and an MP3 -- see
+   newest first: the player at the top, then that night's final scores
+   (from the schedule) with every goal underneath. Adding a week is adding an entry and an MP3 -- see
    tools/recap/README.md.
 
    recaps.html?date=2026-10-04 opens straight to that night's recap,
