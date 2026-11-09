@@ -1,0 +1,21 @@
+{
+  "audio": "recaps/audio/2026-11-01.mp3",
+  "date_text": "Sunday, November 1",
+  "title": "Six Leafs leads, four for KP, and goalies who change on cue",
+  "gap": 0.35,
+  "segments": [
+    {"start": 0.0, "end": 24.2,
+     "text": "Arnie Jordan here, coming to you from row three at Jordan Arena, with the Rinkside Report. It was Sunday, November first, the night after Halloween, so I came armed with a coffee, the notebook, and a pillowcase of leftover candy. Thirty-three goals, counting a shootout, and by the third period I was writing on a candy wrapper. This week I'm keeping a new tally in the notebook, and it's the Leafs Lead Counter. Remember that."},
+    {"start": 119.75, "end": 143.4,
+     "board": ["LEAFS", "7", "HABS", "8", "FINAL", "SHOOTOUT"],
+     "text": "So, another shootout, two weeks running. And Greg Penney buried it. Eight to seven Habs. KP scores four, and Penney gets the last word. The Leafs led six different times, and went home empty-handed. Last week they came back from four down. This week they invented the opposite. Collini slashed somebody in the first, then said sorry with three assists. And Mallet and Rico both went the full game and gave up seven apiece. That's not a goaltending duel. That's a goaltending potluck."},
+    {"start": 299.1, "end": 312.6,
+     "board": ["LEAFS", "7", "HABS", "8", "FINAL", "SHOOTOUT"],
+     "finals": [["Habs", "8", "Leafs", "7", "shootout"], ["Senators", "7", "Oilers", "4", ""], ["Nordiques", "4", "Canucks", "3", ""]],
+     "text": "So that's your week: four goals for KP, a Leafs Lead Counter that stopped at six, goalies who change on cue, and a dressing room full of quotes. I dropped three mini chocolate bars under the bleachers, and I'm not going down there."},
+    {"start": 320.55, "end": 324.49,
+     "board": ["LEAFS", "7", "HABS", "8", "FINAL", "SHOOTOUT"],
+     "finals": [["Habs", "8", "Leafs", "7", "shootout"], ["Senators", "7", "Oilers", "4", ""], ["Nordiques", "4", "Canucks", "3", ""]],
+     "text": "Tape your sticks. This has been Arnie Jordan with the Rinkside Report."}
+  ]
+}
