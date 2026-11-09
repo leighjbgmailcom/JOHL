@@ -302,6 +302,16 @@ Deno.serve(async (req: Request) => {
         seen.add(email);
         if (!alreadySent.has(email)) recipients.push(email);
       }
+
+      // League people who aren't on a roster but still get the report
+      // (e.g. the timekeeper): app_config.recap_email_extra_recipients,
+      // a comma-separated list of addresses.
+      for (const raw of String(config.recap_email_extra_recipients || "").split(",")) {
+        const email = raw.trim().toLowerCase();
+        if (!email || !email.includes("@") || seen.has(email) || skip.has(email)) continue;
+        seen.add(email);
+        if (!alreadySent.has(email)) recipients.push(email);
+      }
       if (!seen.size) return json({ error: "No player emails to send to" }, 500);
       if (!recipients.length) {
         return json({ error: `The ${date} recap has already been emailed to the league (${alreadySent.size} players)` }, 409);
