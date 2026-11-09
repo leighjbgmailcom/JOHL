@@ -41,6 +41,12 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 K="$CACHE/$MODEL"
 
+# League names the voice gets wrong, one per line: "word phonemes"
+# (lower case, Kokoro's phoneme symbols, as in its lexicon-us-en.txt).
+EXTRA_LEX=""
+HERE=$(cd "$(dirname "$0")" && pwd)
+[ -s "$HERE/lexicon-extra.txt" ] && EXTRA_LEX="$HERE/lexicon-extra.txt,"
+
 # A short pause between paragraphs.
 ffmpeg -hide_banner -loglevel error -y -f lavfi -i anullsrc=r=24000:cl=mono -t 0.55 "$WORK/gap.wav"
 
@@ -53,7 +59,7 @@ for para in "$WORK"/p*.txt; do
     "$CACHE/$ENGINE/bin/sherpa-onnx-offline-tts" \
         --kokoro-model="$K/model.onnx" --kokoro-voices="$K/voices.bin" --kokoro-tokens="$K/tokens.txt" \
         --kokoro-data-dir="$K/espeak-ng-data" --kokoro-dict-dir="$K/dict" \
-        --kokoro-lexicon="$K/lexicon-us-en.txt,$K/lexicon-zh.txt" \
+        --kokoro-lexicon="$EXTRA_LEX$K/lexicon-us-en.txt,$K/lexicon-zh.txt" \
         --num-threads=4 --sid="$VOICE" --kokoro-length-scale="$SPEED" \
         --output-filename="$wav" "$(cat "$para")" > "$WORK/tts.log" 2>&1 || { cat "$WORK/tts.log" >&2; exit 1; }
     [ -s "$wav" ] || { echo "No audio produced for $para" >&2; cat "$WORK/tts.log" >&2; exit 1; }
