@@ -88,7 +88,8 @@ minutes. If the voice trips on a name or a nickname, respell it the way
 it sounds in the script file only. For a name that keeps coming up, add
 it to `tools/recap/lexicon-extra.txt` instead (one line each: the word in
 lower case, then its sounds in the voice model's phoneme symbols), and
-every recap after that says it right.
+every recap after that says it right. (Craigy is the exception: he sounds
+right only when the script spells him as two words, "Cray ghee".)
 
 ## 4. Put it on the site as a draft
 
