@@ -839,13 +839,21 @@ function toggleScheduleResults() {
     toggle.querySelector(".schedule-results-chevron").textContent = scheduleResultsOpen ? "Hide ▴" : "Show ▾";
 }
 
-// "#<number> First Last" tag for an event row.
+// "#<number> Name" tag for an event row: the player's nickname, or his
+// last name if he doesn't have one (the same names the Rinkside Report uses).
 function scheduleEventPlayerTag(playerId) {
     if (playerId == null) return "";
     const player = PLAYERS.find(p => String(p.id) === String(playerId));
     if (!player) return "";
-    const name = `${player.first} ${player.last}`;
+    const name = player.nickname || player.last;
     return player.number != null ? `#${player.number} ${name}` : name;
+}
+
+// 1 -> "1st", 2 -> "2nd", 11 -> "11th", 22 -> "22nd".
+function ordinalNumber(n) {
+    const tens = n % 100;
+    if (tens >= 11 && tens <= 13) return `${n}th`;
+    return n + ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th");
 }
 
 // Builds the game detail markup: a "Starting Goalies" section up front
@@ -853,7 +861,7 @@ function scheduleEventPlayerTag(playerId) {
 // of goals, penalties and goalie changes. A goalie change is shown at the
 // time the previous goalie came out, which is how the score sheet (and
 // game_goalie_periods.time_out) records it. Each row shows the team's
-// logo, the event type, and the player(s) involved by full name -- this
+// logo, the event type, and the player(s) involved by number and nickname (or last name) -- this
 // is the public schedule view, so it stays lighter on detail than Admin's
 // full Enter Game Results screen.
 function renderScheduleGameDetail(game, goals, periods, penalties, options = {}) {
@@ -936,7 +944,8 @@ function renderScheduleGameDetail(game, goals, periods, penalties, options = {})
 
         events.push({
             teamCode: sideCodeForTeamId(goal.team_id),
-            label: "Goal",
+            label: String(goal.period) === "SO" ? "Shootout Goal" : "Goal",
+            isGoal: String(goal.period) !== "SO",
             detail: scorerTag,
             subDetail: assistTags.length ? `assist: ${assistTags.join(", ")}` : "",
             cssClass: "is-goal",
@@ -977,6 +986,13 @@ function renderScheduleGameDetail(game, goals, periods, penalties, options = {})
         if (a.key[0] !== b.key[0]) return a.key[0] - b.key[0];
         if (a.key[1] !== b.key[1]) return a.key[1] - b.key[1];
         return a.key[2] - b.key[2];
+    });
+
+    // Goals are numbered in the order they went in: "1st Goal", "2nd Goal"...
+    // (a shootout goal isn't counted as one of the game's goals).
+    let goalCount = 0;
+    events.forEach(event => {
+        if (event.isGoal) event.label = `${ordinalNumber(++goalCount)} Goal`;
     });
 
     const eventRowHtml = event => `
