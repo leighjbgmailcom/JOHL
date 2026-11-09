@@ -158,11 +158,11 @@ function recapHtml(recap, show, host, isFeatured) {
             <p class="eyebrow">${recapEsc(formatDateISO(recap.date))}</p>
             <h3>${recapEsc(recap.title)}</h3>
 
-            ${recapScoresHtml(recap.date)}
-
             <audio class="recap-audio" controls preload="${isFeatured ? "metadata" : "none"}" src="${recapEsc(recap.audio)}">
                 Your browser can't play this here. <a href="${recapEsc(recap.audio)}">Download the recap</a>.
             </audio>
+
+            ${recapScoresHtml(recap.date)}
 
             <details class="recap-words">
                 <summary>Read the recap</summary>
