@@ -65,7 +65,8 @@ between paragraphs. About 600–750 words (three to four minutes).
   goalie whose numbers that night back it up. No invented quotes,
   injuries, fights or history.
 - End with his standing excuse: if he got a name or a goal wrong, take it
-  up with the refs, the timekeeper, and how fast they all move out there.
+  up with the refs, the timekeeper, and how fast you guys skate out there.
+  Say "you guys", never "you people".
 - Ball busting, not bullying. The chirp is about the hockey and nothing
   else: never anyone's age, body, health, family or job, and never
   anything that would sting once the laugh is over. These are neighbours
