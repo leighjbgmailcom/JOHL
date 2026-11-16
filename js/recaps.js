@@ -181,8 +181,9 @@ function recapHtml(recap, show, host, isFeatured) {
 }
 
 /* -----------------------------------------
-   SHARING: the phone's own share sheet where there is one, plus
-   WhatsApp, a text message, Facebook, X and Copy link.
+   SHARING: one Share button. On a phone it opens the phone's own share
+   sheet (texts, WhatsApp, Facebook, email...); where there isn't one
+   (most computers) it copies the link instead.
    ----------------------------------------- */
 
 function recapShareUrl(recap) {
@@ -192,36 +193,28 @@ function recapShareUrl(recap) {
 function recapShareHtml(recap) {
     const url = recapShareUrl(recap);
     const text = `Arnie Jordan's Rinkside Report: ${recap.title}`;
-    const both = encodeURIComponent(`${text} ${url}`);
     return `
         <div class="recap-share" data-url="${recapEsc(url)}" data-text="${recapEsc(text)}">
-            <span class="recap-share-label">Share</span>
-            <button type="button" class="recap-share-btn is-native" hidden>Share…</button>
-            <a class="recap-share-btn is-wa" href="https://wa.me/?text=${both}" target="_blank" rel="noopener">WhatsApp</a>
-            <a class="recap-share-btn is-sms" href="sms:?&body=${both}">Text</a>
-            <a class="recap-share-btn is-fb" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}" target="_blank" rel="noopener">Facebook</a>
-            <a class="recap-share-btn is-x" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}" target="_blank" rel="noopener">X</a>
-            <button type="button" class="recap-share-btn is-copy">Copy link</button>
+            <button type="button" class="recap-share-btn">Share</button>
         </div>
     `;
 }
 
 function setupRecapShare(bar) {
     const url = bar.dataset.url, text = bar.dataset.text;
-    const native = bar.querySelector(".is-native");
-    if (navigator.share) {
-        native.hidden = false;
-        native.addEventListener("click", () => navigator.share({ title: "Rinkside Report", text, url }).catch(() => {}));
-    }
-    const copy = bar.querySelector(".is-copy");
-    copy.addEventListener("click", async () => {
+    const button = bar.querySelector(".recap-share-btn");
+    button.addEventListener("click", async () => {
+        if (navigator.share) {
+            navigator.share({ title: "Rinkside Report", text, url }).catch(() => {});
+            return;
+        }
         try {
             await navigator.clipboard.writeText(url);
-            copy.textContent = "Copied!";
+            button.textContent = "Link copied!";
         } catch (error) {
             window.prompt("Copy this link:", url);
         }
-        setTimeout(() => { copy.textContent = "Copy link"; }, 2000);
+        setTimeout(() => { button.textContent = "Share"; }, 2000);
     });
 }
 

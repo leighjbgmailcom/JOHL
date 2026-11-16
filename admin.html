@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png?v=48">
     <link rel="icon" href="images/icons/icon-192.png?v=48">
     <title>Admin | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=51">
+    <link rel="stylesheet" href="css/style.css?v=52">
 
     <style>
         .admin-panel {
@@ -114,6 +114,19 @@
             color: white;
             border-color: #071a2b;
         }
+
+        .traffic-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+        .traffic-range { font-size: 14px; color: #5b6b7c; }
+        .traffic-range select { margin-left: 6px; padding: 4px 6px; }
+        .traffic-note { font-size: 13px; color: #687681; margin: 6px 0 16px; }
+        .traffic-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .traffic-tile { background: #f4f7fa; border-radius: 8px; padding: 12px 14px; }
+        .traffic-tile strong { display: block; font-size: 26px; color: #0b2239; }
+        .traffic-tile span { font-size: 13px; color: #5b6b7c; }
+        .traffic-chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; border-bottom: 1px solid #d5dde5; margin: 6px 0 4px; }
+        .traffic-bar { flex: 1; background: #c8102e; border-radius: 2px 2px 0 0; min-height: 1px; }
+        .traffic-axis { display: flex; justify-content: space-between; font-size: 12px; color: #687681; margin-bottom: 20px; }
+        .traffic-section { margin: 18px 0 6px; font-size: 15px; color: #0b2239; }
 
         .admin-tab-panel {
             display: none;
@@ -265,6 +278,7 @@
         <button class="admin-tab" data-tab="schedule">Schedule</button>
         <button class="admin-tab" data-tab="teams">Teams</button>
         <button class="admin-tab" data-tab="sponsors">Sponsors</button>
+        <button class="admin-tab" data-tab="traffic">Traffic</button>
     </div>
 
 
@@ -744,6 +758,30 @@
 
     </div>
 
+
+    <div class="admin-tab-panel" id="admin-tab-traffic">
+
+    <div class="admin-panel">
+
+        <div class="traffic-head">
+            <h3>Site Traffic</h3>
+            <label class="traffic-range">Show the last
+                <select id="traffic-days">
+                    <option value="7">7 days</option>
+                    <option value="30" selected>30 days</option>
+                    <option value="90">90 days</option>
+                    <option value="365">year</option>
+                </select>
+            </label>
+        </div>
+        <p class="traffic-note">A "visitor" is one phone or computer, counted once however many pages it opens. Counting started when this tab was added, and visits from the preview link don't count.</p>
+
+        <div id="traffic-body"><p>Loading…</p></div>
+
+    </div>
+
+    </div>
+
 </main>
 
 
@@ -765,12 +803,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js?v=48"></script>
-<script src="js/header.js?v=48"></script>
+<script src="js/header.js?v=49"></script>
 <script src="js/install.js?v=48"></script>
 <script src="js/db.js?v=48"></script>
 <script src="js/app.js?v=50"></script>
 <script src="js/auth.js?v=48"></script>
-<script src="js/admin.js?v=48"></script>
+<script src="js/admin.js?v=49"></script>
 
 </body>
 </html>

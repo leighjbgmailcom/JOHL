@@ -429,6 +429,8 @@ function arnieDateLabel(date) {
 function arniePlainAudio(element, recap) {
     element.innerHTML = `<audio class="recap-audio" controls preload="metadata" src="${arnieEsc(recap.audio)}">
         Your browser can't play this here. <a href="${arnieEsc(recap.audio)}">Download the recap</a>.</audio>`;
+    const audio = element.querySelector("audio");
+    if (audio) audio.addEventListener("play", () => arnieCountPlay(audio, recap));
 }
 
 async function mountArniePlayer(element, recap) {
@@ -520,6 +522,7 @@ async function mountArniePlayer(element, recap) {
     }
 
     audio.addEventListener("play", () => {
+        arnieCountPlay(audio, recap);
         big.hidden = true; onAir.hidden = false; playPause.textContent = "❚❚ Pause"; start();
     });
     audio.addEventListener("pause", () => {
@@ -544,4 +547,13 @@ async function mountArniePlayer(element, recap) {
     });
 
     ARNIE_PLAYERS.push(audio);
+}
+
+
+// Counts the first press of play on a recap for the admin Traffic tab
+// (johlTrack is in js/header.js).
+function arnieCountPlay(audio, recap) {
+    if (audio.dataset.counted) return;
+    audio.dataset.counted = "1";
+    if (typeof johlTrack === "function") johlTrack("play", recap && recap.date);
 }

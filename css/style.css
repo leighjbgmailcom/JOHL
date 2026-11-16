@@ -3079,43 +3079,28 @@ footer {
    ========================================= */
 
 .recap-share {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
     max-width: 560px;
     margin-bottom: 18px;
 }
 
-.recap-share-label {
-    font-size: 13px;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #5b6b7c;
-    margin-right: 2px;
-}
-
 .recap-share-btn {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     border: 0;
     border-radius: 18px;
-    padding: 7px 13px;
+    padding: 8px 18px;
     font-size: 14px;
     font-weight: bold;
     color: white;
-    background: #34495e;
-    text-decoration: none;
+    background: #c8102e;
     cursor: pointer;
 }
 
-.recap-share-btn[hidden] { display: none; }
-.recap-share-btn.is-native { background: #c8102e; }
-.recap-share-btn.is-wa { background: #1f9e55; }
-.recap-share-btn.is-sms { background: #2f7de1; }
-.recap-share-btn.is-fb { background: #1b5fc6; }
-.recap-share-btn.is-x { background: #111; }
-.recap-share-btn.is-copy { background: #6b7785; }
+.recap-share-btn::before {
+    content: "\2934";
+    font-size: 15px;
+}
 
 .recap-comments {
     margin-top: 22px;

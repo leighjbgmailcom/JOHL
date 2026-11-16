@@ -1463,6 +1463,7 @@ async function initAdminPage() {
     await loadActiveSeason();
 
     setupAdminTabs();
+    setupTrafficTab();
 
     document.getElementById("game-away-team").innerHTML = teamOptionsHtml();
     document.getElementById("game-home-team").innerHTML = teamOptionsHtml();
@@ -1506,6 +1507,95 @@ async function initAdminPage() {
 
     document.getElementById("result-game-select").innerHTML = resultGameOptionsHtml();
 }
+
+/* =========================================
+   TRAFFIC TAB -- visitors and page views, from public.traffic_summary()
+   (supabase-migrations/012_page_views.sql). Loaded the first time the
+   tab is opened, and again when the range changes.
+   ========================================= */
+
+const TRAFFIC_PAGE_NAMES = {
+    index: "Home", schedule: "Schedule", standings: "Standings", leaders: "Leaders",
+    teams: "Teams", players: "Players", recaps: "Rinkside Report", live: "Live games",
+    sheet: "Score Sheet", constitution: "Constitution", admin: "Admin"
+};
+
+function setupTrafficTab() {
+    const tab = document.querySelector('.admin-tab[data-tab="traffic"]');
+    const select = document.getElementById("traffic-days");
+    if (!tab || !select) return;
+    let loaded = false;
+    tab.addEventListener("click", () => { if (!loaded) { loaded = true; loadTraffic(); } });
+    select.addEventListener("change", loadTraffic);
+}
+
+function trafficEsc(value) {
+    return String(value ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function trafficShortDate(iso) {
+    const [y, m, d] = String(iso).split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("en-CA", { month: "short", day: "numeric" });
+}
+
+async function loadTraffic() {
+    const body = document.getElementById("traffic-body");
+    const days = Number(document.getElementById("traffic-days").value) || 30;
+    body.innerHTML = "<p>Loading…</p>";
+
+    const { data, error } = await supabaseClient.rpc("traffic_summary", { days });
+    if (error || !data) {
+        console.error("Error loading traffic:", error);
+        body.innerHTML = `<p>Couldn't load the traffic numbers. ${trafficEsc(error && error.message)}</p>`;
+        return;
+    }
+
+    const byDay = data.by_day || [];
+    const most = Math.max(1, ...byDay.map(d => d.visitors));
+    const bars = byDay.map(d =>
+        `<div class="traffic-bar" style="height:${Math.round((d.visitors / most) * 100)}%" title="${trafficShortDate(d.day)}: ${d.visitors} visitors, ${d.views} pages"></div>`
+    ).join("");
+
+    const table = (head, rows) => rows.length
+        ? `<div class="table-wrapper"><table class="standings-table"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`
+        : `<p class="traffic-note">Nothing yet.</p>`;
+
+    const pageRows = (data.by_page || []).map(p =>
+        `<tr><td>${trafficEsc(TRAFFIC_PAGE_NAMES[p.page] || p.page)}</td><td>${p.visitors}</td><td>${p.views}</td></tr>`);
+    const recapRows = (data.recaps || []).map(r =>
+        `<tr><td>${trafficEsc(trafficShortDate(r.date))}</td><td>${r.visitors}</td><td>${r.plays}</td></tr>`);
+    const refRows = (data.referrers || []).map(r =>
+        `<tr><td>${trafficEsc(r.from)}</td><td>${r.visits}</td></tr>`);
+    const dev = data.devices || {};
+
+    body.innerHTML = `
+        <div class="traffic-tiles">
+            <div class="traffic-tile"><strong>${data.visitors}</strong><span>visitors</span></div>
+            <div class="traffic-tile"><strong>${data.today_visitors}</strong><span>visitors today</span></div>
+            <div class="traffic-tile"><strong>${data.views}</strong><span>pages opened</span></div>
+            <div class="traffic-tile"><strong>${data.plays}</strong><span>Rinkside Report plays</span></div>
+            <div class="traffic-tile"><strong>${data.signed_in_visitors}</strong><span>signed-in visitors</span></div>
+        </div>
+
+        <h4 class="traffic-section">Visitors each day</h4>
+        <div class="traffic-chart">${bars}</div>
+        <div class="traffic-axis"><span>${byDay.length ? trafficShortDate(byDay[0].day) : ""}</span><span>Today</span></div>
+
+        <h4 class="traffic-section">Pages</h4>
+        ${table(["Page", "Visitors", "Times opened"], pageRows)}
+
+        <h4 class="traffic-section">Rinkside Report, by week</h4>
+        ${table(["Game night", "Visitors", "Plays"], recapRows)}
+
+        <h4 class="traffic-section">Phones and computers</h4>
+        <p class="traffic-note" style="margin-top:0;">Phones ${dev.phone || 0} &middot; Tablets ${dev.tablet || 0} &middot; Computers ${dev.computer || 0}</p>
+
+        <h4 class="traffic-section">Where visitors came from</h4>
+        ${table(["Site", "Visits"], refRows)}
+        <p class="traffic-note">Visits from the recap email usually show up as "mail.google.com" or similar, or not at all when someone taps the link in a mail app.</p>
+    `;
+}
+
 
 // Note: js/app.js's own DOMContentLoaded listener already runs
 // setupMobileNav() and loadLeagueData() for this page (its other
