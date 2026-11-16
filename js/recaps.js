@@ -159,6 +159,7 @@ function recapHtml(recap, show, host, isFeatured) {
             <h3>${recapEsc(recap.title)}</h3>
 
             <div class="recap-player" data-date="${recapEsc(recap.date)}"></div>
+            ${recap.draft ? "" : recapShareHtml(recap)}
 
             <details class="recap-words">
                 <summary>Read the recap</summary>
@@ -166,10 +167,175 @@ function recapHtml(recap, show, host, isFeatured) {
                 <p class="recap-signoff">— ${recapEsc(host)}, ${recapEsc(show)}</p>
             </details>
 
+            ${recap.draft ? "" : `<section class="recap-comments" data-date="${recapEsc(recap.date)}">
+                <h4>Dressing room chatter</h4>
+                <ol class="recap-comment-list"><li class="recap-comment-empty">Loading…</li></ol>
+                <div class="recap-comment-form"></div>
+            </section>`}
+
             ${recapScoresHtml(recap.date)}
+
 
         </article>
     `;
+}
+
+/* -----------------------------------------
+   SHARING: the phone's own share sheet where there is one, plus
+   WhatsApp, a text message, Facebook, X and Copy link.
+   ----------------------------------------- */
+
+function recapShareUrl(recap) {
+    return `https://jordanohl.ca/recaps.html?date=${encodeURIComponent(recap.date)}`;
+}
+
+function recapShareHtml(recap) {
+    const url = recapShareUrl(recap);
+    const text = `Arnie Jordan's Rinkside Report: ${recap.title}`;
+    const both = encodeURIComponent(`${text} ${url}`);
+    return `
+        <div class="recap-share" data-url="${recapEsc(url)}" data-text="${recapEsc(text)}">
+            <span class="recap-share-label">Share</span>
+            <button type="button" class="recap-share-btn is-native" hidden>Share…</button>
+            <a class="recap-share-btn is-wa" href="https://wa.me/?text=${both}" target="_blank" rel="noopener">WhatsApp</a>
+            <a class="recap-share-btn is-sms" href="sms:?&body=${both}">Text</a>
+            <a class="recap-share-btn is-fb" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}" target="_blank" rel="noopener">Facebook</a>
+            <a class="recap-share-btn is-x" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}" target="_blank" rel="noopener">X</a>
+            <button type="button" class="recap-share-btn is-copy">Copy link</button>
+        </div>
+    `;
+}
+
+function setupRecapShare(bar) {
+    const url = bar.dataset.url, text = bar.dataset.text;
+    const native = bar.querySelector(".is-native");
+    if (navigator.share) {
+        native.hidden = false;
+        native.addEventListener("click", () => navigator.share({ title: "Rinkside Report", text, url }).catch(() => {}));
+    }
+    const copy = bar.querySelector(".is-copy");
+    copy.addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(url);
+            copy.textContent = "Copied!";
+        } catch (error) {
+            window.prompt("Copy this link:", url);
+        }
+        setTimeout(() => { copy.textContent = "Copy link"; }, 2000);
+    });
+}
+
+
+/* -----------------------------------------
+   COMMENTS: anyone can read them; players signed in to the site can
+   post (their name is filled in by the database from the roster) and
+   delete their own. Admins can delete any. Table: recap_comments
+   (supabase-migrations/011_recap_comments.sql).
+   ----------------------------------------- */
+
+let RECAP_ME = null;   // { id, isAdmin } once we know who's signed in
+
+function recapWhen(iso) {
+    const then = new Date(iso), mins = Math.round((Date.now() - then) / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins} min ago`;
+    if (mins < 60 * 24) return `${Math.round(mins / 60)} h ago`;
+    return then.toLocaleDateString("en-CA", { month: "short", day: "numeric" });
+}
+
+function recapCommentHtml(comment) {
+    const mine = RECAP_ME && (RECAP_ME.isAdmin || comment.author_id === RECAP_ME.id);
+    return `
+        <li class="recap-comment" data-id="${comment.id}">
+            <div class="recap-comment-head">
+                <strong>${recapEsc(comment.author_name)}</strong>
+                <span>${recapEsc(recapWhen(comment.created_at))}</span>
+                ${mine ? `<button type="button" class="recap-comment-delete">Delete</button>` : ""}
+            </div>
+            <p>${recapEsc(comment.body)}</p>
+        </li>
+    `;
+}
+
+async function loadRecapComments(root) {
+    const sections = [...root.querySelectorAll(".recap-comments")];
+    if (!sections.length) return;
+
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+            RECAP_ME = { id: session.user.id, isAdmin: false };
+            const { data: profile } = await supabaseClient.from("profiles").select("is_admin").eq("id", session.user.id).maybeSingle();
+            RECAP_ME.isAdmin = !!(profile && profile.is_admin);
+        }
+    } catch (error) {
+        console.error("Could not check who is signed in:", error);
+    }
+
+    const { data, error } = await supabaseClient
+        .from("recap_comments")
+        .select("id, recap_date, author_id, author_name, body, created_at")
+        .in("recap_date", sections.map(section => section.dataset.date))
+        .order("created_at", { ascending: true });
+
+    sections.forEach(section => {
+        const list = section.querySelector(".recap-comment-list");
+        const mine = (data || []).filter(comment => comment.recap_date === section.dataset.date);
+        list.innerHTML = error
+            ? `<li class="recap-comment-empty">Comments couldn't be loaded right now.</li>`
+            : (mine.length ? mine.map(recapCommentHtml).join("") : `<li class="recap-comment-empty">No comments yet. Get the chirps going.</li>`);
+        setupRecapCommentForm(section);
+    });
+}
+
+function setupRecapCommentForm(section) {
+    const holder = section.querySelector(".recap-comment-form");
+    const list = section.querySelector(".recap-comment-list");
+
+    if (!RECAP_ME) {
+        holder.innerHTML = `<p class="recap-comment-signin"><a href="index.html?login=1&redirect=recaps.html">Sign in</a> to leave a comment.</p>`;
+    } else {
+        holder.innerHTML = `
+            <form>
+                <textarea maxlength="600" rows="2" placeholder="Chirp away (keep it about the hockey)…" required></textarea>
+                <button type="submit">Post</button>
+            </form>
+        `;
+        const form = holder.querySelector("form");
+        const box = form.querySelector("textarea");
+        const button = form.querySelector("button");
+        form.addEventListener("submit", async event => {
+            event.preventDefault();
+            const body = box.value.trim();
+            if (!body) return;
+            button.disabled = true;
+            const { data, error } = await supabaseClient
+                .from("recap_comments")
+                .insert({ recap_date: section.dataset.date, body })
+                .select("id, recap_date, author_id, author_name, body, created_at")
+                .single();
+            button.disabled = false;
+            if (error) {
+                console.error("Could not post the comment:", error);
+                alert("That comment didn't go through. Try again in a minute.");
+                return;
+            }
+            const empty = list.querySelector(".recap-comment-empty");
+            if (empty) empty.remove();
+            list.insertAdjacentHTML("beforeend", recapCommentHtml(data));
+            box.value = "";
+        });
+    }
+
+    list.addEventListener("click", async event => {
+        const button = event.target.closest(".recap-comment-delete");
+        if (!button) return;
+        const item = button.closest(".recap-comment");
+        if (!confirm("Delete this comment?")) return;
+        const { error } = await supabaseClient.from("recap_comments").delete().eq("id", item.dataset.id);
+        if (error) { alert("Couldn't delete it right now."); return; }
+        item.remove();
+    });
 }
 
 async function renderRecaps() {
@@ -214,6 +380,10 @@ async function renderRecaps() {
     element.innerHTML = recaps
         .map(recap => recapHtml(recap, data.show, data.host, recap === featured))
         .join("");
+
+    // Share buttons and comments under each recap.
+    element.querySelectorAll(".recap-share").forEach(setupRecapShare);
+    loadRecapComments(element);
 
     // Arnie on camera in place of the plain audio player (js/arnie-player.js).
     element.querySelectorAll(".recap-player").forEach(slot => {

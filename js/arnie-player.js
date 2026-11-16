@@ -18,7 +18,7 @@
        mountArniePlayer(element, recap)   // recap = an entry of recaps.json
    ========================================= */
 
-const ARNIE_ASSET_VERSION = 2;
+const ARNIE_ASSET_VERSION = 3;
 let ARNIE_ASSETS = null;
 const ARNIE_PLAYERS = [];
 
@@ -40,7 +40,8 @@ function arnieAssets() {
             arnieLoadImage("recaps/arnie/scene/resurfacer.webp" + v),
             document.fonts ? Promise.all([
                 document.fonts.load("900 40px Orbitron"),
-                document.fonts.load("700 16px Oswald")
+                document.fonts.load("700 16px Oswald"),
+                document.fonts.load("700 18px Caveat")
             ]).catch(() => null) : null
         ]).then(([scene, front, sprite]) => ({ scene, front, sprite }));
     }
@@ -130,17 +131,133 @@ function arnieEngine(canvas, data, assets, dateLabel) {
       c.restore();
     }
 
-    // Zzz from the fan asleep in the stands
-    function drawZzz(c, now) {
-      const s = now / 1000;
+    // The fan asleep in the stands: a different fella each week, in the
+    // colours of the night's biggest loser (data.sleeper from make_arnie.py).
+    const SLEEP_TEAMS = {
+      TML: ['#0b2d6b', '#ffffff'], CAN: ['#0b6b45', '#0b2346'], NOR: ['#3d8fd9', '#ffffff'],
+      SEN: ['#c8102e', '#1b1b1b'], OIL: ['#0b2346', '#f26b21'], MTL: ['#af1e2d', '#1c2f73'],
+    };
+    const SL = (() => {
+      const S = data.sleeper || {team: 'TML', seed: 1};
+      let k = (S.seed || 1) % 2147483647;
+      const r = () => (k = (k * 16807) % 2147483647) / 2147483647;
+      const hair = ['#3b2a1a', '#8a5a2b', '#9a9a9a', '#d8c27a', '#1b1b1b'];
+      return {
+        col: SLEEP_TEAMS[S.team] || SLEEP_TEAMS.TML,
+        cx: 112 + Math.floor(r() * 28), lean: r() < 0.5 ? -1 : 1,
+        hat: ['toque', 'cap', 'none'][Math.floor(r() * 3)],
+        hair: hair[Math.floor(r() * hair.length)],
+        prop: ['finger', 'popcorn', 'coffee', 'none'][Math.floor(r() * 4)],
+        pants: ['#3b4a63', '#4a4a4a', '#6b5a3e'][Math.floor(r() * 3)],
+        beard: r() < 0.35,
+      };
+    })();
+    function drawSleeper(c, now) {
+      const s = now / 1000, br = Math.sin(s * 1.3), {col, cx, lean} = SL;
+      c.save(); c.lineJoin = 'round'; c.lineCap = 'round'; c.strokeStyle = '#1b1b1b'; c.lineWidth = 2.5;
+      // prop on the bench beside him
+      if (SL.prop === 'coffee') {
+        c.fillStyle = '#f2efe6'; c.beginPath(); c.moveTo(cx - 34, 452); c.lineTo(cx - 22, 452); c.lineTo(cx - 24, 470); c.lineTo(cx - 32, 470); c.closePath(); c.fill(); c.stroke();
+        c.fillStyle = '#c8102e'; c.fillRect(cx - 33, 458, 10, 5);
+      } else if (SL.prop === 'popcorn') {
+        c.fillStyle = '#f5e08a'; c.beginPath(); c.arc(cx + 30, 449, 6, 0, Math.PI * 2); c.arc(cx + 37, 450, 5, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#fff'; c.beginPath(); c.moveTo(cx + 23, 452); c.lineTo(cx + 43, 452); c.lineTo(cx + 40, 470); c.lineTo(cx + 26, 470); c.closePath(); c.fill(); c.stroke();
+        c.fillStyle = '#c8102e'; c.fillRect(cx + 28, 453, 4, 16); c.fillRect(cx + 35, 453, 4, 16);
+      }
+      // sitting slumped: knees, legs and boots
+      c.lineWidth = 3;
+      c.fillStyle = SL.pants;
+      c.beginPath(); c.roundRect(cx - 18, 474, 11, 19, 3); c.fill(); c.stroke();
+      c.beginPath(); c.roundRect(cx + 7, 474, 11, 19, 3); c.fill(); c.stroke();
+      c.beginPath(); c.ellipse(cx - 11, 473, 11, 7, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+      c.beginPath(); c.ellipse(cx + 11, 473, 11, 7, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+      c.fillStyle = '#2a2a2a';
+      c.beginPath(); c.ellipse(cx - 15, 495, 9, 4, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+      c.beginPath(); c.ellipse(cx + 15, 495, 9, 4, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+      // slumped body in a team sweater, breathing slowly
+      const top = 442 - br * 0.8;
+      c.fillStyle = col[0];
+      c.beginPath(); c.moveTo(cx - 21, 470); c.quadraticCurveTo(cx - 23, top + 4, cx - 10 + lean * 4, top);
+      c.quadraticCurveTo(cx + lean * 4, top - 3, cx + 10 + lean * 4, top);
+      c.quadraticCurveTo(cx + 23, top + 4, cx + 21, 470); c.closePath(); c.fill(); c.stroke();
+      c.fillStyle = col[1]; c.fillRect(cx - 21, 460, 42, 4);
+      // arms hanging, hands on the knees
+      for (const side of [-1, 1]) {
+        c.lineWidth = 11; c.strokeStyle = '#1b1b1b';
+        c.beginPath(); c.moveTo(cx + side * 17, top + 6); c.quadraticCurveTo(cx + side * 22, 458, cx + side * 13, 468); c.stroke();
+        c.lineWidth = 7; c.strokeStyle = col[0];
+        c.beginPath(); c.moveTo(cx + side * 17, top + 6); c.quadraticCurveTo(cx + side * 22, 458, cx + side * 13, 468); c.stroke();
+        c.lineWidth = 2.5; c.strokeStyle = '#1b1b1b'; c.fillStyle = 'rgb(232,184,150)';
+        c.beginPath(); c.arc(cx + side * 12, 469, 3.6, 0, Math.PI * 2); c.fill(); c.stroke();
+      }
+      // head tipped over, mouth open
+      const hx0 = cx + lean * 12, hy0 = top - 5;
+      c.save(); c.translate(hx0, hy0); c.rotate(lean * 0.6 + br * 0.03);
+      c.fillStyle = 'rgb(232,184,150)'; c.beginPath(); c.arc(0, 0, 11, 0, Math.PI * 2); c.fill(); c.stroke();
+      if (SL.beard) { c.fillStyle = SL.hair; c.beginPath(); c.arc(0, 3, 10, 0.15 * Math.PI, 0.85 * Math.PI); c.fill(); }
+      c.lineWidth = 1.8;
+      c.beginPath(); c.arc(-4, 0, 2.6, 0.1 * Math.PI, 0.9 * Math.PI); c.stroke();
+      c.beginPath(); c.arc(4, 0, 2.6, 0.1 * Math.PI, 0.9 * Math.PI); c.stroke();
+      c.fillStyle = '#5a1f1f'; c.beginPath(); c.ellipse(0, 6, 2.2, 1.6 + br * 0.6, 0, 0, Math.PI * 2); c.fill();
+      c.lineWidth = 2.5;
+      if (SL.hat === 'toque') {
+        c.fillStyle = col[0]; c.beginPath(); c.moveTo(-11, -2); c.quadraticCurveTo(-10, -16, 0, -16); c.quadraticCurveTo(10, -16, 11, -2); c.closePath(); c.fill(); c.stroke();
+        c.fillStyle = col[1]; c.fillRect(-11, -5, 22, 4); c.beginPath(); c.arc(0, -18, 3.5, 0, Math.PI * 2); c.fill(); c.stroke();
+      } else if (SL.hat === 'cap') {
+        c.fillStyle = col[0]; c.beginPath(); c.arc(0, -3, 11, Math.PI, 0); c.closePath(); c.fill(); c.stroke();
+        c.beginPath(); c.moveTo(lean * 9, -3); c.lineTo(lean * 19, -1); c.stroke();
+      } else {
+        c.fillStyle = SL.hair; c.beginPath(); c.arc(0, -2, 11, Math.PI * 1.05, Math.PI * 1.95); c.fill();
+      }
+      c.restore();
+      // a foam finger slipping out of his hand
+      if (SL.prop === 'finger') {
+        c.save(); c.translate(cx + 20, 456); c.rotate(0.9);
+        c.fillStyle = col[0]; c.beginPath(); c.roundRect(-6, -26, 12, 30, 4); c.fill(); c.stroke();
+        c.beginPath(); c.roundRect(-4, -40, 7, 16, 3); c.fill(); c.stroke();
+        c.restore();
+      }
+      c.restore();
+      // floating Zzz
       for (let k = 0; k < 3; k++) {
         const p = (s * 0.42 + k / 3) % 1;
         c.globalAlpha = Math.sin(p * Math.PI);
         c.font = `700 ${13 + p * 15}px Oswald, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
-        const zx = 154 + p * 30 + Math.sin(p * 6) * 3, zy = 410 - p * 46;
+        const zx = hx0 + 14 + p * 30 + Math.sin(p * 6) * 3, zy = hy0 - 14 - p * 46;
         c.lineWidth = 3.5; c.strokeStyle = '#1c2a44'; c.strokeText('Z', zx, zy); c.fillStyle = '#fff'; c.fillText('Z', zx, zy);
       }
       c.globalAlpha = 1;
+    }
+
+    // Arnie's notebook: this week's notes, a page per paragraph (data.pages).
+    const PAGES = data.pages || [];
+    const PU = [PG.tr[0] - PG.tl[0], PG.tr[1] - PG.tl[1]], PV = [PG.bl[0] - PG.tl[0], PG.bl[1] - PG.tl[1]];
+    const LW = 150, LH = 225;
+    const SLOTS = [[30, 8, 140], [54, 8, 140], [78, 34, 136], [184, 10, 130], [208, 10, 136]];
+    function pageIndex(t) { let i = 0; for (const f of FLIPS) if (t >= f) i++; return Math.min(i, PAGES.length - 1); }
+    function drawPageContent(c, idx) {
+      const lines = PAGES[idx];
+      if (!lines) return;
+      c.save();
+      c.transform(PU[0] / LW, PU[1] / LW, PV[0] / LH, PV[1] / LH, PG.tl[0], PG.tl[1]);
+      c.beginPath(); c.moveTo(2, 12); c.lineTo(148, 12); c.lineTo(148, 223); c.lineTo(2, 223); c.closePath();
+      c.fillStyle = '#fbf8ee'; c.fill();
+      c.strokeStyle = 'rgba(110,140,190,.28)'; c.lineWidth = 1;
+      for (let y = 34; y < 222; y += 24) { c.beginPath(); c.moveTo(3, y + 2); c.lineTo(147, y + 2); c.stroke(); }
+      c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+      lines.slice(0, SLOTS.length).forEach((raw, i) => {
+        const red = raw.startsWith('!'), text = red ? raw.slice(1) : raw;
+        const [y, x0, x1] = SLOTS[i];
+        let size = 19; c.font = `700 ${size}px Caveat, 'Comic Sans MS', cursive`;
+        while (c.measureText(text).width > x1 - x0 && size > 11) { size -= 1; c.font = `700 ${size}px Caveat, 'Comic Sans MS', cursive`; }
+        c.fillStyle = red ? '#c0272d' : (i === 0 ? '#14286e' : '#1f3fa8');
+        c.fillText(text, x0, y);
+        if (i === 0) { c.strokeStyle = c.fillStyle; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x0, y + 3); c.lineTo(x0 + Math.min(c.measureText(text).width, x1 - x0), y + 3); c.stroke(); }
+      });
+      c.restore();
+    }
+    function drawHands(c) {
+      for (const poly of HANDS) { c.save(); c.beginPath(); poly.forEach((pt, i) => i ? c.lineTo(...pt) : c.moveTo(...pt)); c.closePath(); c.clip(); c.drawImage(img, 0, 0); c.restore(); }
     }
 
     // the iA Private Wealth ice resurfacer: far side right to left, then back along the near side
@@ -215,7 +332,7 @@ function arnieEngine(canvas, data, assets, dateLabel) {
       return -1;
     }
     function pagePath(c) { c.beginPath(); c.moveTo(...PG.tl); c.lineTo(...PG.tr); c.lineTo(...PG.br); c.lineTo(...PG.bl); c.closePath(); }
-    function drawFlip(c, p) {
+    function drawFlip(c, p, sheet) {
       const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
       const s = 1 - 1.45 * e;
       const [ox, oy] = PG.tl, ux = PG.tr[0] - ox, uy = PG.tr[1] - oy, vx = PG.bl[0] - ox, vy = PG.bl[1] - oy;
@@ -225,7 +342,7 @@ function arnieEngine(canvas, data, assets, dateLabel) {
       const m21 = uy * ia + s * vy * ib, m22 = uy * ic + s * vy * id;
       const T = [m11, m21, m12, m22, ox - m11 * ox - m12 * oy, oy - m21 * ox - m22 * oy];
       c.save(); c.setTransform(...T); pagePath(c); c.clip();
-      if (s > 0) { c.drawImage(img, 0, 0); c.fillStyle = `rgba(0,0,0,${0.25 * (1 - s)})`; c.fillRect(0, 0, W, H); }
+      if (s > 0) { if (PAGES.length) { c.drawImage(img, 0, 0); drawPageContent(c, sheet); } else c.drawImage(img, 0, 0); c.fillStyle = `rgba(0,0,0,${0.25 * (1 - s)})`; c.fillRect(0, 0, W, H); }
       else {
         c.fillStyle = '#efe9da'; c.fillRect(0, 0, W, H);
         c.strokeStyle = 'rgba(120,140,170,.35)'; c.lineWidth = 2;
@@ -233,19 +350,21 @@ function arnieEngine(canvas, data, assets, dateLabel) {
       }
       c.restore();
       c.save(); c.setTransform(...T); pagePath(c); c.restore(); c.strokeStyle = '#222'; c.lineWidth = 3; c.stroke();
-      for (const poly of HANDS) { c.save(); c.beginPath(); poly.forEach((pt, i) => i ? c.lineTo(...pt) : c.moveTo(...pt)); c.closePath(); c.clip(); c.drawImage(img, 0, 0); c.restore(); }
+      drawHands(c);
     }
 
 
     function frame(now, t, speaking) {
       const sec = now / 1000, live = speaking || t > 0;
       fx.drawImage(img, 0, 0);
-      drawZzz(fx, now);
+      drawSleeper(fx, now);
       drawIce(fx, now);
       if (fgImg.complete) fx.drawImage(fgImg, 0, 0);
       drawBoard(fx, live ? t : -1, now);
       const fp = live ? flipAmount(t) : -1;
-      if (fp >= 0) drawFlip(fx, fp);
+      const pg = PAGES.length ? (live ? pageIndex(t) : 0) : -1;
+      if (pg >= 0) { drawPageContent(fx, pg); drawHands(fx); }
+      if (fp >= 0) drawFlip(fx, fp, Math.max(0, pg - 1));
       let target = speaking ? Math.min(1, level(t) * 1.15) : 0;
       if (target < 0.12) target = 0;
       open += (target - open) * (target > open ? 0.55 : 0.3);

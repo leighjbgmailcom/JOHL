@@ -111,6 +111,23 @@ matched to (-1 is the opening, a number past the last game is the
 sign-off) — check that each game got its own paragraphs. Without the
 file, that recap simply gets the plain audio player.
 
+The file also carries two things that change every week:
+
+- **Arnie's notebook.** A page per paragraph, flipped as he starts each
+  one: the score at that point and a line on each fella he's talking
+  about (blue pen for goals, red pen for the penalty box). The tool
+  makes these up from the score sheet. To make them funnier, give your
+  own in the recap's entry in `recaps/recaps.json`, one list per
+  paragraph (`null` keeps the made-up page), at most five short lines
+  of about 20 characters, a line starting with `!` in red pen:
+
+      "notepad": [["ROW 3 - 11/22", "coffee #1", "nephew: crayons??"], null, ...]
+
+  Same rules as the script: the hockey in them is real, the jokes are
+  never pinned on a named player.
+- **The fan asleep in the stands**, wearing the colours of the team
+  that lost by the most that night, with a different look each week.
+
 ## 4. Put it on the site as a draft
 
 Add an entry to the top of `recaps` in `recaps/recaps.json`:

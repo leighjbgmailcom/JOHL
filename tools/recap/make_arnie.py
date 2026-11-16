@@ -100,6 +100,131 @@ def word_re(name):
     return re.compile(r"(?<![A-Za-z])" + re.escape(name) + r"(?![A-Za-z])", re.I)
 
 
+TEAM_SHORT = {"TML": "Leafs", "CAN": "Canucks", "NOR": "Nordiques", "SEN": "Sens", "OIL": "Oilers", "MTL": "Habs"}
+NUM = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"]
+
+
+def pick_sleeper(date, games, teams):
+    """The fan asleep in the stands: wearing the colours of the team that
+    lost by the most that night (a different fella every week)."""
+    worst, team = -1, None
+    for g in games:
+        hs, as_ = g.get("home_score") or 0, g.get("away_score") or 0
+        margin = abs(hs - as_)
+        loser = g["away_team_id"] if hs > as_ else g["home_team_id"]
+        if margin >= worst:
+            worst, team = margin, teams.get(loser)
+    seed = sum(ord(c) * (i + 7) for i, c in enumerate(date)) % 9973
+    return {"team": team or "TML", "seed": seed}
+
+
+JOKES = {
+    "coffee": ["!coffee spill (again)", "coffee: cold", "coffee #2. maybe 3"],
+    "nephew": ["ask nephew re: 'pros'", "nephew = 9 yrs old"],
+    "shootout": ["SHOOTOUT!!", "no OT. straight to SO"],
+    "glass": ["upstairs crew: LOUD", "glass took a beating"],
+    "upstairs": ["upstairs: pizza + yelling"],
+    "hot dog": ["hot dog #2"], "pizza": ["pizza smell. focus"],
+    "pen": ["need more pens", "pens: running dry"],
+    "candy": ["candy left: 2"], "notebook": ["page getting full"],
+    "pencil": ["pencil broke"], "stairs": ["row 3 = cardio"],
+    "zamboni": ["zamboni guy waved"], "trick": ["HAT TRICK - hats!"],
+}
+FILLER = ["who passed THAT?", "note: buy more pens", "pencil broke", "page getting full", "stretch legs",
+          "listeners: 2 (3?)", "check the clock", "too fast to write", "where'd the puck go"]
+
+
+def notepad_pages(date, recap, paras, assign, games, goals, pens, gper, players, teams, names_for, kf, ptimes):
+    """What Arnie has scribbled on his notebook page while he reads each
+    paragraph: the score so far and a line for each fella he's talking
+    about (blue pen for goals, red pen for the penalty box, as he says
+    himself), or a doodle-note about whatever else he's on about. A recap
+    can give its own lines instead, in recaps.json:
+    "notepad": [["line", "line"], null, ...], one entry per paragraph
+    (null = make it up). Start a line with "!" for the red pen."""
+    import random
+    rnd = random.Random(date)
+    used = set()
+
+    def pick(options):
+        fresh = [o for o in options if o not in used] or options
+        o = rnd.choice(fresh); used.add(o); return o
+
+    nm = lambda pid: (names_for(pid) or ["?"])[0]
+    pages = []
+    override = recap.get("notepad") or []
+    first_page = {}
+    for pi, gi in enumerate(assign):
+        own = override[pi] if pi < len(override) else None
+        if own:
+            pages.append(list(own)[:6]); continue
+        text = paras[pi]
+        low = text.lower()
+        lines = []
+        if 0 <= gi < len(games):
+            g = games[gi]
+            home, away = g["home_team_id"], g["away_team_id"]
+            H, A = TEAM_SHORT.get(teams.get(home), "Home"), TEAM_SHORT.get(teams.get(away), "Away")
+            # the score on the board when he finishes this paragraph
+            st = [k for k in kf if k["g"] == gi and k["t"] <= ptimes[pi][1] + 0.01]
+            h, a = (st[-1]["h"], st[-1]["a"]) if st else (0, 0)
+            fin = bool(st and st[-1]["final"])
+            if gi not in first_page:
+                first_page[gi] = pi
+                lines.append(f"G{gi + 1}: {A} @ {H}")
+            lines.append(f"{A} {a} - {H} {h}" + ("  FINAL" if fin else ""))
+            gg = [x for x in goals if x["game_id"] == g["id"] and str(x["period"]) != "SO"]
+            gp = [x for x in pens if x["game_id"] == g["id"]]
+            gk = [x for x in gper if x["game_id"] == g["id"]]
+            roster = {}
+            for pid, pl in players.items():
+                if pl.get("team_id") in (home, away):
+                    for n in names_for(pid):
+                        if n and len(n) > 1:
+                            roster[n] = pid
+            found = []
+            for n, pid in roster.items():
+                m = word_re(n).search(text)
+                if m: found.append((m.start(), pid))
+            seen = set()
+            for _, pid in sorted(found):
+                if pid in seen or len(lines) >= 5: continue
+                seen.add(pid)
+                gl = sum(1 for x in gg if x["scorer_id"] == pid)
+                asst = sum(1 for x in gg if pid in (x.get("assist1_id"), x.get("assist2_id")))
+                pp = [x for x in gp if x["player_id"] == pid]
+                goalie = [x for x in gk if x["goalie_id"] == pid]
+                n = nm(pid)
+                team_goalies = {x["goalie_id"] for x in gk if x["team_id"] == (goalie[0]["team_id"] if goalie else None)}
+                if goalie and len(team_goalies) > 1:
+                    lines.append(pick([f"{n} in net (swap)", f"{n}: in, then out", f"goalie change: {n}"]))
+                elif goalie:
+                    ga = sum(1 for x in gg if x["team_id"] != goalie[0]["team_id"])
+                    lines.append(pick([f"{n} in net: {ga} GA"]) if ga < 7 else pick([f"{n}: {ga} GA. get him a coffee", f"{n} saw {ga} go by"]))
+                elif pp and (len(pp) >= 2 or not gl):
+                    inf = (pp[0].get("infraction") or "penalty").lower().split("/")[0].strip()
+                    inf = {"unsportsmanlike conduct": "unsportsmanlike", "tmp": "too many men"}.get(inf, inf)[:18]
+                    lines.append(f"!{n}: {inf}" + (f" +{len(pp) - 1} more" if len(pp) > 1 else "") + (" - DONE" if len(pp) >= 3 else ""))
+                elif gl >= 3:
+                    lines.append(f"{n}: {gl} goals - HATS!")
+                elif gl:
+                    lines.append(f"{n} {gl}G" + (f" {asst}A" if asst else "") + ("!!" if gl == 2 else ""))
+                elif asst:
+                    lines.append(f"{n}: {asst} assist" + ("s" if asst > 1 else ""))
+        else:
+            lines.append("ROW 3 - " + date[5:].replace("-", "/") if gi < 0 else "THAT'S THE WEEK")
+        for word, opts in JOKES.items():
+            if len(lines) >= 5: break
+            if word in low:
+                lines.append(pick(opts))
+        while len(lines) < 3:
+            lines.append(pick(FILLER))
+        if gi >= len(games):
+            lines.append("Tape your sticks!")
+        pages.append(lines[:6])
+    return pages
+
+
 def main(date):
     recaps = json.load(open(os.path.join(ROOT, "recaps", "recaps.json")))["recaps"]
     recap = next((r for r in recaps if r["date"] == date), None)
@@ -138,11 +263,13 @@ def main(date):
 
     # The night's games and goals.
     teams = {t["id"]: t["code"] for t in rest("teams", "select=id,code")}
-    games = rest("games", "select=id,game_time,home_team_id,away_team_id,status,no_games"
+    games = rest("games", "select=id,game_time,home_team_id,away_team_id,home_score,away_score,status,no_games"
                  f"&game_date=eq.{date}&order=game_time")
     games = [g for g in games if not g.get("no_games")]
     ids = ",".join(str(g["id"]) for g in games)
-    goals = rest("game_goals", f"select=game_id,team_id,period,game_time,scorer_id&game_id=in.({ids})") if ids else []
+    goals = rest("game_goals", f"select=game_id,team_id,period,game_time,scorer_id,assist1_id,assist2_id&game_id=in.({ids})") if ids else []
+    pens = rest("game_penalties", f"select=game_id,team_id,player_id,minutes,infraction&game_id=in.({ids})") if ids else []
+    gper = rest("game_goalie_periods", f"select=game_id,team_id,goalie_id,period,time_out&game_id=in.({ids})") if ids else []
     players = {p["id"]: p for p in rest("players", "select=id,team_id,first_name,last_name,nickname")}
 
     def names_for(pid):
@@ -282,7 +409,10 @@ def main(date):
             name = (names_for(x["scorer_id"]) or ["GOAL"])[0].upper() if x else None
             kf.append({"t": round(t, 2), "g": gi, "per": per, "clk": int(clk), "h": h, "a": a, "goal": name, "final": final})
 
-    out = {"date": date, "caps": caps, "kf": kf, "games": board_games,
+    pages = notepad_pages(date, recap, paras, assign, games, goals, pens, gper, players, teams, names_for, kf, ptimes)
+    sleeper = pick_sleeper(date, games, teams)
+
+    out = {"date": date, "caps": caps, "pages": pages, "sleeper": sleeper, "kf": kf, "games": board_games,
            "flips": [round(s - 0.2, 2) for s, _ in ptimes[1:]], "env": env}
     path = os.path.join(ROOT, "recaps", "arnie", f"{date}.json")
     os.makedirs(os.path.dirname(path), exist_ok=True)
