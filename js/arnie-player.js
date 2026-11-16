@@ -18,7 +18,7 @@
        mountArniePlayer(element, recap)   // recap = an entry of recaps.json
    ========================================= */
 
-const ARNIE_ASSET_VERSION = 1;
+const ARNIE_ASSET_VERSION = 2;
 let ARNIE_ASSETS = null;
 const ARNIE_PLAYERS = [];
 
