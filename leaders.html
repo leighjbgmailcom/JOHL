@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="images/icons/apple-touch-icon.png?v=48">
     <link rel="icon" href="images/icons/icon-192.png?v=48">
     <title>Leaders | Jordan Oldtimers Hockey League</title>
-    <link rel="stylesheet" href="css/style.css?v=49">
+    <link rel="stylesheet" href="css/style.css?v=51">
 </head>
 
 <body>
@@ -49,6 +49,7 @@
                         <th>G</th>
                         <th>A</th>
                         <th>PTS</th>
+                        <th title="Shootout goals (not counted in G or PTS)">SO</th>
                     </tr>
                 </thead>
 
@@ -60,6 +61,8 @@
     <div class="page-tab-panel" id="leaders-tab-goalies">
         <p style="color:#687681; font-size:14px; margin-bottom:14px;">
             Goals against, based on how each game's crease was split between the goaltenders.
+            Tap a goalie to see each game. Shootouts are kept separate: they add no time in net,
+            and a shootout goal isn't a goal against.
         </p>
         <div class="table-wrapper">
             <table class="standings-table">
@@ -72,6 +75,7 @@
                         <th>Minutes</th>
                         <th>GA</th>
                         <th>GAA</th>
+                        <th title="Shootout wins and losses">SO W-L</th>
                     </tr>
                 </thead>
 
@@ -103,7 +107,7 @@
 <script src="js/header.js?v=48"></script>
 <script src="js/install.js?v=48"></script>
 <script src="js/db.js?v=48"></script>
-<script src="js/app.js?v=49"></script>
+<script src="js/app.js?v=50"></script>
 <script src="js/auth.js?v=48"></script>
 <script>
     setupPageTabs(".page-tabs", "leaders-tab");

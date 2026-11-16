@@ -1380,28 +1380,11 @@ async function renderPlayerDetail(playerId) {
                 <div><span>${minutesPlayed.toFixed(1)}</span><label>Minutes</label></div>
                 <div><span>${ga}</span><label>GA</label></div>
                 <div><span>${gaa.toFixed(2)}</span><label>GAA</label></div>
+                ${goalieShootoutRecord(s) ? `<div><span>${goalieShootoutRecord(s)}</span><label>Shootout W-L</label></div>` : ""}
             </div>
         `;
 
-        columnsHtml = `<th>Date</th><th>Opponent</th><th>Time</th><th>GA</th>`;
-
-        const games = s
-            ? Object.keys(s.perGame).map(id => ({
-                  game: gameLookup[id],
-                  ga: s.perGame[id],
-                  seconds: s.perGameSeconds[id] || 0
-              })).filter(r => r.game)
-            : [];
-        games.sort((a, b) => gameSortKey(a.game).localeCompare(gameSortKey(b.game)));
-
-        rowsHtml = games.map(row => `
-            <tr>
-                <td>${formatDateISO(row.game.date)}</td>
-                <td>${opponentLabel(row.game)}</td>
-                <td>${formatSecondsAsClock(row.seconds)}</td>
-                <td>${row.ga}</td>
-            </tr>
-        `).join("");
+        logHtml = goalieGameLogTableHtml(player, s);
     } else {
         const stats = await computeSkaterStats();
         const s = stats && stats[player.id];
@@ -1415,6 +1398,7 @@ async function renderPlayerDetail(playerId) {
                 <div><span>${goals}</span><label>G</label></div>
                 <div><span>${assists}</span><label>A</label></div>
                 <div><span>${goals + assists}</span><label>PTS</label></div>
+                ${s && s.soGoals ? `<div><span>${s.soGoals}</span><label>Shootout goals</label></div>` : ""}
             </div>
         `;
 
@@ -1788,7 +1772,7 @@ async function computeSkaterStats() {
     const stats = {};
     function statsFor(playerId) {
         if (!stats[playerId]) {
-            stats[playerId] = { playerId, games: new Set(), goals: 0, assists: 0, perGame: {} };
+            stats[playerId] = { playerId, games: new Set(), goals: 0, assists: 0, soGoals: 0, perGame: {} };
         }
         return stats[playerId];
     }
@@ -1798,7 +1782,7 @@ async function computeSkaterStats() {
         const s = statsFor(playerId);
         const key = String(gameId);
         s.games.add(key);
-        if (!s.perGame[key]) s.perGame[key] = { goals: 0, assists: 0, plays: [] };
+        if (!s.perGame[key]) s.perGame[key] = { goals: 0, assists: 0, soGoals: 0, plays: [] };
         return s.perGame[key];
     }
 
@@ -1809,6 +1793,14 @@ async function computeSkaterStats() {
         const play = role => ({ role, period: g.period, time: g.game_time, scorerId: g.scorer_id, assistIds });
 
         const scorerLine = appear(g.game_id, g.scorer_id);
+        // A shootout goal is its own stat: it isn't a goal or a point in
+        // the game, and nobody gets an assist on it.
+        if (scorerLine && g.period === "SO") {
+            stats[g.scorer_id].soGoals++;
+            scorerLine.soGoals++;
+            scorerLine.plays.push(play("SO"));
+            return;
+        }
         if (scorerLine) {
             stats[g.scorer_id].goals++;
             scorerLine.goals++;
@@ -1865,6 +1857,9 @@ function scoringPlaysHtml(plays) {
     if (!plays || !plays.length) return `<span class="game-log-none">—</span>`;
     return plays.map(play => {
         const when = `${periodShortLabel(play.period)}${play.time ? " " + play.time : ""}`;
+        if (play.role === "SO") {
+            return `<span class="play-chip play-shootout"><strong>Shootout goal</strong> <span class="play-meta">(not counted in G or PTS)</span></span>`;
+        }
         if (play.role === "G") {
             const helpers = play.assistIds.length
                 ? ` <span class="play-meta">(${play.assistIds.map(playerLastName).join(", ")})</span>`
@@ -1916,7 +1911,7 @@ function skaterStatsRows(stats) {
             if (!player) return null;
             const team = TEAMS.find(t => t.code === player.team);
             const points = s.goals + s.assists;
-            return { player, team, gp: s.games.size, goals: s.goals, assists: s.assists, points };
+            return { player, team, gp: s.games.size, goals: s.goals, assists: s.assists, points, soGoals: s.soGoals || 0 };
         })
         .filter(row => row !== null)
         .sort((a, b) => {
@@ -1932,14 +1927,14 @@ async function renderLeaders() {
 
     const stats = await computeSkaterStats();
     if (!stats) {
-        table.innerHTML = `<tr><td colspan="8">Unable to load the leaderboard right now.</td></tr>`;
+        table.innerHTML = `<tr><td colspan="9">Unable to load the leaderboard right now.</td></tr>`;
         return;
     }
 
     const rows = skaterStatsRows(stats).filter(row => !isGoaliePosition(row.player.position));
 
     if (!rows.length) {
-        table.innerHTML = `<tr><td colspan="8">No goals have been recorded yet this season.</td></tr>`;
+        table.innerHTML = `<tr><td colspan="9">No goals have been recorded yet this season.</td></tr>`;
         return;
     }
 
@@ -1955,9 +1950,10 @@ async function renderLeaders() {
             <td>${row.goals}</td>
             <td>${row.assists}</td>
             <td><strong>${row.points}</strong></td>
+            <td>${row.soGoals || ""}</td>
         </tr>
         <tr class="leader-detail-row" data-detail-for="${row.player.id}" hidden>
-            <td colspan="8"></td>
+            <td colspan="9"></td>
         </tr>
     `).join("");
 
@@ -2056,14 +2052,17 @@ function gameElapsedSeconds(period, clockSeconds, otSeconds) {
 
 // Where the game ended on the running clock. Regulation always runs its
 // full 60 minutes. OT is sudden death, so it ends the instant somebody
-// scores (that goal's own recorded time); an OT with no timed goal --
-// one that expired and went to a shootout, say -- ran its full length.
-// Shootouts have no continuous ice time, so they add nothing.
+// scores (that goal's own recorded time); an OT with no timed goal ran
+// its full length. Shootouts have no ice time, so they add nothing.
 function gameEndElapsedSeconds(gameGoals, gameGoalieRows, otSeconds) {
-    const wentPastRegulation =
-        (gameGoals || []).some(goal => goal.period === "OT" || goal.period === "SO") ||
+    // This league has no overtime in the regular season: a tie goes
+    // straight to the shootout, which adds no ice time. Only a game with
+    // something actually recorded in an OT period (a championship OT)
+    // runs past 60 minutes.
+    const playedOT =
+        (gameGoals || []).some(goal => goal.period === "OT") ||
         (gameGoalieRows || []).some(row => row.period === "OT");
-    if (!wentPastRegulation) return REGULATION_GAME_SECONDS;
+    if (!playedOT) return REGULATION_GAME_SECONDS;
 
     const otGoal = (gameGoals || []).find(goal => goal.period === "OT");
     const secs = otGoal ? parseClockToSeconds(otGoal.game_time) : null;
@@ -2173,7 +2172,8 @@ function buildGoalieStats(goalieRows, goals) {
         if (!stats[goalieId]) {
             stats[goalieId] = {
                 goalieId, games: new Set(), periodsPlayed: new Set(),
-                ga: 0, gaTimed: 0, secondsPlayed: 0, perGame: {}, perGameSeconds: {}
+                ga: 0, gaTimed: 0, secondsPlayed: 0, perGame: {}, perGameSeconds: {},
+                soW: 0, soL: 0, soGA: 0, perGameSO: {}
             };
         }
         return stats[goalieId];
@@ -2214,21 +2214,33 @@ function buildGoalieStats(goalieRows, goals) {
                 });
             });
 
-            // Every goal the OTHER team scored in this game went in against
-            // whichever of this team's goalies was in net at that moment.
+            // Every goal the OTHER team scored in the game itself went in
+            // against whichever of this team's goalies was in net then.
             gameGoals
-                .filter(goal => String(goal.team_id) !== teamId)
+                .filter(goal => String(goal.team_id) !== teamId && goal.period !== "SO")
                 .forEach(goal => {
                     const stint = goalieStintAt(timeline, goalElapsedSeconds(goal, otSeconds));
                     if (!stint) return;
                     const s = statsFor(stint.goalieId);
                     s.ga++;
+                    s.gaTimed++;
                     s.perGame[gameId] = (s.perGame[gameId] || 0) + 1;
-                    // GAA is a rate stat measured against ice time, and
-                    // shootout goals don't count against it (standard
-                    // hockey convention -- a shootout has no ice time).
-                    if (goal.period !== "SO") s.gaTimed++;
                 });
+
+            // The shootout is kept apart from the game: no ice time, and its
+            // goals aren't goals against. The goalie in net at the end
+            // takes the shootout win or loss, and any shootout goals
+            // scored on him are counted on their own.
+            const shootout = gameGoals.filter(goal => goal.period === "SO");
+            if (shootout.length && timeline.length) {
+                const last = statsFor(timeline[timeline.length - 1].goalieId);
+                const against = shootout.filter(goal => String(goal.team_id) !== teamId).length;
+                const scored = shootout.length - against;
+                const won = scored > against;
+                if (won) last.soW++; else last.soL++;
+                last.soGA += against;
+                last.perGameSO[gameId] = { result: won ? "W" : "L", ga: against };
+            }
         });
     });
 
@@ -2290,34 +2302,127 @@ function goalieStatsRows(stats) {
         });
 }
 
+// "W" / "L (1 GA)" -- a goalie's shootout in one game, or "" if none.
+function goalieShootoutLabel(so) {
+    if (!so) return "";
+    return so.result + (so.ga ? ` (${so.ga} GA)` : "");
+}
+
+// "1-0" -- a goalie's shootout record, or "" if he's never been in one.
+function goalieShootoutRecord(s) {
+    return s && (s.soW || s.soL) ? `${s.soW}-${s.soL}` : "";
+}
+
+// One goalie's season, game by game (oldest first): time in net, goals
+// against in the game, and the shootout kept separate. Shared by the
+// Leaders expansion and the player page.
+function goalieGameLogTableHtml(player, s) {
+    const gameLookup = {};
+    SCHEDULE.forEach(g => { gameLookup[String(g.id)] = g; });
+    const games = s
+        ? Object.keys(s.perGameSeconds).map(id => ({
+              game: gameLookup[id],
+              ga: s.perGame[id] || 0,
+              seconds: s.perGameSeconds[id] || 0,
+              so: s.perGameSO[id]
+          })).filter(r => r.game)
+        : [];
+    if (!games.length) return `<p class="roster-empty">No games recorded yet this season.</p>`;
+    games.sort((a, b) => `${a.game.date} ${a.game.time || ""}`.localeCompare(`${b.game.date} ${b.game.time || ""}`));
+
+    const rows = games.map(row => {
+        const home = row.game.home === player.team;
+        const opponent = `${home ? "vs" : "@"} ${teamName(home ? row.game.away : row.game.home)}`;
+        const mine = home ? row.game.homeScore : row.game.awayScore;
+        const theirs = home ? row.game.awayScore : row.game.homeScore;
+        const result = (row.game.status === "final" && mine != null && theirs != null)
+            ? `${mine > theirs ? "W" : "L"} ${mine}-${theirs}${row.so || row.game.wentOT ? " SO" : ""}` : "";
+        return `
+            <tr>
+                <td>${formatDateShort(row.game.date)}</td>
+                <td>${opponent}</td>
+                <td>${result}</td>
+                <td>${formatSecondsAsClock(row.seconds)}</td>
+                <td><strong>${row.ga}</strong></td>
+                <td>${goalieShootoutLabel(row.so) || "—"}</td>
+            </tr>
+        `;
+    }).join("");
+
+    return `
+        <div class="table-wrapper">
+            <table class="standings-table game-log-table">
+                <thead><tr><th>Date</th><th>Opponent</th><th>Result</th><th>Time in net</th><th>GA</th><th>Shootout</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+        <p class="game-log-note">GA and time in net are for the game itself. A shootout is kept separate: it adds no time, and goals scored in it aren't goals against.</p>
+    `;
+}
+
 async function renderGoalieStats() {
     const table = document.getElementById("goalies-table");
     if (!table) return;
 
     const stats = await computeGoalieStats();
     if (!stats) {
-        table.innerHTML = `<tr><td colspan="7">Unable to load goalie stats right now.</td></tr>`;
+        table.innerHTML = `<tr><td colspan="8">Unable to load goalie stats right now.</td></tr>`;
         return;
     }
 
     const rows = goalieStatsRows(stats);
 
     if (!rows.length) {
-        table.innerHTML = `<tr><td colspan="7">No goalie appearances have been recorded yet this season.</td></tr>`;
+        table.innerHTML = `<tr><td colspan="8">No goalie appearances have been recorded yet this season.</td></tr>`;
         return;
     }
 
+    // Each goalie row toggles a detail row under it with his game log,
+    // the same as the skaters.
     table.innerHTML = rows.map(row => `
-        <tr>
+        <tr class="clickable-row leader-row" data-goalie="${row.player.id}" tabindex="0" aria-expanded="false">
             <td>${row.player.number != null ? "#" + row.player.number : "—"}</td>
-            <td>${row.player.last}, ${row.player.first}${playerNicknameHtml(row.player)}</td>
+            <td><span class="leader-chevron">▸</span> ${row.player.last}, ${row.player.first}${playerNicknameHtml(row.player)}</td>
             <td>${row.team ? row.team.name : ""}</td>
             <td>${row.gp}</td>
             <td>${row.minutesPlayed.toFixed(1)}</td>
             <td>${row.ga}</td>
             <td><strong>${row.gaa.toFixed(2)}</strong></td>
+            <td>${goalieShootoutRecord(stats[row.player.id])}</td>
+        </tr>
+        <tr class="leader-detail-row" data-detail-for="${row.player.id}" hidden>
+            <td colspan="8"></td>
         </tr>
     `).join("");
+
+    function toggle(rowEl) {
+        const playerId = rowEl.dataset.goalie;
+        const detail = table.querySelector(`tr[data-detail-for="${playerId}"]`);
+        if (!detail) return;
+        const opening = detail.hidden;
+
+        if (opening && !detail.dataset.built) {
+            const player = PLAYERS.find(p => String(p.id) === String(playerId));
+            detail.firstElementChild.innerHTML = `
+                <div class="leader-detail">
+                    ${goalieGameLogTableHtml(player, stats[playerId])}
+                    <a class="link-button" href="players.html?player=${playerId}">Full player page →</a>
+                </div>
+            `;
+            detail.dataset.built = "1";
+        }
+
+        detail.hidden = !opening;
+        rowEl.setAttribute("aria-expanded", String(opening));
+        rowEl.classList.toggle("expanded", opening);
+    }
+
+    table.querySelectorAll(".leader-row").forEach(rowEl => {
+        rowEl.addEventListener("click", () => toggle(rowEl));
+        rowEl.addEventListener("keydown", e => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(rowEl); }
+        });
+    });
 }
 
 

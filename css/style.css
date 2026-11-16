@@ -3204,3 +3204,16 @@ footer {
 .recap-comment-signin {
     font-size: 14px;
 }
+
+
+/* Shootout goals in a skater's game log, and the note under a goalie's. */
+.play-chip.play-shootout {
+    background: #fdecef;
+    color: #8a1024;
+}
+
+.game-log-note {
+    margin: 6px 0 10px;
+    font-size: 12px;
+    color: #687681;
+}
