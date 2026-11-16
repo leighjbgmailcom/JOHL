@@ -32,7 +32,7 @@ they count as real, the same as the score sheet.
 ## 2. Write Arnie's script
 
 Save it as `recaps/scripts/YYYY-MM-DD.txt`, plain text, a blank line
-between paragraphs. About 600–750 words (three to four minutes).
+between paragraphs. About 750–900 words (four to five minutes, with the standings).
 
 - Open with "Arnie Jordan here, coming to you from row three at Jordan
   Arena, with the Rinkside Report …" and close with "This has been Arnie
@@ -69,6 +69,14 @@ between paragraphs. About 600–750 words (three to four minutes).
   not asking"), and a goalie "making it look easy" is only said about a
   goalie whose numbers that night back it up. No invented quotes,
   injuries, fights or history.
+- Just before the sign-off, a quick look at the big board, as of that
+  night: the top three in the scoring race (points; say so if there's a
+  tie), the top three goalies by goals against average, and the
+  standings for all six teams. Take them from the site's own Leaders and
+  Standings pages (`leaders.html`, `standings.html`) so they match what
+  the players see; serving the repo locally (`python3 -m http.server`)
+  and reading the tables with Playwright works. A light chirp or two is
+  fine, same rules as the rest.
 - End with his standing excuse: if he got a name or a goal wrong, take it
   up with the refs, the timekeeper, and how fast you guys skate out there.
   Say "you guys", never "you people".
@@ -139,6 +147,11 @@ Add an entry to the top of `recaps` in `recaps/recaps.json`:
       "audio": "recaps/audio/YYYY-MM-DD.mp3",
       "text": ["first paragraph", "second paragraph", "…"]
     }
+
+Two optional fields for the email: `"email_note"` puts a line in a
+yellow band under Arnie's picture (for something new that week), and
+`"email_image"` swaps the picture (a path on the site; the default is
+`recaps/arnie/scene/share.jpg`).
 
 `text` is the script with names spelled properly (the page shows it under
 "Read the recap"). `"draft": true` keeps it off the Recaps page and the

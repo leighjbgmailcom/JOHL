@@ -111,6 +111,11 @@ function buildEmail(show: string, host: string, recap: any, scores: any[]) {
   const link = `${SITE}/recaps.html?date=${recap.date}${recap.draft ? "&preview" : ""}`;
   const dateText = longDate(recap.date);
   const teaser = Array.isArray(recap.text) && recap.text.length ? String(recap.text[0]) : "";
+  // Arnie in row three, above the headline. A recap can name its own
+  // picture ("email_image", a path on the site) and add a line under it
+  // ("email_note") for something new that week.
+  const image = `${SITE}/${String(recap.email_image || "recaps/arnie/scene/share.jpg").replace(/^\/+/, "")}`;
+  const note = recap.email_note ? String(recap.email_note) : "";
 
   const scoreRows = scores
     .map(
@@ -138,7 +143,15 @@ function buildEmail(show: string, host: string, recap: any, scores: any[]) {
             </td>
           </tr>
           <tr>
-            <td style="border-top:4px solid #c8102e;padding:24px;">
+            <td style="border-top:4px solid #c8102e;padding:0;line-height:0;">
+              <a href="${link}"><img src="${esc(image)}" width="560" alt="${esc(host)} in row three at Jordan Arena, notebook in hand" style="display:block;width:100%;max-width:560px;height:auto;border:0;"></a>
+            </td>
+          </tr>
+          ${note ? `<tr>
+            <td style="background:#fff6d6;padding:12px 24px;font-size:15px;line-height:1.5;color:#0b2239;border-bottom:1px solid #f0e2a8;">${esc(note)}</td>
+          </tr>` : ""}
+          <tr>
+            <td style="padding:24px;">
               <div style="font-size:12px;letter-spacing:1.5px;font-weight:700;color:#c8102e;text-transform:uppercase;">${esc(dateText)}</div>
               <h1 style="margin:8px 0 16px;font-size:22px;line-height:1.3;color:#0b2239;">${esc(recap.title)}</h1>
               ${scoreRows ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e3e9ef;border-bottom:1px solid #e3e9ef;margin-bottom:18px;">${scoreRows}</table>` : ""}
@@ -172,6 +185,8 @@ function buildEmail(show: string, host: string, recap: any, scores: any[]) {
     "",
     recap.title,
     "",
+    note || null,
+    note ? "" : null,
     scoreText,
     scoreText ? "" : null,
     teaser,
