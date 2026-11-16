@@ -605,6 +605,7 @@ async function onSheetGameChange() {
     printButton.hidden = false;
     renderSheet();
     updateSheetSaveStatus();
+    sheetTickEveryoneByDefault();
 }
 
 
@@ -801,6 +802,23 @@ function sheetRosterHtml(side) {
         goalies.map(line).join("");
 }
 
+// "Check all" / "Uncheck all" above the roster, whichever applies.
+function sheetRosterAllHtml(side) {
+    const roster = sheetRoster(side);
+    if (!roster.length) return "";
+    const allIn = roster.every(p => sheetAttendance[side].has(String(p.id)));
+    return allIn
+        ? `<button type="button" class="gs-roster-all-button" data-action="attendance-all" data-side="${side}" data-check="0">Uncheck all</button>`
+        : `<button type="button" class="gs-roster-all-button" data-action="attendance-all" data-side="${side}" data-check="1">✓ Check all</button>`;
+}
+
+function redrawSheetRoster(side) {
+    const roster = document.getElementById(`sheet-roster-${side}`);
+    const all = document.getElementById(`sheet-roster-all-${side}`);
+    if (roster) roster.innerHTML = sheetRosterHtml(side);
+    if (all) all.innerHTML = sheetRosterAllHtml(side);
+}
+
 // The goalies who can be picked on an added line: the roster's goalies,
 // plus anyone already on a line in this box.
 function sheetGoalieOptionsHtml(side, box, selectedId) {
@@ -876,7 +894,8 @@ function sheetTeamHtml(side) {
                         <span class="gs-side-title">${SHEET_SIDE_TITLE[side]}</span>
                     </div>
                     <div class="gs-team-band">${sheetEsc(sheetTeamName(side))}</div>
-                    <div class="gs-roster">${sheetRosterHtml(side)}</div>
+                    <div class="gs-roster-all gs-screen-only" id="sheet-roster-all-${side}">${sheetRosterAllHtml(side)}</div>
+                    <div class="gs-roster" id="sheet-roster-${side}">${sheetRosterHtml(side)}</div>
                 </div>
 
                 <div class="gs-top-boxes">
@@ -1951,7 +1970,78 @@ async function onSheetAttendanceChange(checkbox) {
         attendance[side].delete(String(playerId));
     }
 
+    if (attendance === sheetAttendance) {
+        const all = document.getElementById(`sheet-roster-all-${side}`);
+        if (all) all.innerHTML = sheetRosterAllHtml(side);
+    }
     updateSheetSaveStatus();
+}
+
+// Ticks (or unticks) the whole roster for one team in a single save.
+// Ticking skips anyone already ticked, so two people on the sheet at
+// once can't double up a player.
+async function setSheetAttendanceAll(side, checked) {
+    const game = sheetGame;
+    const attendance = sheetAttendance;
+    if (!game || !attendance) return false;
+
+    const roster = sheetRoster(side);
+    const teamId = sheetSideTeamId(game, side);
+    const missing = roster.filter(p => !attendance[side].has(String(p.id)));
+    if (checked && !missing.length) return true;
+
+    sheetPendingSaves++;
+    updateSheetSaveStatus();
+
+    let error;
+    if (checked) {
+        ({ error } = await sheetDb()
+            .from("game_attendance")
+            .upsert(
+                missing.map(p => ({ game_id: game.id, team_id: teamId, player_id: p.id })),
+                { onConflict: "game_id,player_id", ignoreDuplicates: true }
+            ));
+    } else {
+        ({ error } = await sheetDb()
+            .from("game_attendance")
+            .delete()
+            .eq("game_id", game.id)
+            .eq("team_id", teamId));
+    }
+
+    sheetPendingSaves--;
+
+    if (error) {
+        console.error(error);
+        updateSheetSaveStatus();
+        alert(checked ? "Couldn't check everyone in. Check the connection and try again." : "Couldn't clear the ticks. Check the connection and try again.");
+        return false;
+    }
+
+    if (checked) roster.forEach(p => attendance[side].add(String(p.id)));
+    else attendance[side].clear();
+
+    if (attendance === sheetAttendance) redrawSheetRoster(side);
+    updateSheetSaveStatus();
+    return true;
+}
+
+// Everyone starts out checked in: on game day (or when the game goes
+// live), a team with no ticks yet gets its whole roster ticked, and the
+// timekeeper unticks whoever didn't show. Games on a later date are
+// left alone so nobody gets a game played before it's played.
+async function sheetTickEveryoneByDefault() {
+    const game = sheetGame;
+    if (!game || !sheetAttendance || game.status === "final") return;
+    const gameDay = SHEET_PRACTICE || game.status === "live" || (game.game_date && game.game_date <= todayISO());
+    if (!gameDay) return;
+
+    for (const side of SHEET_SIDES) {
+        if (game !== sheetGame) return;
+        if (sheetAttendance[side].size === 0 && sheetRoster(side).length) {
+            await setSheetAttendanceAll(side, true);
+        }
+    }
 }
 
 
@@ -2127,8 +2217,10 @@ async function setSheetGameStatus(updates, failureMessage) {
     return true;
 }
 
-function startSheetGame() {
-    return setSheetGameStatus({ status: "live" }, "There was a problem going live.");
+async function startSheetGame() {
+    const ok = await setSheetGameStatus({ status: "live" }, "There was a problem going live.");
+    if (ok) await sheetTickEveryoneByDefault();
+    return ok;
 }
 
 function sheetUnsavedLineCount() {
@@ -2247,6 +2339,7 @@ function setupSheetEvents() {
         else if (action === "change-save") onSheetChangeSave(button);
         else if (action === "change-cancel") onSheetChangeCancel(button);
         else if (action === "show-side") setSheetActiveSide(button.dataset.side);
+        else if (action === "attendance-all") setSheetAttendanceAll(button.dataset.side, button.dataset.check === "1");
         else if (action === "start") startSheetGame();
         else if (action === "final") finalizeSheetGame();
         else if (action === "reopen") reopenSheetGame();

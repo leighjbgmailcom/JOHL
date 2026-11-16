@@ -61,6 +61,19 @@ function sheetPracticeRun(query) {
 
             const matches = row => query.filters.every(filter => String(row[filter.column]) === String(filter.value));
 
+            if (query.op === "insert" && Array.isArray(query.payload)) {
+                // A batch (the roster's "Check all"): skip anyone already in.
+                const added = [];
+                query.payload.forEach(item => {
+                    if (query.upsert && rows.some(row => String(row.game_id) === String(item.game_id) && String(row.player_id) === String(item.player_id))) return;
+                    const row = Object.assign({ id: ++sheetPracticeSeq }, sheetPracticeClone(item));
+                    rows.push(row);
+                    added.push(sheetPracticeClone(row));
+                });
+                resolve({ data: added, error: null });
+                return;
+            }
+
             if (query.op === "insert") {
                 const row = Object.assign({ id: ++sheetPracticeSeq }, sheetPracticeClone(query.payload));
                 rows.push(row);
@@ -105,6 +118,7 @@ const sheetPracticeDb = {
         const api = {
             select() { return api; },
             insert(payload) { query.op = "insert"; query.payload = payload; return api; },
+            upsert(payload) { query.op = "insert"; query.upsert = true; query.payload = [].concat(payload); return api; },
             update(payload) { query.op = "update"; query.payload = payload; return api; },
             delete() { query.op = "delete"; return api; },
             eq(column, value) { query.filters.push({ column, value }); return api; },
@@ -239,7 +253,7 @@ const SHEET_COACH_STEPS = [
     {
         id: "roster",
         title: "Tick who's here",
-        text: "Before the puck drops, tick the box beside each player who showed up. Try a few now. On a phone, the V and H tabs above the sheet switch between the Visitors and the Home team.",
+        text: "Everyone starts out ticked. Before the puck drops, untick anyone who didn't show up — tap the tick beside their name. \"Uncheck all\" / \"✓ Check all\" above each roster clears or fills the whole team. On a phone, the V and H tabs above the sheet switch between the Visitors and the Home team.",
         target: ".gs-roster",
         praise: "That's the roll call.",
         done: () => SHEET_SIDES.some(side => sheetAttendance[side].size > 0)

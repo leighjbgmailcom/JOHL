@@ -371,6 +371,36 @@
     print-color-adjust: exact;
 }
 
+/* "Check all" / "Uncheck all" just under the team band. */
+.gs-roster-all {
+    margin-left: var(--gs-margin);
+    display: flex;
+    justify-content: flex-end;
+    padding: 4px 0;
+}
+
+.gs-roster-all:empty {
+    display: none;
+}
+
+.gs-roster-all-button {
+    padding: 5px 12px;
+    border: 1.5px solid var(--gs-ink);
+    border-radius: 4px;
+    background: var(--gs-input);
+    color: var(--gs-ink);
+    font: inherit;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.gs-roster-all-button:hover,
+.gs-roster-all-button:focus-visible {
+    background: var(--gs-ink);
+    color: white;
+}
+
 /* The roster: # | last name | first name, with the tick in the margin. */
 .gs-roster-row {
     display: grid;
