@@ -2700,13 +2700,16 @@ function renderHomeRecap(date) {
                 <span class="home-recap-date">${esc(show)} · ${esc(host)}'s notes from row three</span>
                 <strong>${esc(recap.title)}</strong>
             </div>
-            <audio class="home-recap-audio" controls preload="none" src="${esc(recap.audio)}">
-                Your browser can't play this here.
-            </audio>
             <a class="home-recap-go" href="recaps.html?date=${esc(recap.date)}">Read along →</a>
+            <div class="home-recap-player"></div>
         </div>
     `;
     element.hidden = false;
+
+    // Arnie on camera in place of a plain audio player (js/arnie-player.js).
+    const slot = element.querySelector(".home-recap-player");
+    if (typeof mountArniePlayer === "function") mountArniePlayer(slot, recap);
+    else slot.innerHTML = `<audio class="home-recap-audio" controls preload="none" src="${esc(recap.audio)}"></audio>`;
 }
 
 

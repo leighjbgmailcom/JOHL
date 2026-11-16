@@ -1,8 +1,8 @@
 # Rinkside Report — the weekly recap
 
 Every game night gets a recap on the site: a short piece of colour
-commentary on all the games, as text and as an audio file, at
-`recaps.html`. The voice is **Arnie Jordan**, a made-up local who watches
+commentary on all the games, as text and as Arnie on camera reading it
+(an audio file and an animated picture), at `recaps.html`. The voice is **Arnie Jordan**, a made-up local who watches
 every game from row three at Jordan Arena with a coffee and a notebook
 and reports on it for his podcast's two (sometimes three) loyal
 listeners. He is an original character — he is not, and must never be
@@ -91,6 +91,26 @@ lower case, then its sounds in the voice model's phoneme symbols), and
 every recap after that says it right. (Craigy is the exception: he sounds
 right only when the script spells him as two words, "Cray ghee".)
 
+## 3b. Put Arnie on camera
+
+The Recaps page and the home page show the recap as a little animated
+show instead of a plain audio player: Arnie in row three reading it out,
+his mouth moving with his voice, the words underneath, a notebook page
+flipping with each paragraph, and the scoreboard behind him playing
+each game out as he names the scorers. The picture never changes; each
+week only needs its timing file, made from the recording, the recap's
+paragraphs and that night's goals:
+
+    python3 tools/recap/make_arnie.py YYYY-MM-DD
+
+Run it after step 4's entry is in `recaps/recaps.json` (it reads the
+paragraphs and the audio path from there), and again whenever the audio
+is re-recorded. It writes `recaps/arnie/YYYY-MM-DD.json`; commit that
+with everything else. Its last line says which game each paragraph was
+matched to (-1 is the opening, a number past the last game is the
+sign-off) — check that each game got its own paragraphs. Without the
+file, that recap simply gets the plain audio player.
+
 ## 4. Put it on the site as a draft
 
 Add an entry to the top of `recaps` in `recaps/recaps.json`:
@@ -109,6 +129,7 @@ home page: only the preview link shows it,
 
     https://jordanohl.ca/recaps.html?date=YYYY-MM-DD&preview
 
+Then run `python3 tools/recap/make_arnie.py YYYY-MM-DD` (step 3b).
 Commit, merge to `main`, push, and wait a couple of minutes for that link
 to show it. The emails read the recap from the live site, so nothing can
 go out before the page is up. (If the audio is ever re-recorded after

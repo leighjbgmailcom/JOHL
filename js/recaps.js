@@ -4,7 +4,7 @@
 
    Each recap is an entry in recaps/recaps.json: the game date, a title,
    the audio file, and the words as paragraphs. This page lists them
-   newest first: the player at the top, the words just under it, then
+   newest first: Arnie on camera at the top (js/arnie-player.js), the words just under it, then
    that night's final scores (from the schedule) with every goal. Adding a week is adding an entry and an MP3 -- see
    tools/recap/README.md.
 
@@ -158,9 +158,7 @@ function recapHtml(recap, show, host, isFeatured) {
             <p class="eyebrow">${recapEsc(formatDateISO(recap.date))}</p>
             <h3>${recapEsc(recap.title)}</h3>
 
-            <audio class="recap-audio" controls preload="${isFeatured ? "metadata" : "none"}" src="${recapEsc(recap.audio)}">
-                Your browser can't play this here. <a href="${recapEsc(recap.audio)}">Download the recap</a>.
-            </audio>
+            <div class="recap-player" data-date="${recapEsc(recap.date)}"></div>
 
             <details class="recap-words">
                 <summary>Read the recap</summary>
@@ -216,6 +214,13 @@ async function renderRecaps() {
     element.innerHTML = recaps
         .map(recap => recapHtml(recap, data.show, data.host, recap === featured))
         .join("");
+
+    // Arnie on camera in place of the plain audio player (js/arnie-player.js).
+    element.querySelectorAll(".recap-player").forEach(slot => {
+        const recap = recaps.find(entry => entry.date === slot.dataset.date);
+        if (typeof mountArniePlayer === "function") mountArniePlayer(slot, recap);
+        else slot.innerHTML = `<audio class="recap-audio" controls preload="none" src="${recapEsc(recap.audio)}"></audio>`;
+    });
 
     if (wanted && featured.date === wanted && featured !== recaps[0]) {
         document.getElementById(`recap-${featured.date}`).scrollIntoView({ block: "start" });
