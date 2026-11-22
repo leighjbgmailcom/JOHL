@@ -199,12 +199,21 @@ function groupScheduleByDate(entries) {
    HOME PAGE — NEXT GAME DAY
    ========================================= */
 
-// The game day the home page leads with: the latest one that has got
-// going (at least one game live or final). On a game night that is
-// tonight, from the first puck drop on; the rest of the week it's the
-// last game day's results.
+// Is there a game day on today's date?
+function todayGameDay() {
+    const today = todayISO();
+    const games = SCHEDULE.filter(entry => !entry.noGames && entry.date === today);
+    return games.length ? games : null;
+}
+
+// The game day the home page leads with. On a game day that's today's
+// games, all day long -- before, during and after the puck drops -- and
+// nothing else. The rest of the week it's the last game day's results.
 function getLatestPlayedDay() {
     const today = todayISO();
+
+    const gameDay = todayGameDay();
+    if (gameDay) return gameDay;
 
     const playedDates = SCHEDULE
         .filter(entry => !entry.noGames && entry.date <= today && (entry.status === "live" || entry.status === "final"))
@@ -311,16 +320,19 @@ function renderLatestResults() {
         return;
     }
 
-    // Tonight's games, while any of them is still to finish.
-    const tonight = games[0].date === todayISO() && games.some(game => game.status !== "final");
+    // Game day: today's games only. Last week's results and their
+    // Rinkside Report stay off the page until tomorrow.
+    const tonight = games[0].date === todayISO();
+    const allFinal = games.every(game => game.status === "final");
 
-    document.getElementById("home-results-eyebrow").textContent = tonight ? "GAME NIGHT" : "LAST GAME DAY";
-    document.getElementById("home-results-title").textContent = tonight ? "Tonight's Games" : "Latest Results";
+    document.getElementById("home-results-eyebrow").textContent = tonight ? "GAME DAY" : "LAST GAME DAY";
+    document.getElementById("home-results-title").textContent =
+        tonight ? (allFinal ? "Tonight's Results" : "Today's Games") : "Latest Results";
 
     element.innerHTML = homeGameDayHtml(games);
     section.hidden = false;
 
-    renderHomeRecap(games[0].date);
+    renderHomeRecap(tonight ? null : games[0].date);
 }
 
 function renderNextGame() {
@@ -328,6 +340,11 @@ function renderNextGame() {
 
     const element = document.getElementById("next-game");
     if (!element) return;
+
+    // On a game day the home page shows that day's games and nothing
+    // else, so the "Next Game Day" box steps aside until tomorrow.
+    const nextSection = document.getElementById("home-next");
+    if (nextSection) nextSection.hidden = !!todayGameDay();
 
     const games = getNextGameDay();
 
