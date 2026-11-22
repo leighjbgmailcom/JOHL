@@ -273,7 +273,7 @@ function homeGameDayHtml(games) {
                     return `
                     <div class="homepage-game ${isLive ? "is-live" : ""} ${isOpen ? "is-open" : ""}">
                         <div class="homepage-game-time">
-                            ${isLive ? `<span class="live-badge">Live</span>` : formatTime12h(game.time)}
+                            ${isLive ? `<span class="live-badge">Live</span>` : isFinal ? `<span class="homepage-time-text">${formatTime12h(game.time)}</span><span class="homepage-final-tag">Final</span>` : formatTime12h(game.time)}
                             ${hasScore ? `
                                 <button type="button" class="homepage-detail-link" id="home-detail-link-${game.id}"
                                     aria-expanded="${isOpen ? "true" : "false"}" aria-controls="home-detail-${game.id}"
