@@ -263,29 +263,14 @@ function recapThreadHtml(comments) {
 
 const RECAP_COMMENT_COLUMNS = "id, recap_date, author_id, author_name, body, created_at, reply_to, is_arnie";
 
-// After a player posts, Arnie answers within a few seconds: show him
-// "typing" and drop his reply in when it lands.
-async function waitForArnie(list, comment) {
-    const typing = document.createElement("li");
-    typing.className = "recap-comment is-arnie is-typing";
-    typing.innerHTML = `<div class="recap-comment-head"><strong>Arnie Jordan</strong></div><p>Arnie's licking his pencil…</p>`;
+// Arnie reads the comments twice a day (a scheduled task, lunch and
+// supper time) and answers each one; the player gets an email when he does.
+function arnieWillAnswer(list, comment) {
+    const note = document.createElement("li");
+    note.className = "recap-comment is-arnie is-typing";
+    note.innerHTML = `<div class="recap-comment-head"><strong>Arnie Jordan</strong></div><p>Arnie reads the comments at lunch and suppertime. You'll get an email when he writes back.</p>`;
     const mineEl = list.querySelector(`[data-id="${comment.id}"]`);
-    if (mineEl) mineEl.after(typing); else list.appendChild(typing);
-
-    for (let tries = 0; tries < 15; tries++) {
-        await new Promise(resolve => setTimeout(resolve, 2500));
-        const { data } = await supabaseClient
-            .from("recap_comments")
-            .select(RECAP_COMMENT_COLUMNS)
-            .eq("reply_to", comment.id)
-            .eq("is_arnie", true)
-            .limit(1);
-        if (data && data.length) {
-            typing.outerHTML = recapCommentHtml(data[0]);
-            return;
-        }
-    }
-    typing.remove();   // he'll be there next time the page loads
+    if (mineEl) mineEl.after(note); else list.appendChild(note);
 }
 
 async function loadRecapComments(root) {
@@ -359,7 +344,7 @@ function setupRecapCommentForm(section) {
             if (empty) empty.remove();
             list.insertAdjacentHTML("beforeend", recapCommentHtml(data));
             box.value = "";
-            waitForArnie(list, data);
+            arnieWillAnswer(list, data);
         });
     }
 

@@ -3,9 +3,10 @@
 // Arnie replies to a comment on the Rinkside Report
 // =========================================
 //
-// Called by the database right after a player posts a comment under a
-// recap (private.recap_comment_ask_arnie, supabase-migrations/
-// 013_arnie_replies.sql), with { comment_id }. It:
+// Called by the database with { comment_id, reply } -- normally from
+// private.arnie_reply(comment_id, reply), which the twice-a-day
+// "JOHL Arnie answers comments" scheduled task runs after writing each
+// reply in Arnie's voice (tools/recap/README.md, step 7). It:
 //
 //   1. writes Arnie Jordan's reply under that comment on recaps.html, and
 //   2. emails the player who left the comment to say Arnie wrote back.
@@ -15,7 +16,8 @@
 // (recap_email_secret), so "verify JWT" is OFF for this function.
 //
 // Arnie's words:
-//   - If the Edge Function secret ANTHROPIC_API_KEY is set, Claude writes
+//   - Normally they come in as "reply", written by the scheduled task.
+//   - With no "reply": if the Edge Function secret ANTHROPIC_API_KEY is set, Claude writes
 //     a reply to what the player actually said, in Arnie's voice, with
 //     that night's recap for context.
 //   - Otherwise (or if that call fails) he picks a line from the bank
@@ -202,7 +204,7 @@ Deno.serve(async (req) => {
     return json({ error: "Not allowed" }, 401);
   }
 
-  let body: { comment_id?: number; skip_email?: boolean };
+  let body: { comment_id?: number; reply?: string; skip_email?: boolean };
   try { body = await req.json(); } catch { return json({ error: "Bad body" }, 400); }
   const commentId = Number(body.comment_id);
   if (!commentId) return json({ error: "comment_id is required" }, 400);
@@ -230,8 +232,9 @@ Deno.serve(async (req) => {
     console.error("Could not read recaps.json", error);
   }
 
-  const fromClaude = await claudeReply(comment.body, name, recap);
-  const reply = fromClaude || bankReply(comment.body, name);
+  const written = String(body.reply || "").trim().slice(0, 600);
+  const fromClaude = written ? "" : await claudeReply(comment.body, name, recap);
+  const reply = written || fromClaude || bankReply(comment.body, name);
 
   const { data: saved, error: saveError } = await admin
     .from("recap_comments")
@@ -279,5 +282,5 @@ Deno.serve(async (req) => {
     }
   }
 
-  return json({ ok: true, reply_id: saved.id, source: fromClaude ? "claude" : "bank", emailed, emailNote });
+  return json({ ok: true, reply_id: saved.id, source: written ? "given" : fromClaude ? "claude" : "bank", emailed, emailNote });
 });
