@@ -237,17 +237,55 @@ function recapWhen(iso) {
 }
 
 function recapCommentHtml(comment) {
-    const mine = RECAP_ME && (RECAP_ME.isAdmin || comment.author_id === RECAP_ME.id);
+    const mine = RECAP_ME && (RECAP_ME.isAdmin || (!comment.is_arnie && comment.author_id === RECAP_ME.id));
     return `
-        <li class="recap-comment" data-id="${comment.id}">
+        <li class="recap-comment ${comment.is_arnie ? "is-arnie" : ""}" id="comment-${comment.id}" data-id="${comment.id}">
             <div class="recap-comment-head">
                 <strong>${recapEsc(comment.author_name)}</strong>
+                ${comment.is_arnie ? `<span class="recap-arnie-badge">Host</span>` : ""}
                 <span>${recapEsc(recapWhen(comment.created_at))}</span>
                 ${mine ? `<button type="button" class="recap-comment-delete">Delete</button>` : ""}
             </div>
             <p>${recapEsc(comment.body)}</p>
         </li>
     `;
+}
+
+// Each player's comment, with Arnie's reply tucked in right under it.
+function recapThreadHtml(comments) {
+    const replies = {};
+    comments.filter(c => c.reply_to).forEach(c => { (replies[c.reply_to] = replies[c.reply_to] || []).push(c); });
+    return comments
+        .filter(c => !c.reply_to)
+        .map(c => recapCommentHtml(c) + (replies[c.id] || []).map(recapCommentHtml).join(""))
+        .join("");
+}
+
+const RECAP_COMMENT_COLUMNS = "id, recap_date, author_id, author_name, body, created_at, reply_to, is_arnie";
+
+// After a player posts, Arnie answers within a few seconds: show him
+// "typing" and drop his reply in when it lands.
+async function waitForArnie(list, comment) {
+    const typing = document.createElement("li");
+    typing.className = "recap-comment is-arnie is-typing";
+    typing.innerHTML = `<div class="recap-comment-head"><strong>Arnie Jordan</strong></div><p>Arnie's licking his pencil…</p>`;
+    const mineEl = list.querySelector(`[data-id="${comment.id}"]`);
+    if (mineEl) mineEl.after(typing); else list.appendChild(typing);
+
+    for (let tries = 0; tries < 15; tries++) {
+        await new Promise(resolve => setTimeout(resolve, 2500));
+        const { data } = await supabaseClient
+            .from("recap_comments")
+            .select(RECAP_COMMENT_COLUMNS)
+            .eq("reply_to", comment.id)
+            .eq("is_arnie", true)
+            .limit(1);
+        if (data && data.length) {
+            typing.outerHTML = recapCommentHtml(data[0]);
+            return;
+        }
+    }
+    typing.remove();   // he'll be there next time the page loads
 }
 
 async function loadRecapComments(root) {
@@ -267,7 +305,7 @@ async function loadRecapComments(root) {
 
     const { data, error } = await supabaseClient
         .from("recap_comments")
-        .select("id, recap_date, author_id, author_name, body, created_at")
+        .select(RECAP_COMMENT_COLUMNS)
         .in("recap_date", sections.map(section => section.dataset.date))
         .order("created_at", { ascending: true });
 
@@ -276,9 +314,13 @@ async function loadRecapComments(root) {
         const mine = (data || []).filter(comment => comment.recap_date === section.dataset.date);
         list.innerHTML = error
             ? `<li class="recap-comment-empty">Comments couldn't be loaded right now.</li>`
-            : (mine.length ? mine.map(recapCommentHtml).join("") : `<li class="recap-comment-empty">No comments yet. Get the chirps going.</li>`);
+            : (mine.length ? recapThreadHtml(mine) : `<li class="recap-comment-empty">No comments yet. Get the chirps going.</li>`);
         setupRecapCommentForm(section);
     });
+
+    // Arrived from the "Arnie wrote back" email: go to that conversation.
+    const target = location.hash && document.getElementById(location.hash.slice(1));
+    if (target) target.scrollIntoView({ block: "center" });
 }
 
 function setupRecapCommentForm(section) {
@@ -305,7 +347,7 @@ function setupRecapCommentForm(section) {
             const { data, error } = await supabaseClient
                 .from("recap_comments")
                 .insert({ recap_date: section.dataset.date, body })
-                .select("id, recap_date, author_id, author_name, body, created_at")
+                .select(RECAP_COMMENT_COLUMNS)
                 .single();
             button.disabled = false;
             if (error) {
@@ -317,6 +359,7 @@ function setupRecapCommentForm(section) {
             if (empty) empty.remove();
             list.insertAdjacentHTML("beforeend", recapCommentHtml(data));
             box.value = "";
+            waitForArnie(list, data);
         });
     }
 
@@ -327,6 +370,10 @@ function setupRecapCommentForm(section) {
         if (!confirm("Delete this comment?")) return;
         const { error } = await supabaseClient.from("recap_comments").delete().eq("id", item.dataset.id);
         if (error) { alert("Couldn't delete it right now."); return; }
+        // Arnie's reply goes with it.
+        list.querySelectorAll(".recap-comment.is-arnie").forEach(reply => {
+            if (reply.previousElementSibling === item) reply.remove();
+        });
         item.remove();
     });
 }

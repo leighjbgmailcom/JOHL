@@ -3098,14 +3098,19 @@ footer {
     display: none;
 }
 
+/* The button sits down on the ice at the left, clear of Arnie's face. */
 .arnie-big span {
+    position: absolute;
+    left: 4%;
+    top: 58%;
     background: #c8102e;
     color: white;
-    font-size: 17px;
+    font-size: clamp(14px, 3.6vw, 17px);
     font-weight: bold;
-    padding: 13px 20px;
+    padding: 11px 18px;
     border-radius: 40px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    white-space: nowrap;
 }
 
 .arnie-caption {
@@ -3239,6 +3244,36 @@ footer {
     margin: 4px 0 0;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+}
+
+.recap-comment.is-arnie {
+    margin-left: 22px;
+    background: #fff6f7;
+    border-left: 3px solid #c8102e;
+}
+
+.recap-comment.is-arnie strong::before {
+    content: "🎙 ";
+}
+
+.recap-arnie-badge {
+    background: #c8102e;
+    color: white !important;
+    font-size: 10px !important;
+    font-weight: bold;
+    letter-spacing: .5px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.recap-comment.is-typing p {
+    color: #6b7785;
+    font-style: italic;
+}
+
+.recap-comment:target {
+    outline: 2px solid #c8102e;
 }
 
 .recap-comment-empty {
