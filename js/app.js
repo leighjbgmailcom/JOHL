@@ -2816,22 +2816,20 @@ function renderHomeRecap(date) {
     const show = HOME_RECAPS.show || "Rinkside Report";
     const host = HOME_RECAPS.host || "Arnie Jordan";
 
+    // A small bar that links to the full report (Arnie on camera) on the
+    // Recaps page; the home page doesn't play it itself.
+    const face = recap.moustache ? "recaps/arnie/scene/face-movember.jpg" : "recaps/arnie/scene/face.jpg";
     element.innerHTML = `
-        <div class="home-recap-card">
-            <div class="home-recap-words">
-                <span class="home-recap-date">${esc(show)} · ${esc(host)}'s notes from row three</span>
+        <a class="home-recap-bar" href="recaps.html?date=${esc(recap.date)}">
+            <img class="home-recap-face" src="${face}" alt="" width="56" height="56">
+            <span class="home-recap-words">
+                <span class="home-recap-date">${esc(host)}'s ${esc(show)}</span>
                 <strong>${esc(recap.title)}</strong>
-            </div>
-            <a class="home-recap-go" href="recaps.html?date=${esc(recap.date)}">Read along →</a>
-            <div class="home-recap-player"></div>
-        </div>
+            </span>
+            <span class="home-recap-go">&#9654; Watch or listen</span>
+        </a>
     `;
     element.hidden = false;
-
-    // Arnie on camera in place of a plain audio player (js/arnie-player.js).
-    const slot = element.querySelector(".home-recap-player");
-    if (typeof mountArniePlayer === "function") mountArniePlayer(slot, recap);
-    else slot.innerHTML = `<audio class="home-recap-audio" controls preload="none" src="${esc(recap.audio)}"></audio>`;
 }
 
 

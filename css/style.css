@@ -1673,24 +1673,40 @@ body.printing-schedule #schedule-print-sheet {
     display: none;
 }
 
-.home-recap-card {
+.home-recap-bar {
     display: flex;
     align-items: center;
-    gap: 14px 22px;
+    gap: 14px;
     margin-bottom: 14px;
-    padding: 16px 22px;
+    padding: 10px 16px 10px 10px;
     background: #071a2b;
     border-left: 5px solid #c8102e;
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,.08);
     color: white;
+    text-decoration: none;
+    transition: background .15s;
+}
+
+.home-recap-bar:hover,
+.home-recap-bar:focus-visible {
+    background: #0d2a44;
+}
+
+.home-recap-face {
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    object-fit: cover;
 }
 
 .home-recap-words {
-    flex: 1 1 260px;
+    flex: 1 1 auto;
     min-width: 0;
     display: grid;
-    gap: 4px;
+    gap: 2px;
 }
 
 .home-recap-date {
@@ -1702,40 +1718,48 @@ body.printing-schedule #schedule-print-sheet {
 }
 
 .home-recap-words strong {
-    font-size: 19px;
+    font-size: 16px;
     line-height: 1.25;
-}
-
-.home-recap-audio {
-    flex: 1 1 300px;
-    min-width: 0;
-    max-width: 420px;
-    height: 44px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .home-recap-go {
     flex: 0 0 auto;
-    color: white;
+    padding: 8px 14px;
+    background: #c8102e;
+    border-radius: 999px;
     font-size: 14px;
     font-weight: bold;
     white-space: nowrap;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 600px) {
 
-    .home-recap-card {
-        flex-wrap: wrap;
-        padding: 16px;
+    .home-recap-bar {
+        gap: 10px;
+        padding: 8px 10px 8px 8px;
     }
 
-    .home-recap-words,
-    .home-recap-audio {
-        flex-basis: 100%;
-        max-width: none;
+    .home-recap-face {
+        width: 44px;
+        height: 44px;
     }
 
     .home-recap-words strong {
-        font-size: 18px;
+        display: none;
+    }
+
+    .home-recap-date {
+        font-size: 13px;
+        letter-spacing: .04em;
+        color: white;
+    }
+
+    .home-recap-go {
+        padding: 7px 10px;
+        font-size: 13px;
     }
 }
 
