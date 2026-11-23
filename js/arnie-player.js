@@ -48,6 +48,37 @@ function arnieAssets() {
     return ARNIE_ASSETS;
 }
 
+// Arnie's moustache (grown for men's health), drawn over the picture in
+// scene-image pixels, after the mouth so it moves with his head.
+function drawArnieMoustache(c) {
+  c.save();
+  c.beginPath();
+  c.moveTo(651, 554);
+  c.bezierCurveTo(662, 547, 681, 547, 693, 555);
+  c.bezierCurveTo(700, 559, 703, 566, 701, 573);
+  c.bezierCurveTo(693, 568, 684, 567, 674, 570);
+  c.bezierCurveTo(664, 573, 656, 572, 651, 567);
+  c.bezierCurveTo(645, 573, 634, 576, 624, 575);
+  c.bezierCurveTo(615, 576, 609, 580, 603, 584);
+  c.bezierCurveTo(601, 575, 606, 563, 616, 557);
+  c.bezierCurveTo(628, 550, 642, 549, 651, 554);
+  c.closePath();
+  const g = c.createLinearGradient(0, 548, 0, 580);
+  g.addColorStop(0, '#9c9893'); g.addColorStop(1, '#6f6b66');
+  c.fillStyle = g; c.fill();
+  c.lineJoin = 'round'; c.lineWidth = 3; c.strokeStyle = '#1b1b1b'; c.stroke();
+  // a few whiskers
+  c.lineWidth = 1.4; c.strokeStyle = 'rgba(40,38,36,.55)'; c.lineCap = 'round';
+  const W = [[640,556,630,568],[632,557,620,571],[624,560,612,575],[646,558,640,569],
+             [662,555,668,566],[671,553,679,565],[680,553,689,564],[656,557,659,567]];
+  for (const [a,b,x,y] of W) { c.beginPath(); c.moveTo(a,b); c.quadraticCurveTo((a+x)/2+1,(b+y)/2-2,x,y); c.stroke(); }
+  // highlight
+  c.lineWidth = 1.6; c.strokeStyle = 'rgba(235,232,226,.55)';
+  c.beginPath(); c.moveTo(620,560); c.quadraticCurveTo(634,553,646,555); c.stroke();
+  c.beginPath(); c.moveTo(657,555); c.quadraticCurveTo(672,550,686,555); c.stroke();
+  c.restore();
+}
+
 // All the drawing for one recap. Returns frame(now, t, speaking), which
 // paints the whole picture onto the canvas for that moment.
 function arnieEngine(canvas, data, assets, dateLabel) {
@@ -385,6 +416,7 @@ function arnieEngine(canvas, data, assets, dateLabel) {
           if (sh > 2 && d > 0.2) fx.drawImage(img, x, top, 2, sh, x, top + d, 2, sh - d);
         }
       }
+      drawArnieMoustache(fx);
       if (now > nextBlink) { blinkUntil = now + 120; nextBlink = now + 2200 + Math.random() * 3500; }
       if (now < blinkUntil) for (const e of EYES) {
         fx.fillStyle = SKIN; fx.beginPath(); fx.ellipse(e.x, e.y, e.rx, e.ry, 0, 0, Math.PI * 2); fx.fill();
