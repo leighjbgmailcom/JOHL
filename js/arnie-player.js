@@ -48,8 +48,9 @@ function arnieAssets() {
     return ARNIE_ASSETS;
 }
 
-// Arnie's moustache (grown for men's health), drawn over the picture in
-// scene-image pixels, after the mouth so it moves with his head.
+// Arnie's Movember moustache, drawn over the picture in scene-image
+// pixels, after the mouth so it moves with his head. Only on a recap
+// whose recaps.json entry has "moustache": true (Nov 22, 2026).
 function drawArnieMoustache(c) {
   c.save();
   c.beginPath();
@@ -81,7 +82,7 @@ function drawArnieMoustache(c) {
 
 // All the drawing for one recap. Returns frame(now, t, speaking), which
 // paints the whole picture onto the canvas for that moment.
-function arnieEngine(canvas, data, assets, dateLabel) {
+function arnieEngine(canvas, data, assets, dateLabel, moustache) {
     const ENV = data.env || [];
     const CAPS = data.caps || [], KF = data.kf || [], GAMES = data.games || [], FLIPS = data.flips || [];
     const DATE_LABEL = dateLabel;
@@ -416,7 +417,7 @@ function arnieEngine(canvas, data, assets, dateLabel) {
           if (sh > 2 && d > 0.2) fx.drawImage(img, x, top, 2, sh, x, top + d, 2, sh - d);
         }
       }
-      drawArnieMoustache(fx);
+      if (moustache) drawArnieMoustache(fx);
       if (now > nextBlink) { blinkUntil = now + 120; nextBlink = now + 2200 + Math.random() * 3500; }
       if (now < blinkUntil) for (const e of EYES) {
         fx.fillStyle = SKIN; fx.beginPath(); fx.ellipse(e.x, e.y, e.rx, e.ry, 0, 0, Math.PI * 2); fx.fill();
@@ -536,7 +537,7 @@ async function mountArniePlayer(element, recap) {
     }
 
     arnieAssets().then(assets => {
-        frame = arnieEngine(canvas, data, assets, arnieDateLabel(recap.date));
+        frame = arnieEngine(canvas, data, assets, arnieDateLabel(recap.date), !!recap.moustache);
         paint(performance.now());
     }).catch(() => arniePlainAudio(element, recap));
 

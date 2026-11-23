@@ -77,13 +77,6 @@ between paragraphs. About 750–900 words (four to five minutes, with the standi
   the players see; serving the repo locally (`python3 -m http.server`)
   and reading the tables with Playwright works. A light chirp or two is
   fine, same rules as the rest.
-- **The moustache.** Arnie has grown a moustache to support men's
-  health (it's on him in the picture now). Every report, he mentions it
-  in a line or two, in character: in November it's his Movember
-  moustache; the rest of the year he's kept it and still backs men's
-  health. Have him nudge the fellas to book a check-up and look out for
-  each other. Keep it light and warm, a bit he's proud of, never a
-  lecture, and never about any player's own health.
 - **Get them talking.** Work in one or two questions for the players,
   aimed at that night's real games, and ask them to answer in the
   comments under this report on the league website: who's buying the
@@ -236,6 +229,9 @@ Function `supabase-functions/arnie-reply`.
 
     select * from private.arnie_unanswered();                    -- comments still waiting
     select private.arnie_reply(42, 'What Arnie says back');       -- answer comment 42
+    select private.arnie_post('YYYY-MM-DD', 'Arnie''s own note'); -- a comment of his own under a recap
+
+A web address (https://…) in one of Arnie's comments shows as a link.
 
 The reply comes back `ok` with `emailed` true or false and a note on why
 not (no email on that login, opted out). Running `arnie_reply` again for

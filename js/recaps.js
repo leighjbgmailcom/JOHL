@@ -236,6 +236,13 @@ function recapWhen(iso) {
     return then.toLocaleDateString("en-CA", { month: "short", day: "numeric" });
 }
 
+// Web links in Arnie's own comments (only the site can post as him)
+// become clickable. Players' comments stay plain text.
+function recapLinkify(escaped) {
+    return escaped.replace(/https:\/\/[^\s<]+[^\s<.,!?)]/g, url =>
+        `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
+}
+
 function recapCommentHtml(comment) {
     const mine = RECAP_ME && (RECAP_ME.isAdmin || (!comment.is_arnie && comment.author_id === RECAP_ME.id));
     return `
@@ -246,7 +253,7 @@ function recapCommentHtml(comment) {
                 <span>${recapEsc(recapWhen(comment.created_at))}</span>
                 ${mine ? `<button type="button" class="recap-comment-delete">Delete</button>` : ""}
             </div>
-            <p>${recapEsc(comment.body)}</p>
+            <p>${comment.is_arnie ? recapLinkify(recapEsc(comment.body)) : recapEsc(comment.body)}</p>
         </li>
     `;
 }
